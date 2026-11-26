@@ -23,6 +23,25 @@ export const SPRITES = {
     '......nnnn......',
     '................',
   ],
+  // first-person hand holding the knife (shown at the bottom of the battle screen)
+  hand_knife: [
+    '............vv..',
+    '...........vwv..',
+    '..........vwv...',
+    '.........vwv....',
+    '........vwv.....',
+    '.......vvv......',
+    '.....gg.v.......',
+    '......gg........',
+    '....ffoff.......',
+    '...fffofff......',
+    '...ffoffff......',
+    '...fffffff......',
+    '....fffff.......',
+    '....bbbbb.......',
+    '...bbbbbbb......',
+    '...bbbbbbb......',
+  ],
   // item icons (12x12)
   item_knife: [
     '..........v.',

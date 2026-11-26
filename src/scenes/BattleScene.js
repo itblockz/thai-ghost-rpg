@@ -4,9 +4,12 @@ import { ITEMS, STARTING_ITEMS } from '../data/items.js';
 import { STATUSES } from '../data/statuses.js';
 import { registerSprites } from '../art/sprites.js';
 import { ZOOM, setupCamera } from '../display.js';
+import { play, isMuted, toggleMute } from '../audio/sfx.js';
 
 const FONT = { fontFamily: 'sans-serif', color: '#fff', resolution: ZOOM };
 const MX = 180, MY = 200; // monster position
+const HX = 300, HY = 436; // first-person hand (bottom of battle area)
+const BTN_Y = 505;
 
 export class BattleScene extends Phaser.Scene {
   constructor() { super('Battle'); }
@@ -19,18 +22,26 @@ export class BattleScene extends Phaser.Scene {
     this.p = { name: 'หมอผีน้อย', hp: 30, maxHp: 30, statuses: new Set(), cd: {} };
     this.busy = false;
 
-    this.add.rectangle(180, 210, 360, 420, 0x140a1e);
+    this.add.rectangle(180, 220, 360, 440, 0x140a1e);
     this.glow = this.add.circle(MX, MY, 95, 0xff3060, 0.12);
     this.mSprite = this.add.image(MX, MY, def.sprite).setScale(11);
     this.tweens.add({ targets: [this.mSprite, this.glow], y: '-=8', yoyo: true, repeat: -1, duration: 900, ease: 'Sine.inOut' });
     this.intent = this.add.text(MX, 85, '', { ...FONT, fontSize: '30px', fontStyle: 'bold' }).setOrigin(0.5);
 
     this.mBar = this.bar(30, 20, def.name);
-    this.pBar = this.bar(30, 360, this.p.name);
+    this.pBar = this.bar(30, 585, this.p.name);
+
+    // First-person view: our hand holding the knife.
+    this.hand = this.add.image(HX, HY, 'hand_knife').setOrigin(0.5, 1).setScale(7);
+    this.tweens.add({ targets: this.hand, y: HY + 6, yoyo: true, repeat: -1, duration: 1100, ease: 'Sine.inOut' });
+    this.fx = this.add.graphics();
+
+    const mute = this.add.text(340, 70, isMuted() ? '🔇' : '🔊', { ...FONT, fontSize: '22px' }).setOrigin(1, 0).setInteractive();
+    mute.on('pointerdown', () => mute.setText(toggleMute() ? '🔇' : '🔊'));
 
     const skills = STARTING_ITEMS.map(id => ({ id, icon: ITEMS[id].icon, ...ITEMS[id].skill }));
     const n = skills.length, w = n === 1 ? 220 : 155;
-    this.btns = skills.map((s, i) => this.skillBtn(180 + (i - (n - 1) / 2) * 170, 520, s, w));
+    this.btns = skills.map((s, i) => this.skillBtn(180 + (i - (n - 1) / 2) * 170, BTN_Y, s, w));
     this.refresh();
   }
 
@@ -45,10 +56,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   skillBtn(x, y, s, w) {
-    const r = this.add.rectangle(x, y, w, 150, 0x33334d).setStrokeStyle(3, 0x8888cc).setInteractive();
-    const icon = this.add.image(x, y - 32, s.icon).setScale(5);
-    const name = this.add.text(x, y + 25, s.name, { ...FONT, fontSize: '22px' }).setOrigin(0.5);
-    const hint = this.add.text(x, y + 52, `⚔ ${s.dmg}`, { ...FONT, fontSize: '16px', color: '#d0d0ee' }).setOrigin(0.5);
+    const r = this.add.rectangle(x, y, w, 130, 0x33334d).setStrokeStyle(3, 0x8888cc).setInteractive();
+    const icon = this.add.image(x, y - 28, s.icon).setScale(5);
+    const name = this.add.text(x, y + 22, s.name, { ...FONT, fontSize: '22px' }).setOrigin(0.5);
+    const hint = this.add.text(x, y + 46, `⚔ ${s.dmg}`, { ...FONT, fontSize: '16px', color: '#d0d0ee' }).setOrigin(0.5);
     const cdText = this.add.text(x, y, '', { ...FONT, fontSize: '56px', fontStyle: 'bold' }).setOrigin(0.5);
     r.on('pointerdown', () => { if (!this.busy && !this.p.cd[s.id]) this.useSkill(s); });
     return { s, r, parts: [icon, name, hint], cdText };
@@ -105,20 +116,73 @@ export class BattleScene extends Phaser.Scene {
     // +1 because cooldowns tick down at the end of the monster's turn
     if (s.cooldown) this.p.cd[s.id] = s.cooldown + 1;
 
-    this.m.hp -= s.dmg;
-    this.popup(MX, MY - 20, `-${s.dmg}`, '#ffdd55');
-    this.tweens.add({ targets: this.mSprite, alpha: 0.2, yoyo: true, duration: 70, repeat: 1 });
-    if (s.removes && this.m.statuses.delete(s.removes)) {
-      this.time.delayedCall(250, () => this.popup(MX, MY + 40, `ล้าง${STATUSES[s.removes].icon}!`, '#66ccff', 28));
-    }
-    this.setBar(this.mBar, this.m);
-    this.showIntent();
-    this.time.delayedCall(900, () => (this.m.hp <= 0 ? this.end(true) : this.monsterTurn()));
+    this.animSlash(() => {
+      this.m.hp -= s.dmg;
+      this.popup(MX, MY - 20, `-${s.dmg}`, '#ffdd55');
+      if (s.removes && this.m.statuses.delete(s.removes)) {
+        this.time.delayedCall(250, () => this.popup(MX, MY + 40, `ล้าง${STATUSES[s.removes].icon}!`, '#66ccff', 28));
+      }
+      this.setBar(this.mBar, this.m);
+      this.showIntent();
+      this.time.delayedCall(700, () => (this.m.hp <= 0 ? this.end(true) : this.monsterTurn()));
+    });
+  }
+
+  // ---------- animations ----------
+  // Hand thrusts up, a slash streak crosses the ghost, ghost flashes and is knocked back.
+  animSlash(onHit) {
+    this.tweens.add({
+      targets: this.hand, x: HX - 60, y: HY - 90, angle: -35, duration: 120, ease: 'Cubic.out',
+      onStart: () => play('slash'),
+      onComplete: () => {
+        this.fx.clear();
+        this.fx.lineStyle(10, 0xffffff, 1).lineBetween(MX + 70, MY - 70, MX - 70, MY + 70);
+        this.fx.lineStyle(4, 0xffdd88, 1).lineBetween(MX + 75, MY - 70, MX - 65, MY + 75);
+        this.fx.setAlpha(1);
+        this.tweens.add({ targets: this.fx, alpha: 0, duration: 250 });
+        this.mSprite.setTintFill(0xffffff);
+        this.time.delayedCall(90, () => this.mSprite.clearTint());
+        this.tweens.add({ targets: this.mSprite, x: MX + 14, y: '-=10', duration: 70, yoyo: true });
+        play('hit');
+        onHit();
+        this.tweens.add({ targets: this.hand, x: HX, y: HY, angle: 0, duration: 250, ease: 'Sine.out' });
+      },
+    });
+  }
+
+  // Ghost lunges at the camera, claw marks rip across the screen.
+  animMonsterAttack(danger, onHit) {
+    let hit = false; // onYoyo fires once per tweened property — only apply the hit once
+    this.tweens.add({
+      targets: this.mSprite, scale: 11 * 1.6, y: MY + 60, duration: 160, ease: 'Cubic.in', yoyo: true,
+      onStart: () => play('laugh'),
+      onYoyo: () => {
+        if (hit) return;
+        hit = true;
+        play('scratch');
+        this.fx.clear();
+        this.fx.lineStyle(danger ? 14 : 9, 0xcc1133, 1);
+        for (let i = -1; i <= 1; i++) this.fx.lineBetween(110 + i * 45, 230, 170 + i * 45, 420);
+        this.fx.setAlpha(1);
+        this.tweens.add({ targets: this.fx, alpha: 0, duration: 500, delay: 150 });
+        this.tweens.add({ targets: this.hand, y: HY + 40, duration: 80, yoyo: true });
+        play('hurt');
+        onHit();
+      },
+    });
   }
 
   monsterTurn() {
     const mv = this.m.moves[this.nextMove()];
     this.m.turn++;
+    if (mv.dmg && !(mv.needs && !this.m.statuses.has(mv.needs))) {
+      this.animMonsterAttack(mv.danger, () => this.resolveMonsterMove(mv));
+    } else {
+      this.resolveMonsterMove(mv);
+    }
+  }
+
+  resolveMonsterMove(mv) {
     if (mv.needs && !this.m.statuses.has(mv.needs)) {
       this.popup(MX, MY - 20, `😵 ${mv.fizzle}`, '#ffffff', 28);
     } else {
@@ -129,7 +193,7 @@ export class BattleScene extends Phaser.Scene {
       }
       if (mv.dmg) {
         this.p.hp -= mv.dmg;
-        this.popup(180, 340, `-${mv.dmg}`, '#ff5566', mv.danger ? 48 : 34);
+        this.popup(180, 560, `-${mv.dmg}`, '#ff5566', mv.danger ? 48 : 34);
         this.cameras.main.shake(mv.danger ? 350 : 150, mv.danger ? 0.025 : 0.008);
         if (mv.danger) this.cameras.main.flash(200, 255, 40, 80);
       }
@@ -144,11 +208,23 @@ export class BattleScene extends Phaser.Scene {
     this.busy = true;
     this.intent.setText('');
     this.tweens.killTweensOf(this.intent);
-    if (won) this.tweens.add({ targets: [this.mSprite, this.glow], alpha: 0, scale: '+=2', duration: 600 });
+    if (won) {
+      play('win');
+      // ghost dissolves into rising pixels
+      for (let i = 0; i < 40; i++) {
+        const px = this.add.rectangle(MX + Phaser.Math.Between(-70, 70), MY + Phaser.Math.Between(-80, 80), 8, 8, Phaser.Math.RND.pick([0x5d4d6e, 0xffffff, 0xd01030]));
+        this.tweens.add({ targets: px, y: px.y - Phaser.Math.Between(60, 160), alpha: 0, duration: Phaser.Math.Between(500, 1100), onComplete: () => px.destroy() });
+      }
+      this.tweens.add({ targets: [this.mSprite, this.glow], alpha: 0, duration: 400 });
+    } else {
+      play('lose');
+      const red = this.add.rectangle(180, 320, 360, 640, 0x660011, 0);
+      this.tweens.add({ targets: red, fillAlpha: 0.55, duration: 900 });
+    }
     this.add.text(180, 300, won ? 'ชนะ! 🎉' : 'แพ้... 💀', { ...FONT, fontSize: '40px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
     this.btns.forEach(b => { b.r.setVisible(false); b.parts.forEach(p => p.setVisible(false)); b.cdText.setVisible(false); });
-    const r = this.add.rectangle(180, 520, 240, 90, won ? 0x2d5a3a : 0x5a2d3a).setStrokeStyle(3, 0xffffff).setInteractive();
-    this.add.text(180, 520, '🔁 สู้อีกครั้ง', { ...FONT, fontSize: '24px' }).setOrigin(0.5);
-    r.on('pointerdown', () => this.scene.restart());
+    const r = this.add.rectangle(180, BTN_Y, 240, 90, won ? 0x2d5a3a : 0x5a2d3a).setStrokeStyle(3, 0xffffff).setInteractive();
+    this.add.text(180, BTN_Y, '🔁 สู้อีกครั้ง', { ...FONT, fontSize: '24px' }).setOrigin(0.5);
+    r.on('pointerdown', () => { play('click'); this.scene.restart(); });
   }
 }

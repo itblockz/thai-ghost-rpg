@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { MONSTERS } from '../data/monsters.js';
+import { MONSTERS, STAGES } from '../data/monsters.js';
 import { ITEMS, STARTING_ITEMS } from '../data/items.js';
-import { SKILLS } from '../data/skills.js';
+import { SKILLS, skillDamage } from '../data/skills.js';
 import { registerSprites } from '../art/sprites.js';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
@@ -18,13 +18,17 @@ function storageSet(k, v) { try { localStorage.setItem(k, v); } catch { /* ignor
 export class BattleScene extends Phaser.Scene {
   constructor() { super('Battle'); }
 
-  create() {
+  create(data) {
     registerSprites(this);
     setupCamera(this);
-    const def = MONSTERS.kongkoi;
-    // Both sides share the same shape: hp, skills, cooldowns.
-    this.m = { ...def, maxHp: def.hp, cd: {} };
-    this.p = { name: 'ศิษย์หมอผี', hp: 30, maxHp: 30, cd: {} };
+    // Progress lives in the registry: which stage we're on and which items we own.
+    this.stage = data?.stage ?? 0;
+    if (!this.registry.get('items')) this.registry.set('items', [...STARTING_ITEMS]);
+    const def = MONSTERS[STAGES[this.stage]];
+    // Both sides share the same shape: hp, skills, cooldowns, block.
+    this.m = { ...def, maxHp: def.hp, cd: {}, block: false };
+    for (const id of def.skills) if (SKILLS[id].startCooldown) this.m.cd[id] = SKILLS[id].startCooldown;
+    this.p = { name: 'ศิษย์หมอผี', hp: 30, maxHp: 30, cd: {}, block: false };
     this.busy = false;
 
     this.add.image(180, 0, 'bg_night').setOrigin(0.5, 0).setScale(4);
@@ -44,6 +48,13 @@ export class BattleScene extends Phaser.Scene {
     // First-person view: our hand holding the knife.
     this.hand = this.add.image(HX, HY, 'hand_knife').setOrigin(0.5, 1).setScale(7);
     this.tweens.add({ targets: this.hand, y: HY + 6, yoyo: true, repeat: -1, duration: 1100, ease: 'Sine.inOut' });
+    // Left hand that pops up when using a self skill (e.g. takrut). Hidden below the screen.
+    this.offHand = this.add.image(70, HY + 140, 'hand_takrut').setOrigin(0.5, 1).setScale(7).setVisible(false);
+    this.wardGlow = this.add.rectangle(180, 220, 360, 440, 0xffd860, 0);
+    // Tap our own side (hand area / our HP bar) = use a self skill.
+    const self = () => this.useSelectedOn(this.p);
+    this.add.zone(180, 400, 360, 70).setInteractive({ useHandCursor: true }).on('pointerdown', self);
+    this.add.zone(180, 605, 330, 44).setInteractive({ useHandCursor: true }).on('pointerdown', self);
     this.fxSlash = this.add.image(MX, MY, 'fx_slash').setScale(7).setAlpha(0);
     this.fxClaw = this.add.image(170, 330, 'fx_claw').setScale(6).setAlpha(0);
 
@@ -51,7 +62,7 @@ export class BattleScene extends Phaser.Scene {
     const mute = this.add.image(338, 78, muteKey()).setScale(3.5).setInteractive({ useHandCursor: true });
     mute.on('pointerdown', () => { toggleMute(); mute.setTexture(muteKey()); });
 
-    const items = STARTING_ITEMS.map(id => ITEMS[id]);
+    const items = this.registry.get('items').map(id => ITEMS[id]);
     const n = items.length, w = n === 1 ? 220 : 155;
     this.btns = items.map((item, i) => this.itemBtn(180 + (i - (n - 1) / 2) * 170, BTN_Y, item, w));
 
@@ -71,20 +82,24 @@ export class BattleScene extends Phaser.Scene {
   // ---------- input ----------
   // Generic wording: the target may not always be a ghost.
   updateHint() {
-    if (this.hint) this.hint.setText(`แตะเป้าเพื่อใช้วิชา "${SKILLS[this.selected].name}"`);
+    if (!this.hint) return;
+    const s = SKILLS[this.selected];
+    this.hint.setText(s.target === 'self' ? `แตะตัวเองเพื่อใช้วิชา "${s.name}"` : `แตะเป้าเพื่อใช้วิชา "${s.name}"`);
   }
 
   select(skillId) {
     this.selected = skillId;
     this.updateHint();
     this.btns.forEach(b => this.drawBtn(b));
+    this.drawReticle(true);
     const b = this.btns.find(x => x.skillId === skillId);
     this.showItemInfo(b.item);
   }
 
   useSelectedOn(target) {
     if (this.busy || !this.selected || this.p.cd[this.selected]) return;
-    if (target !== this.m) return; // only enemy-targeted skills for now
+    const wantSelf = SKILLS[this.selected].target === 'self';
+    if ((target === this.p) !== wantSelf) return;
     this.hideCard();
     if (this.hint) { this.hint.destroy(); this.hint = null; storageSet('seenTapGhost', '1'); }
     this.playerTurn(this.selected);
@@ -109,7 +124,9 @@ export class BattleScene extends Phaser.Scene {
     const name = this.add.text(x, y + 22, skill.name, { ...FONT, fontSize: '22px' }).setOrigin(0.5);
     const dmg = skill.effects.find(e => e.damage != null)?.damage;
     const dmgIcon = this.add.image(x - 14, y + 47, 'icon_dmg').setScale(2.5).setVisible(dmg != null);
-    const hint = this.add.text(x - 2, y + 47, dmg != null ? String(dmg) : '', { ...FONT, fontSize: '17px', color: '#d0d0ee' }).setOrigin(0, 0.5);
+    const hint = dmg != null
+      ? this.add.text(x - 2, y + 47, String(dmg), { ...FONT, fontSize: '17px', color: '#d0d0ee' }).setOrigin(0, 0.5)
+      : this.add.text(x, y + 47, 'กันทั้งหมด', { ...FONT, fontSize: '15px', color: '#d0d0ee' }).setOrigin(0.5);
     const cdText = this.add.text(x, y, '', { ...FONT, fontSize: '56px', fontStyle: 'bold' }).setOrigin(0.5);
     const b = { item, skillId: item.skill, zone, g, x, y, w, h: 130, parts: [icon, name, dmgIcon, hint], cdText };
     zone.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
@@ -186,7 +203,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   skillRows(y, skill) {
-    for (const e of skill.effects) if (e.damage != null) y = this.cardRow(y, 'icon_dmg', 'อานุภาพ', String(e.damage), '#ffdd55');
+    for (const e of skill.effects) {
+      if (e.damage != null) y = this.cardRow(y, 'icon_dmg', 'อานุภาพ', String(e.damage), '#ffdd55');
+      if (e.block) y = this.cardRow(y, 'icon_shield', 'กันการโจมตี', 'ตานี้', '#ffe066');
+    }
     return this.cardRow(y, 'icon_clock', 'พักวิชา', skill.cooldown ? `${skill.cooldown} ตา` : 'มิต้องพัก');
   }
 
@@ -228,11 +248,13 @@ export class BattleScene extends Phaser.Scene {
     this.drawReticle(!this.busy);
   }
 
-  // Corner brackets around the ghost: "tap here".
+  // Corner brackets around what the selected skill targets: the ghost, or our own side.
   drawReticle(show) {
     const g = this.reticle.clear();
     if (!show) return;
-    const l = MX - 85, r = MX + 85, t = MY - 95, b = MY + 95, k = 22;
+    const self = SKILLS[this.selected]?.target === 'self';
+    const [l, r, t, b] = self ? [12, 348, 368, 630] : [MX - 85, MX + 85, MY - 95, MY + 95];
+    const k = 22;
     g.fillStyle(0xffdd55);
     [[l, t, 1, 1], [r, t, -1, 1], [l, b, 1, -1], [r, b, -1, -1]].forEach(([x, y, sx, sy]) => {
       g.fillRect(Math.min(x, x + sx * k), y - (sy < 0 ? 4 : 0), k, 4);
@@ -244,41 +266,54 @@ export class BattleScene extends Phaser.Scene {
   applySkill(user, target, skillId) {
     const skill = SKILLS[skillId];
     if (skill.cooldown) user.cd[skillId] = skill.cooldown + 1; // +1: ticks down at end of this round
+    let dealt = 0;
     for (const e of skill.effects) {
-      if (e.damage != null) target.hp -= e.damage;
+      if (e.damage != null && !target.block) { target.hp -= e.damage; dealt += e.damage; }
+      if (e.block) user.block = true;
     }
-    return skill;
+    return { skill, dealt, blocked: skillDamage(skill) > 0 && target.block };
   }
 
   tickCooldowns(c) { for (const k in c.cd) if (c.cd[k] > 0) c.cd[k]--; }
 
+  // Ghosts use their strongest ready skill.
   pickMonsterSkill() {
     const ready = this.m.skills.filter(id => !this.m.cd[id]);
-    return Phaser.Math.RND.pick(ready.length ? ready : this.m.skills);
+    return (ready.length ? ready : this.m.skills).reduce((a, b) => (skillDamage(SKILLS[b]) > skillDamage(SKILLS[a]) ? b : a));
   }
 
   // ---------- turns ----------
   playerTurn(skillId) {
     this.busy = true;
     this.drawReticle(false);
-    this.animSlash(() => {
-      const skill = this.applySkill(this.p, this.m, skillId);
-      const dmg = skill.effects.reduce((s, e) => s + (e.damage || 0), 0);
-      if (dmg) this.popup(MX, MY - 20, `-${dmg}`, '#ffdd55');
+    const self = SKILLS[skillId].target === 'self';
+    const anim = self ? (cb) => this.animWard(cb) : (cb) => this.animSlash(cb);
+    anim(() => {
+      const { dealt } = this.applySkill(this.p, self ? this.p : this.m, skillId);
+      if (dealt) this.popup(MX, MY - 20, `-${dealt}`, '#ffdd55');
       this.setBar(this.mBar, this.m);
+      this.btns.forEach(b => this.drawBtn(b));
       this.time.delayedCall(700, () => (this.m.hp <= 0 ? this.end(true) : this.monsterTurn()));
     });
   }
 
   monsterTurn() {
     const skillId = this.pickMonsterSkill();
-    this.animMonsterAttack(() => {
-      const skill = this.applySkill(this.m, this.p, skillId);
-      const dmg = skill.effects.reduce((s, e) => s + (e.damage || 0), 0);
-      if (dmg) {
-        this.popup(280, 582, `-${dmg}`, '#ff5566', 34);
-        this.cameras.main.shake(150, 0.008);
+    const heavy = skillDamage(SKILLS[skillId]) >= 10;
+    this.animMonsterAttack(heavy, () => {
+      const { dealt, blocked } = this.applySkill(this.m, this.p, skillId);
+      this.popup(MX, MY + 70, SKILLS[skillId].name, heavy ? '#ff5577' : '#ffffff', heavy ? 30 : 22);
+      if (blocked) {
+        this.popup(180, 380, 'ตะกรุดกันไว้!', '#ffe066', 30);
+        play('block');
+      } else if (dealt) {
+        this.popup(280, 582, `-${dealt}`, '#ff5566', heavy ? 46 : 34);
+        this.cameras.main.shake(heavy ? 350 : 150, heavy ? 0.025 : 0.008);
+        if (heavy) this.cameras.main.flash(200, 255, 40, 80);
       }
+      // end of round: blocks expire, cooldowns tick
+      this.p.block = false; this.m.block = false;
+      this.hideWard();
       this.tickCooldowns(this.p);
       this.tickCooldowns(this.m);
       if (this.p.cd[this.selected]) this.selected = this.btns[0].skillId; // back to the basic skill
@@ -309,7 +344,21 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // Ghost lunges at the camera, claw marks rip across the screen.
-  animMonsterAttack(onHit) {
+  // Left hand raises the takrut; golden light fills the screen until the round ends.
+  animWard(onDone) {
+    play('ward');
+    this.offHand.setVisible(true);
+    this.tweens.add({ targets: this.offHand, y: HY + 10, duration: 180, ease: 'Back.out' });
+    this.tweens.add({ targets: this.wardGlow, fillAlpha: 0.18, duration: 200 });
+    this.time.delayedCall(250, onDone);
+  }
+
+  hideWard() {
+    this.tweens.add({ targets: this.offHand, y: HY + 140, duration: 250, ease: 'Sine.in', onComplete: () => this.offHand.setVisible(false) });
+    this.tweens.add({ targets: this.wardGlow, fillAlpha: 0, duration: 250 });
+  }
+
+  animMonsterAttack(heavy, onHit) {
     let hit = false; // onYoyo fires once per tweened property — only apply the hit once
     this.tweens.add({
       targets: this.mSprite, scale: 11 * 1.6, y: MY + 60, duration: 160, ease: 'Cubic.in', yoyo: true,
@@ -318,7 +367,7 @@ export class BattleScene extends Phaser.Scene {
         if (hit) return;
         hit = true;
         play('scratch');
-        this.fxClaw.setAlpha(1).setScale(6);
+        this.fxClaw.setAlpha(1).setScale(heavy ? 8 : 6);
         this.tweens.add({ targets: this.fxClaw, alpha: 0, duration: 500, delay: 150 });
         this.tweens.add({ targets: this.hand, y: HY + 40, duration: 80, yoyo: true });
         play('hurt');
@@ -349,10 +398,35 @@ export class BattleScene extends Phaser.Scene {
     if (this.hint) this.hint.setVisible(false);
     this.drawReticle(false);
     this.mSkillTiles.forEach(t => { t.g.setVisible(false); t.icon.setVisible(false); t.cdText.setVisible(false); });
+    // What happens next: retry this ghost, go to the next one, or finish the demo.
+    const last = this.stage >= STAGES.length - 1;
+    let label = 'ตั้งจิตใหม่', next = () => this.scene.restart({ stage: this.stage });
+    if (won && !last) {
+      label = 'เดินทางต่อ';
+      next = () => this.scene.restart({ stage: this.stage + 1 });
+      const reward = this.m.reward && ITEMS[this.m.reward];
+      if (reward && !this.registry.get('items').includes(this.m.reward)) {
+        this.registry.set('items', [...this.registry.get('items'), this.m.reward]);
+        this.time.delayedCall(700, () => this.showReward(reward));
+      }
+    } else if (won && last) {
+      label = 'เริ่มตำราใหม่';
+      this.add.text(180, 350, 'จบเดโม ขอบคุณที่ลองเล่น', { ...FONT, fontSize: '16px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+      next = () => { this.registry.set('items', [...STARTING_ITEMS]); this.scene.start('Title'); };
+    }
     this.pixelPanel(this.add.graphics(), 180, BTN_Y, 240, 90, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
-    this.add.image(110, BTN_Y, 'icon_retry').setScale(4);
-    this.add.text(135, BTN_Y, 'ตั้งจิตใหม่', { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5);
+    this.add.image(100, BTN_Y, 'icon_retry').setScale(4);
+    this.add.text(125, BTN_Y, label, { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5);
     const r = this.add.zone(180, BTN_Y, 240, 90).setInteractive({ useHandCursor: true });
-    r.on('pointerdown', () => { play('click'); this.scene.restart(); });
+    r.on('pointerdown', () => { play('click'); next(); });
+  }
+
+  // Small popup: "ได้รับของขลัง" with the item icon.
+  showReward(item) {
+    let y = this.cardHeader(this.openCard(), item.icon, 4, item.name, 'ได้รับของขลัง!');
+    y = this.skillRows(y, SKILLS[item.skill]);
+    this.finishCard(y);
+    this.card.y = 60; // top of the screen — the ghost is gone by now
+    play('win');
   }
 }

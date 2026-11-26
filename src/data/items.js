@@ -3,8 +3,12 @@
 // Names/lore are placeholders — story comes later.
 export const ITEMS = {
   knife: {
-    name: 'มีดหมอ', icon: 'item_knife', skill: 'cut',
+    name: 'มีดหมอ', icon: 'item_knife', hand: 'hand_knife', skill: 'cut',
     lore: 'มีดด้ามไม้ใบสั้นลงอักขระ ของประจำตัวหมอผี',
+  },
+  takrut: {
+    name: 'ตะกรุด', icon: 'item_takrut', hand: 'hand_takrut', skill: 'ward',
+    lore: 'แผ่นโลหะลงอักขระม้วนเป็นหลอด ห้อยคอกันภัย',
   },
 };
 

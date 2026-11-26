@@ -8,3 +8,8 @@ export const ZOOM = Math.min(4, Math.max(1, Math.ceil(fit * (window.devicePixelR
 export function setupCamera(scene) {
   scene.cameras.main.setZoom(ZOOM).centerOn(W / 2, H / 2);
 }
+
+// UI font. ?font=Mitr (etc.) in the URL overrides it — handy for comparing fonts.
+const FONTS = { 'Chakra Petch': true, Mitr: true, Kanit: true };
+const requested = new URLSearchParams(window.location.search).get('font');
+export const FONT_FAMILY = requested && FONTS[requested] ? `"${requested}"` : 'sans-serif';

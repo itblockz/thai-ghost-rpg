@@ -3,10 +3,10 @@ import { MONSTERS } from '../data/monsters.js';
 import { ITEMS, STARTING_ITEMS } from '../data/items.js';
 import { SKILLS } from '../data/skills.js';
 import { registerSprites } from '../art/sprites.js';
-import { ZOOM, setupCamera } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
 
-const FONT = { fontFamily: 'sans-serif', color: '#fff', resolution: ZOOM };
+const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM };
 const MX = 180, MY = 200; // monster position
 const HX = 300, HY = 436; // first-person hand (bottom of battle area)
 const BTN_Y = 505;

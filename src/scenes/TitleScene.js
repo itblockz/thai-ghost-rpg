@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { unlockAudio, play } from '../audio/sfx.js';
 
-const FONT = { fontFamily: 'sans-serif', color: '#fff', resolution: ZOOM };
+const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM };
 
 // Tap-to-start screen: also unlocks audio on iOS.
 export class TitleScene extends Phaser.Scene {

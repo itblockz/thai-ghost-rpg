@@ -6,6 +6,9 @@ import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, currentTeam } from '../flow.js';
 
+// How each unit travels to its target: dash (default), hop, float.
+const MOTION = { kongkoi: 'hop', krasue: 'float' };
+
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const ENEMY_Y = 140;   // enemy sprite centre
 const ALLY_Y = 345;    // retainer sprite centre
@@ -432,8 +435,24 @@ export class BattleScene extends Phaser.Scene {
           const ghost = this.add.image(sp.x, sp.y, sp.texture.key).setScale(sp.scaleX, sp.scaleY).setAlpha(0.35).setTint(enemy ? 0xff6080 : 0xffe08a).setDepth(sp.depth - 0.1);
           this.tweens.add({ targets: ghost, alpha: 0, duration: 200, onComplete: () => ghost.destroy() });
         } });
+        const style = MOTION[user.id] || 'dash';
+        const to = { x: user.x + dx, y: user.y + dy };
+        let move;
+        if (style === 'hop') {
+          // ผีกองกอย: one big arcing leap, landing claws-first
+          const p = { t: 0 };
+          move = { targets: p, t: 1, duration: 260, ease: 'Sine.inOut',
+            onUpdate: () => { sp.setPosition(user.x + dx * p.t, user.y + dy * p.t - Math.sin(p.t * Math.PI) * 70); sp.setAngle((enemy ? 1 : -1) * 20 * Math.sin(p.t * Math.PI)); } };
+        } else if (style === 'float') {
+          // กระสือ: glides in on a wavering S-curve, then snaps forward
+          const p = { t: 0 };
+          move = { targets: p, t: 1, duration: 420, ease: 'Quad.in',
+            onUpdate: () => sp.setPosition(user.x + dx * p.t + Math.sin(p.t * Math.PI * 2) * 30, user.y + dy * p.t) };
+        } else {
+          move = { targets: sp, x: to.x, y: to.y, scaleX: sx * 0.9, scaleY: sx * 1.15, duration: 110, ease: 'Cubic.in' };
+        }
         this.tweens.add({
-          targets: sp, x: user.x + dx, y: user.y + dy, scaleX: sx * 0.9, scaleY: sx * 1.15, duration: 110, ease: 'Cubic.in',
+          ...move,
           onComplete: () => {
             trail.remove();
             sp.setScale(sx * 1.1);
@@ -451,7 +470,7 @@ export class BattleScene extends Phaser.Scene {
             }
             // 4) recovery: hold for a beat, then hop home and settle
             this.time.delayedCall(kind === 'frenzy' ? 380 : 90, () => this.tweens.add({
-              targets: sp, x: user.x, y: user.y, scaleX: sx, scaleY: sx, duration: 260, ease: 'Back.out',
+              targets: sp, x: user.x, y: user.y, scaleX: sx, scaleY: sx, angle: 0, duration: 260, ease: 'Back.out',
             }));
           },
         });

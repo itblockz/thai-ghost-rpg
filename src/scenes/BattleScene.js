@@ -417,23 +417,45 @@ export class BattleScene extends Phaser.Scene {
     }
     if (kind === 'spit') return this.animSpit(user, target, onHit);
     if (kind === 'ram') return this.animRam(user, target, onHit);
-    const dx = (target.x - user.x) * 0.35, dy = (target.y - user.y) * 0.35;
-    let hit = false; // onYoyo fires once per tweened property — only hit once
+    const sp = user.sprite, enemy = user.side === 'enemy';
+    const dx = (target.x - user.x) * 0.55, dy = (target.y - user.y) * 0.55;
+    const len = Math.hypot(dx, dy) || 1;
+    const back = { x: user.x - dx / len * 14, y: user.y - dy / len * 14 };
+    const sx = user.scale;
+    // 1) anticipation: pull back and squash
     this.tweens.add({
-      targets: user.sprite, x: user.x + dx, y: user.y + dy, scale: user.scale * (user.side === 'enemy' ? 1.25 : 1.15),
-      duration: 150, ease: 'Cubic.in', yoyo: true,
-      onStart: () => play(user.side === 'enemy' ? 'laugh' : 'slash'),
-      onYoyo: () => {
-        if (hit) return;
-        hit = true;
-        if (kind === 'bite') this.fxBite(target);
-        else if (kind === 'claw') this.fxClaw(target);
-        else if (kind === 'frenzy') return this.fxFrenzy(target, onHit);
-        else this.fxSlash(target);
-        if (target.side === 'ally') play('hurt');
-        onHit();
+      targets: sp, x: back.x, y: back.y, scaleX: sx * 1.15, scaleY: sx * 0.85, duration: 180, ease: 'Sine.out',
+      onComplete: () => {
+        play(enemy ? 'laugh' : 'slash');
+        // 2) dash: stretched along the move, leaving after-images
+        const trail = this.time.addEvent({ delay: 25, repeat: 4, callback: () => {
+          const ghost = this.add.image(sp.x, sp.y, sp.texture.key).setScale(sp.scaleX, sp.scaleY).setAlpha(0.35).setTint(enemy ? 0xff6080 : 0xffe08a).setDepth(sp.depth - 0.1);
+          this.tweens.add({ targets: ghost, alpha: 0, duration: 200, onComplete: () => ghost.destroy() });
+        } });
+        this.tweens.add({
+          targets: sp, x: user.x + dx, y: user.y + dy, scaleX: sx * 0.9, scaleY: sx * 1.15, duration: 110, ease: 'Cubic.in',
+          onComplete: () => {
+            trail.remove();
+            sp.setScale(sx * 1.1);
+            // 3) impact: effect, flash, knockback, then a brief freeze (hit-stop)
+            const k = { x: target.x + dx / len * 16, y: target.y + dy / len * 16 };
+            if (kind === 'frenzy') {
+              this.fxFrenzy(target, onHit);
+            } else {
+              if (kind === 'bite') this.fxBite(target);
+              else if (kind === 'claw') this.fxClaw(target);
+              else this.fxSlash(target);
+              if (target.side === 'ally') play('hurt');
+              this.tweens.add({ targets: target.sprite, x: k.x, y: k.y, duration: 70, yoyo: true, ease: 'Quad.out', onComplete: () => target.sprite.setPosition(target.x, target.y) });
+              onHit();
+            }
+            // 4) recovery: hold for a beat, then hop home and settle
+            this.time.delayedCall(kind === 'frenzy' ? 380 : 90, () => this.tweens.add({
+              targets: sp, x: user.x, y: user.y, scaleX: sx, scaleY: sx, duration: 260, ease: 'Back.out',
+            }));
+          },
+        });
       },
-      onComplete: () => user.sprite.setPosition(user.x, user.y),
     });
   }
 

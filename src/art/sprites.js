@@ -35,5 +35,6 @@ export function registerSprites(scene) {
       if (PALETTE[ch]) { ctx.fillStyle = PALETTE[ch]; ctx.fillRect(x, y, 1, 1); }
     }));
     tex.refresh();
+    tex.setFilter(1); // NEAREST: keep pixel art crisp while text stays smooth
   }
 }

@@ -1,9 +1,8 @@
 // Ghosts use the same skills as the player (see skills.js).
 // Each turn a ghost uses its strongest skill that is off cooldown.
-// reward: item the player receives after defeating this ghost.
 export const MONSTERS = {
   kongkoi: {
-    name: 'ผีกองกอย', sprite: 'kongkoi', hp: 18, skills: ['scratch'], reward: 'takrut',
+    name: 'ผีกองกอย', sprite: 'kongkoi', hp: 18, skills: ['scratch'],
     lore: 'ผีป่าตัวเล็ก ขาเดียว ชอบแกล้งคนหลงป่า',
   },
   krasue: {
@@ -12,5 +11,8 @@ export const MONSTERS = {
   },
 };
 
-// Fight order for the demo.
-export const STAGES = ['kongkoi', 'krasue'];
+// Demo journey: each stage = story before the fight, the ghost, story after.
+export const STAGES = [
+  { before: 'forest', monster: 'kongkoi', after: 'afterKongkoi' },
+  { before: 'village', monster: 'krasue', after: 'ending' },
+];

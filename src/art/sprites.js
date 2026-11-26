@@ -390,9 +390,88 @@ function drawBackdrop(scene) {
   tex.setFilter(1);
 }
 
+
+/** Story illustrations (procedural pixel art). */
+function canvasArt(scene, key, W, H, draw) {
+  if (scene.textures.exists(key)) return;
+  const tex = scene.textures.createCanvas(key, W, H);
+  const c = tex.getContext();
+  const px = (x, y, col) => { c.fillStyle = col; c.fillRect(x, y, 1, 1); };
+  const rect = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+  draw(px, rect, W, H);
+  tex.refresh();
+  tex.setFilter(1);
+}
+
+function drawStoryArt(scene) {
+  // Empty temple pavilion at night, a lantern still glowing, an empty mat.
+  canvasArt(scene, 'art_shrine', 90, 70, (px, rect, W, H) => {
+    rect(0, 0, W, H, '#0a0814');
+    for (let y = 0; y < 30; y++) for (let x = 0; x < W; x++) if ((x * 13 + y * 7) % 53 === 0) px(x, y, '#3a3660');
+    // lantern glow
+    for (let y = -22; y <= 22; y++) for (let x = -22; x <= 22; x++) {
+      const d = Math.sqrt(x * x + y * y);
+      if (d < 22 && (d < 10 || (x + y) % 2 === 0)) px(45 + x, 34 + y, d < 10 ? '#3a2a18' : '#22180f');
+    }
+    // roof
+    for (let y = 0; y < 10; y++) rect(10 - y, 6 + y, W - 20 + 2 * y, 1, '#1a1020');
+    rect(0, 16, W, 3, '#2a1a24');
+    // pillars
+    rect(8, 19, 5, 40, '#2a1a24'); rect(W - 13, 19, 5, 40, '#2a1a24');
+    // floor
+    rect(0, 59, W, 11, '#1c1418');
+    for (let x = 0; x < W; x += 6) rect(x, 59, 1, 11, '#140e12');
+    // empty mat
+    rect(32, 54, 26, 5, '#4a3a22'); rect(32, 54, 26, 1, '#5e4a2c');
+    // lantern
+    rect(44, 19, 1, 8, '#555'); rect(42, 27, 5, 7, '#d08a30'); rect(43, 28, 3, 5, '#ffd070'); rect(42, 34, 5, 1, '#7a4a20');
+    // fallen note on the mat
+    rect(48, 52, 5, 3, '#d8c8a0'); px(49, 53, '#5a4a3a'); px(51, 53, '#5a4a3a');
+  });
+
+  // Torn paper note with scribbled lines.
+  canvasArt(scene, 'art_note', 40, 30, (px, rect, W, H) => {
+    for (let y = 2; y < H - 2; y++) for (let x = 3; x < W - 3; x++) {
+      const torn = (x === 3 || x === W - 4) && (y * 7) % 5 < 2;
+      const tornTop = y === 2 && (x * 5) % 7 < 3;
+      if (!torn && !tornTop) px(x, y, (x + y) % 9 === 0 ? '#c8b890' : '#dccca0');
+    }
+    for (let line = 0; line < 5; line++) {
+      const y = 7 + line * 4, len = 26 - (line === 4 ? 12 : (line * 3) % 7);
+      for (let x = 7; x < 7 + len; x++) if ((x * 3 + line) % 5 !== 0) px(x, y + ((x + line) % 3 === 0 ? -1 : 0), '#3a2a20');
+    }
+    // dark stain
+    for (let y = 18; y < 25; y++) for (let x = 26; x < 33; x++) if ((x - 29) ** 2 + (y - 21) ** 2 < 10) px(x, y, '#6a2a20');
+  });
+
+  // Silent village on stilts; a red light glowing above the trees.
+  canvasArt(scene, 'art_village', 90, 70, (px, rect, W, H) => {
+    for (let y = 0; y < H; y++) rect(0, y, W, 1, y < 20 ? '#0b0820' : y < 40 ? '#140c2a' : '#1a1030');
+    // red glow
+    for (let y = -14; y <= 14; y++) for (let x = -14; x <= 14; x++) {
+      const d = Math.sqrt(x * x + y * y);
+      if (d < 14 && (d < 4 || (x + y) % 2 === 0)) px(68 + x, 14 + y, d < 3 ? '#ff6688' : d < 7 ? '#a01830' : '#4a0c20');
+    }
+    // trees
+    const tree = (cx, top) => { for (let y = top; y < 52; y++) { const h = Math.min(6, Math.floor((y - top) / 2) + 1); rect(cx - h, y, 2 * h + 1, 1, '#06040c'); } };
+    tree(8, 18); tree(30, 24); tree(56, 22); tree(80, 20);
+    // stilt houses
+    const house = (x, w) => {
+      for (let y = 0; y < 8; y++) rect(x - y, 30 + y, w + 2 * y, 1, '#0d0912'); // roof
+      rect(x - 4, 38, w + 8, 10, '#120d18');
+      rect(x + 2, 41, 4, 4, '#05030a'); rect(x + w - 6, 41, 4, 4, '#05030a'); // shut windows
+      for (let i = 0; i < 4; i++) rect(x - 3 + i * Math.floor((w + 6) / 3), 48, 1, 8, '#0d0912'); // stilts
+    };
+    house(12, 14); house(44, 16); house(72, 12);
+    rect(0, 56, W, 14, '#0c140e');
+    for (let x = 0; x < W; x++) if ((x * 7) % 11 === 0) px(x, 56, '#1c2a1c');
+  });
+}
+
 /** Register every sprite as a Phaser texture (1px per cell; scale when displaying). */
 export function registerSprites(scene) {
   drawBackdrop(scene);
+  drawStoryArt(scene);
   for (const [key, rows] of Object.entries(SPRITES)) {
     if (scene.textures.exists(key)) continue;
     const tex = scene.textures.createCanvas(key, rows[0].length, rows.length);

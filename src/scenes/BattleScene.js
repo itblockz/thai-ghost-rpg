@@ -5,6 +5,7 @@ import { SKILLS, skillDamage } from '../data/skills.js';
 import { registerSprites } from '../art/sprites.js';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
+import { afterVictory } from '../flow.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const MX = 180, MY = 200; // monster position
@@ -24,7 +25,7 @@ export class BattleScene extends Phaser.Scene {
     // Progress lives in the registry: which stage we're on and which items we own.
     this.stage = data?.stage ?? 0;
     if (!this.registry.get('items')) this.registry.set('items', [...STARTING_ITEMS]);
-    const def = MONSTERS[STAGES[this.stage]];
+    const def = MONSTERS[STAGES[this.stage].monster];
     // Both sides share the same shape: hp, skills, cooldowns, block.
     // pending: a wound-up skill waiting to finish; takenMult: damage multiplier while winding up.
     this.m = { ...def, maxHp: def.hp, cd: {}, block: false, pending: null, takenMult: 1 };
@@ -506,35 +507,13 @@ export class BattleScene extends Phaser.Scene {
     if (this.hint) this.hint.setVisible(false);
     this.drawReticle(false);
     this.mSkillTiles.forEach(t => { t.g.setVisible(false); t.icon.setVisible(false); t.cdText.setVisible(false); });
-    // What happens next: retry this ghost, go to the next one, or finish the demo.
-    const last = this.stage >= STAGES.length - 1;
-    let label = 'ตั้งจิตใหม่', next = () => this.scene.restart({ stage: this.stage });
-    if (won && !last) {
-      label = 'เดินทางต่อ';
-      next = () => this.scene.restart({ stage: this.stage + 1 });
-      const reward = this.m.reward && ITEMS[this.m.reward];
-      if (reward && !this.registry.get('items').includes(this.m.reward)) {
-        this.registry.set('items', [...this.registry.get('items'), this.m.reward]);
-        this.time.delayedCall(700, () => this.showReward(reward));
-      }
-    } else if (won && last) {
-      label = 'เริ่มตำราใหม่';
-      this.add.text(180, 350, 'จบเดโม ขอบคุณที่ลองเล่น', { ...FONT, fontSize: '16px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
-      next = () => { this.registry.set('items', [...STARTING_ITEMS]); this.scene.start('Title'); };
-    }
+    // Win → continue the journey (story pages). Lose → retry this ghost.
+    const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
+    const next = won ? () => afterVictory(this, this.stage) : () => this.scene.restart({ stage: this.stage });
     this.pixelPanel(this.add.graphics(), 180, BTN_Y, 240, 90, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
     this.add.image(100, BTN_Y, 'icon_retry').setScale(4);
     this.add.text(125, BTN_Y, label, { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5);
     const r = this.add.zone(180, BTN_Y, 240, 90).setInteractive({ useHandCursor: true });
     r.on('pointerdown', () => { play('click'); next(); });
-  }
-
-  // Small popup: "ได้รับของขลัง" with the item icon.
-  showReward(item) {
-    let y = this.cardHeader(this.openCard(), item.icon, 4, item.name, 'ได้รับของขลัง!');
-    y = this.skillRows(y, SKILLS[item.skill]);
-    this.finishCard(y);
-    this.card.y = 60; // top of the screen — the ghost is gone by now
-    play('win');
   }
 }

@@ -57,19 +57,26 @@ export class BattleScene extends Phaser.Scene {
 
     // First-time hint, hidden forever after the first attack.
     this.hint = storageGet('seenTapGhost') ? null
-      : this.add.text(MX, 312, 'แตะผีเพื่อโจมตี', { ...FONT, fontSize: '16px', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+      : this.add.text(MX, 312, '', { ...FONT, fontSize: '16px', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
 
     this.card = this.add.container(0, 0).setDepth(10).setVisible(false);
     // Tapping empty space closes the info panel.
     this.input.on('pointerdown', (_p, over) => { if (!over.length) this.hideCard(); });
 
-    this.selected = SKILLS[items[0].skill] && items[0].skill; // basic skill pre-selected
+    this.selected = items[0].skill; // basic skill pre-selected
+    this.updateHint();
     this.refresh();
   }
 
   // ---------- input ----------
+  // Generic wording: the target may not always be a ghost.
+  updateHint() {
+    if (this.hint) this.hint.setText(`แตะเป้าหมายเพื่อใช้ "${SKILLS[this.selected].name}"`);
+  }
+
   select(skillId) {
     this.selected = skillId;
+    this.updateHint();
     this.btns.forEach(b => this.drawBtn(b));
     const b = this.btns.find(x => x.skillId === skillId);
     this.showItemInfo(b.item);

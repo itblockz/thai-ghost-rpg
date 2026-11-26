@@ -10,7 +10,7 @@ const FONT = { fontFamily: 'sans-serif', color: '#fff', resolution: ZOOM };
 const MX = 180, MY = 200; // monster position
 const HX = 300, HY = 436; // first-person hand (bottom of battle area)
 const BTN_Y = 505;
-const LONG_PRESS_MS = 400;
+const PANEL_BOTTOM = 436; // info panel sits just above the skill buttons
 
 function storageGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function storageSet(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } }
@@ -31,9 +31,14 @@ export class BattleScene extends Phaser.Scene {
     this.glow = this.add.circle(MX, MY, 95, 0xff3060, 0.12);
     this.mSprite = this.add.image(MX, MY, def.sprite).setScale(11);
     this.tweens.add({ targets: [this.mSprite, this.glow], y: '-=8', yoyo: true, repeat: -1, duration: 900, ease: 'Sine.inOut' });
-    this.onLongPress(this.add.zone(MX, MY, 180, 190), () => this.showMonsterCard());
+    // Tap the ghost = use the selected skill on it.
+    this.add.zone(MX, MY, 190, 200).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.useSelectedOn(this.m));
+    this.reticle = this.add.graphics();
+    this.tweens.add({ targets: this.reticle, alpha: 0.35, yoyo: true, repeat: -1, duration: 500 });
 
     this.mBar = this.bar(30, 20, def.name);
+    // Ghost's skills as small tiles under its HP bar (tap to read).
+    this.mSkillTiles = this.m.skills.map((id, i) => this.monsterSkillTile(48 + i * 46, 84, id));
     this.pBar = this.bar(30, 592, this.p.name);
 
     // First-person view: our hand holding the knife.
@@ -50,33 +55,32 @@ export class BattleScene extends Phaser.Scene {
     const n = items.length, w = n === 1 ? 220 : 155;
     this.btns = items.map((item, i) => this.itemBtn(180 + (i - (n - 1) / 2) * 170, BTN_Y, item, w));
 
-    // First-time hint, hidden forever after the player long-presses once.
-    this.hint = storageGet('seenLongPress') ? null
-      : this.add.text(180, 579, 'กดค้างเพื่อดูรายละเอียด', { ...FONT, fontSize: '12px', color: '#aaaacc' }).setOrigin(0.5);
+    // First-time hint, hidden forever after the first attack.
+    this.hint = storageGet('seenTapGhost') ? null
+      : this.add.text(MX, 312, 'แตะผีเพื่อโจมตี', { ...FONT, fontSize: '16px', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
 
     this.card = this.add.container(0, 0).setDepth(10).setVisible(false);
+    // Tapping empty space closes the info panel.
+    this.input.on('pointerdown', (_p, over) => { if (!over.length) this.hideCard(); });
+
+    this.selected = SKILLS[items[0].skill] && items[0].skill; // basic skill pre-selected
     this.refresh();
   }
 
   // ---------- input ----------
-  // Tap → onTap, hold → onHold (card stays while finger is down).
-  onLongPress(obj, onHold, onTap) {
-    obj.setInteractive({ useHandCursor: true });
-    let timer = null, held = false;
-    obj.on('pointerdown', () => {
-      held = false;
-      timer = this.time.delayedCall(LONG_PRESS_MS, () => {
-        held = true;
-        onHold();
-        if (this.hint) { this.hint.destroy(); this.hint = null; storageSet('seenLongPress', '1'); }
-      });
-    });
-    const release = (tapped) => {
-      if (timer) { timer.remove(); timer = null; }
-      if (held) { this.hideCard(); held = false; } else if (tapped && onTap) onTap();
-    };
-    obj.on('pointerup', () => release(true));
-    obj.on('pointerout', () => release(false));
+  select(skillId) {
+    this.selected = skillId;
+    this.btns.forEach(b => this.drawBtn(b));
+    const b = this.btns.find(x => x.skillId === skillId);
+    this.showItemInfo(b.item);
+  }
+
+  useSelectedOn(target) {
+    if (this.busy || !this.selected || this.p.cd[this.selected]) return;
+    if (target !== this.m) return; // only enemy-targeted skills for now
+    this.hideCard();
+    if (this.hint) { this.hint.destroy(); this.hint = null; storageSet('seenTapGhost', '1'); }
+    this.playerTurn(this.selected);
   }
 
   // ---------- UI ----------
@@ -101,11 +105,21 @@ export class BattleScene extends Phaser.Scene {
     const hint = this.add.text(x - 2, y + 47, dmg != null ? String(dmg) : '', { ...FONT, fontSize: '17px', color: '#d0d0ee' }).setOrigin(0, 0.5);
     const cdText = this.add.text(x, y, '', { ...FONT, fontSize: '56px', fontStyle: 'bold' }).setOrigin(0.5);
     const b = { item, skillId: item.skill, zone, g, x, y, w, h: 130, parts: [icon, name, dmgIcon, hint], cdText };
-    this.onLongPress(zone, () => this.showItemCard(item), () => {
-      if (this.busy || this.p.cd[b.skillId]) return;
-      this.playerTurn(b.skillId);
+    zone.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      if (this.busy || this.p.cd[b.skillId]) { this.showItemInfo(item); return; }
+      this.select(b.skillId);
     });
     return b;
+  }
+
+  monsterSkillTile(x, y, id) {
+    const s = SKILLS[id];
+    const g = this.add.graphics();
+    this.pixelPanel(g, x, y, 38, 38, 0x2a1a2e, 0xaa6677, 3);
+    const icon = this.add.image(x, y, s.icon).setScale(3);
+    const cdText = this.add.text(x, y, '', { ...FONT, fontSize: '20px', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+    this.add.zone(x, y, 42, 42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(s, 'สกิลของผี'));
+    return { id, icon, cdText };
   }
 
   // Panel with notched (pixel-style) corners.
@@ -120,7 +134,8 @@ export class BattleScene extends Phaser.Scene {
   drawBtn(b) {
     const cd = this.p.cd[b.skillId] || 0;
     b.g.clear();
-    this.pixelPanel(b.g, b.x, b.y, b.w, b.h, cd ? 0x1e1e2a : 0x33334d, cd ? 0x444455 : 0x8888cc);
+    const sel = this.selected === b.skillId && !cd;
+    this.pixelPanel(b.g, b.x, b.y, b.w, b.h, cd ? 0x1e1e2a : sel ? 0x3d3d5e : 0x33334d, cd ? 0x444455 : sel ? 0xffdd55 : 0x8888cc);
     b.parts.forEach(p => p.setAlpha(cd ? 0.25 : 1));
     b.cdText.setText(cd ? String(cd) : '');
   }
@@ -128,27 +143,29 @@ export class BattleScene extends Phaser.Scene {
   // ---------- detail cards ----------
   // Card layout: header (icon + name + type), then stat rows (icon · label · value), then lore.
   // Keeps text short and puts numbers in a right-aligned column so they're easy to scan.
+  // The info panel is built from y=0 down, then the whole container is moved so its
+  // bottom sits just above the skill buttons (it never covers the buttons).
   openCard() {
     this.card.removeAll(true);
     this.cardBg = this.add.graphics();
-    this.card.add([this.add.rectangle(180, 320, 360, 640, 0x000000, 0.65), this.cardBg]).setVisible(true);
-    return 150; // card top
+    this.card.add(this.cardBg).setVisible(true);
+    return 0;
   }
 
-  // Draw the panel once the content height is known.
   finishCard(bottom) {
-    const top = 150, h = bottom - top + 14;
-    this.pixelPanel(this.cardBg, 180, top + h / 2, 300, h, 0x1c1c30, 0xccccee);
+    const h = bottom + 10;
+    this.pixelPanel(this.cardBg, 180, h / 2, 300, h, 0x1c1c30, 0xccccee);
+    this.card.y = PANEL_BOTTOM - h;
   }
 
   cardHeader(top, iconKey, iconScale, title, type) {
     this.card.add([
-      this.add.image(76, top + 48, iconKey).setScale(iconScale),
-      this.add.text(124, top + 36, title, { ...FONT, fontSize: '24px', fontStyle: 'bold' }).setOrigin(0, 0.5),
-      this.add.text(124, top + 64, type, { ...FONT, fontSize: '13px', color: '#9999bb' }).setOrigin(0, 0.5),
-      this.add.rectangle(180, top + 96, 260, 2, 0x55557a),
+      this.add.image(70, top + 34, iconKey).setScale(iconScale),
+      this.add.text(108, top + 24, title, { ...FONT, fontSize: '21px', fontStyle: 'bold' }).setOrigin(0, 0.5),
+      this.add.text(108, top + 47, type, { ...FONT, fontSize: '13px', color: '#9999bb' }).setOrigin(0, 0.5),
+      this.add.rectangle(180, top + 66, 260, 2, 0x55557a),
     ]);
-    return top + 112;
+    return top + 74;
   }
 
   // One row: [icon] label ........ value
@@ -161,14 +178,6 @@ export class BattleScene extends Phaser.Scene {
     return y + 32;
   }
 
-  cardLore(y, lore) {
-    if (!lore) return y;
-    this.card.add(this.add.rectangle(180, y + 4, 260, 2, 0x55557a));
-    const t = this.add.text(180, y + 16, lore, { ...FONT, fontSize: '13px', color: '#8f8fb0', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5, 0);
-    this.card.add(t);
-    return y + 24 + t.height;
-  }
-
   skillRows(y, skill) {
     for (const e of skill.effects) if (e.damage != null) y = this.cardRow(y, 'icon_dmg', 'ความเสียหาย', String(e.damage), '#ffdd55');
     return this.cardRow(y, 'icon_clock', 'คูลดาวน์', skill.cooldown ? `${skill.cooldown} ตา` : 'ไม่มี');
@@ -176,23 +185,15 @@ export class BattleScene extends Phaser.Scene {
 
   hideCard() { this.card.setVisible(false); this.card.removeAll(true); }
 
-  showItemCard(item) {
+  showItemInfo(item) {
     const skill = SKILLS[item.skill];
-    let y = this.cardHeader(this.openCard(), item.icon, 5, item.name, `ของขลัง · สกิล "${skill.name}"`);
-    y = this.skillRows(y, skill);
-    this.finishCard(this.cardLore(y + 6, item.lore));
+    let y = this.cardHeader(this.openCard(), item.icon, 4, `${item.name} · ${skill.name}`, 'ของขลัง');
+    this.finishCard(this.skillRows(y, skill));
   }
 
-  showMonsterCard() {
-    const m = this.m;
-    let y = this.cardHeader(this.openCard(), m.sprite, 3.5, m.name, 'ผี');
-    y = this.cardRow(y, 'icon_heart', 'HP', `${Math.max(0, m.hp)}/${m.maxHp}`, '#ff8899');
-    for (const id of m.skills) {
-      const s = SKILLS[id];
-      this.card.add(this.add.text(60, y + 14, s.name, { ...FONT, fontSize: '17px', fontStyle: 'bold' }).setOrigin(0, 0.5));
-      y = this.skillRows(y + 30, s);
-    }
-    this.finishCard(this.cardLore(y + 6, m.lore));
+  showSkillInfo(skill, type) {
+    let y = this.cardHeader(this.openCard(), skill.icon, 4, skill.name, type);
+    this.finishCard(this.skillRows(y, skill));
   }
 
   // ---------- feedback ----------
@@ -212,6 +213,24 @@ export class BattleScene extends Phaser.Scene {
     this.setBar(this.mBar, this.m);
     this.setBar(this.pBar, this.p);
     this.btns.forEach(b => this.drawBtn(b));
+    this.mSkillTiles.forEach(t => {
+      const cd = this.m.cd[t.id] || 0;
+      t.icon.setAlpha(cd ? 0.3 : 1);
+      t.cdText.setText(cd ? String(cd) : '');
+    });
+    this.drawReticle(!this.busy);
+  }
+
+  // Corner brackets around the ghost: "tap here".
+  drawReticle(show) {
+    const g = this.reticle.clear();
+    if (!show) return;
+    const l = MX - 85, r = MX + 85, t = MY - 95, b = MY + 95, k = 22;
+    g.fillStyle(0xffdd55);
+    [[l, t, 1, 1], [r, t, -1, 1], [l, b, 1, -1], [r, b, -1, -1]].forEach(([x, y, sx, sy]) => {
+      g.fillRect(Math.min(x, x + sx * k), y - (sy < 0 ? 4 : 0), k, 4);
+      g.fillRect(x - (sx < 0 ? 4 : 0), Math.min(y, y + sy * k), 4, k);
+    });
   }
 
   // ---------- skills (shared by both sides) ----------
@@ -234,6 +253,7 @@ export class BattleScene extends Phaser.Scene {
   // ---------- turns ----------
   playerTurn(skillId) {
     this.busy = true;
+    this.drawReticle(false);
     this.animSlash(() => {
       const skill = this.applySkill(this.p, this.m, skillId);
       const dmg = skill.effects.reduce((s, e) => s + (e.damage || 0), 0);
@@ -254,6 +274,8 @@ export class BattleScene extends Phaser.Scene {
       }
       this.tickCooldowns(this.p);
       this.tickCooldowns(this.m);
+      if (this.p.cd[this.selected]) this.selected = this.btns[0].skillId; // back to the basic skill
+      this.busy = this.p.hp <= 0;
       this.refresh();
       if (this.p.hp <= 0) return this.time.delayedCall(900, () => this.end(false));
       this.busy = false;
@@ -318,6 +340,8 @@ export class BattleScene extends Phaser.Scene {
     this.add.text(180, 310, won ? 'ชนะ!' : 'แพ้...', { ...FONT, fontSize: '40px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
     this.btns.forEach(b => { b.zone.disableInteractive(); b.g.setVisible(false); b.parts.forEach(p => p.setVisible(false)); b.cdText.setVisible(false); });
     if (this.hint) this.hint.setVisible(false);
+    this.drawReticle(false);
+    this.mSkillTiles.forEach(t => { t.icon.setVisible(false); t.cdText.setVisible(false); });
     this.pixelPanel(this.add.graphics(), 180, BTN_Y, 240, 90, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
     this.add.image(110, BTN_Y, 'icon_retry').setScale(4);
     this.add.text(135, BTN_Y, 'สู้อีกครั้ง', { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5);

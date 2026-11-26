@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { STORY } from '../data/story.js';
-import { ITEMS } from '../data/items.js';
+import { ALLIES } from '../data/units.js';
 import { play } from '../audio/sfx.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
@@ -58,12 +58,12 @@ export class StoryScene extends Phaser.Scene {
       this.art.setVisible(false);
     }
 
-    // item gift
+    // new retainer
     this.gift.setText('');
-    if (page.give) {
-      const items = this.registry.get('items') || [];
-      if (!items.includes(page.give)) this.registry.set('items', [...items, page.give]);
-      this.gift.setText(`ได้รับของขลัง: ${ITEMS[page.give].name}`);
+    if (page.recruit) {
+      const team = this.registry.get('team') || [];
+      if (!team.includes(page.recruit)) this.registry.set('team', [...team, page.recruit]);
+      this.gift.setText(`ได้บริวาร: ${ALLIES[page.recruit].name}`);
       play('ward');
     }
 

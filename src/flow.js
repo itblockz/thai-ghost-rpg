@@ -1,10 +1,9 @@
-import { STAGES } from './data/monsters.js';
-import { STARTING_ITEMS } from './data/items.js';
+import { STAGES, STARTING_TEAM } from './data/units.js';
 
 // Journey flow: Title → intro → (story before → fight → story after) per stage → Title.
 
 export function startNewGame(scene) {
-  scene.registry.set('items', [...STARTING_ITEMS]);
+  scene.registry.set('team', []);
   scene.scene.start('Story', { keys: ['intro', STAGES[0].before], next: { scene: 'Battle', data: { stage: 0 } } });
 }
 
@@ -13,4 +12,9 @@ export function afterVictory(scene, i) {
   const next = STAGES[i + 1];
   if (next) scene.scene.start('Story', { keys: [STAGES[i].after, next.before], next: { scene: 'Battle', data: { stage: i + 1 } } });
   else scene.scene.start('Story', { keys: [STAGES[i].after], next: { scene: 'Title' } });
+}
+
+export function currentTeam(scene) {
+  const team = scene.registry.get('team');
+  return team && team.length ? team : [...STARTING_TEAM];
 }

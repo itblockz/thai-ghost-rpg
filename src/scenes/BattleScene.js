@@ -1,17 +1,20 @@
 import Phaser from 'phaser';
-import { MONSTERS, STAGES } from '../data/monsters.js';
-import { ITEMS, STARTING_ITEMS } from '../data/items.js';
+import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillDamage } from '../data/skills.js';
 import { registerSprites } from '../art/sprites.js';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
-import { afterVictory } from '../flow.js';
+import { afterVictory, currentTeam } from '../flow.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
-const MX = 180, MY = 200; // monster position
-const HX = 300, HY = 436; // first-person hand (bottom of battle area)
-const BTN_Y = 505;
-const PANEL_BOTTOM = 436; // info panel sits just above the skill buttons
+const ENEMY_Y = 140;   // enemy sprite centre
+const ALLY_Y = 345;    // retainer sprite centre
+const BTN_Y = 505;     // skill buttons
+const PANEL_BOTTOM = 436;
+const THAI_LETTERS = ['ก', 'ข', 'ค'];
+
+// x positions for 1–3 units in a row
+const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : [65, 180, 295]);
 
 function storageGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function storageSet(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } }
@@ -22,174 +25,278 @@ export class BattleScene extends Phaser.Scene {
   create(data) {
     registerSprites(this);
     setupCamera(this);
-    // Progress lives in the registry: which stage we're on and which items we own.
     this.stage = data?.stage ?? 0;
-    if (!this.registry.get('items')) this.registry.set('items', [...STARTING_ITEMS]);
-    const def = MONSTERS[STAGES[this.stage].monster];
-    // Both sides share the same shape: hp, skills, cooldowns, block.
-    // pending: a wound-up skill waiting to finish; takenMult: damage multiplier while winding up.
-    this.m = { ...def, maxHp: def.hp, cd: {}, block: false, pending: null, takenMult: 1 };
-    this.p = { name: 'ศิษย์หมอผี', hp: 30, maxHp: 30, cd: {}, block: false, pending: null, takenMult: 1 };
-    this.busy = false;
+    const stage = STAGES[this.stage];
+    this.busy = true;
+    this.ended = false;
+    this.active = null;
 
     this.add.image(180, 0, 'bg_night').setOrigin(0.5, 0).setScale(4);
-    this.glow = this.add.circle(MX, MY, 95, 0xff3060, 0.12);
-    this.mSprite = this.add.image(MX, MY, def.sprite).setScale(11);
-    this.tweens.add({ targets: [this.mSprite, this.glow], y: '-=8', yoyo: true, repeat: -1, duration: 900, ease: 'Sine.inOut' });
-    // Tap the ghost = use the selected skill on it.
-    this.add.zone(MX, MY, 190, 200).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.useSelectedOn(this.m));
-    this.reticle = this.add.graphics();
+    this.add.rectangle(180, 540, 360, 200, 0x0b0b1a);
+    this.reticle = this.add.graphics().setDepth(4);
     this.tweens.add({ targets: this.reticle, alpha: 0.35, yoyo: true, repeat: -1, duration: 500 });
 
-    this.mBar = this.bar(30, 20, def.name);
-    // Ghost's skills as small tiles under its HP bar (tap to read).
-    this.mSkillTiles = this.m.skills.map((id, i) => this.monsterSkillTile(48 + i * 46, 84, id));
-    this.pBar = this.bar(30, 592, this.p.name);
-
-    // First-person view: our hand holding the knife.
-    this.hand = this.add.image(HX, HY, 'hand_knife').setOrigin(0.5, 1).setScale(7);
-    this.tweens.add({ targets: this.hand, y: HY + 6, yoyo: true, repeat: -1, duration: 1100, ease: 'Sine.inOut' });
-    // Left hand that pops up when using a self skill (e.g. takrut). Hidden below the screen.
-    this.offHand = this.add.image(70, HY + 140, 'hand_takrut').setOrigin(0.5, 1).setScale(7).setVisible(false);
-    this.wardGlow = this.add.rectangle(180, 220, 360, 440, 0xffd860, 0);
-    // Tap our own side (hand area / our HP bar) = use a self skill.
-    const self = () => this.useSelectedOn(this.p);
-    this.add.zone(180, 400, 360, 70).setInteractive({ useHandCursor: true }).on('pointerdown', self);
-    this.add.zone(180, 605, 330, 44).setInteractive({ useHandCursor: true }).on('pointerdown', self);
-    this.fxSlash = this.add.image(MX, MY, 'fx_slash').setScale(7).setAlpha(0);
-    this.fxClaw = this.add.image(170, 330, 'fx_claw').setScale(6).setAlpha(0);
+    // ----- units -----
+    const counts = {};
+    stage.enemies.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+    const seen = {};
+    const ex = slots(stage.enemies.length);
+    const eScale = stage.enemies.length === 1 ? 10 : stage.enemies.length === 2 ? 7 : 5;
+    this.enemies = stage.enemies.map((id, i) => {
+      const def = ENEMIES[id];
+      seen[id] = (seen[id] || 0) + 1;
+      const name = counts[id] > 1 ? `${def.name} ${THAI_LETTERS[seen[id] - 1]}` : def.name;
+      return this.makeUnit('enemy', id, def, name, ex[i], ENEMY_Y, eScale);
+    });
+    const team = currentTeam(this);
+    const ax = slots(team.length);
+    this.allies = team.map((id, i) => this.makeUnit('ally', id, ALLIES[id], ALLIES[id].name, ax[i], ALLY_Y, 5));
 
     const muteKey = () => (isMuted() ? 'icon_sound_off' : 'icon_sound_on');
-    const mute = this.add.image(338, 78, muteKey()).setScale(3.5).setInteractive({ useHandCursor: true });
+    const mute = this.add.image(342, 18, muteKey()).setScale(3).setInteractive({ useHandCursor: true });
     mute.on('pointerdown', () => { toggleMute(); mute.setTexture(muteKey()); });
 
-    const items = this.registry.get('items').map(id => ITEMS[id]);
-    const n = items.length, w = n === 1 ? 220 : 155;
-    this.btns = items.map((item, i) => this.itemBtn(180 + (i - (n - 1) / 2) * 170, BTN_Y, item, w));
-
-    // First-time hint, hidden forever after the first attack.
-    this.hint = storageGet('seenTapGhost') ? null
-      : this.add.text(MX, 312, '', { ...FONT, fontSize: '16px', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
-
+    this.turnText = this.add.text(180, 606, '', { ...FONT, fontSize: '14px', color: '#ccccee', align: 'center' }).setOrigin(0.5);
+    this.btns = [];
     this.card = this.add.container(0, 0).setDepth(10).setVisible(false);
-    // Tapping empty space closes the info panel.
     this.input.on('pointerdown', (_p, over) => { if (!over.length) this.hideCard(); });
 
-    this.selected = items[0].skill; // basic skill pre-selected
-    this.updateHint();
-    this.busy = true; // locked until the ghost has made its entrance
     this.refresh();
     this.intro(!!data?.retry);
   }
 
-  // Ghost entrance: darkness, the ghost emerges, its name appears, then the fight UI fades in.
-  // Tap to skip. Retries use a short fade only.
-  intro(short) {
-    const veil = this.add.rectangle(180, 320, 360, 640, 0x000000, 1).setDepth(20);
-    this.introDone = false; // scene instance is reused on restart
-    const introTweens = [];
-    const finish = () => {
-      if (this.introDone) return;
-      this.introDone = true;
-      this.time.removeAllEvents();
-      introTweens.forEach(t => t.stop());
-      this.tweens.killTweensOf([veil, this.banner, this.bannerSub].filter(Boolean));
-      this.mSprite.setDepth(0).setAlpha(1).setScale(11);
-      this.glow.setDepth(0).setAlpha(1);
-      this.banner?.destroy(); this.bannerSub?.destroy();
-      this.tweens.add({ targets: veil, alpha: 0, duration: 350, onComplete: () => veil.destroy() });
-      this.busy = false;
-      this.refresh();
+  // ---------- units ----------
+  makeUnit(side, id, def, name, x, y, scale) {
+    const u = {
+      side, id, def, name, x, y, scale,
+      hp: def.hp, maxHp: def.hp, skills: def.skills, cd: {}, block: false, pending: null, takenMult: 1, alive: true,
     };
-    if (short) return this.time.delayedCall(10, finish);
+    u.glow = this.add.circle(x, y, scale * 9, side === 'enemy' ? 0xff3060 : 0xffd860, side === 'enemy' ? 0.12 : 0);
+    u.sprite = this.add.image(x, y, def.sprite).setScale(scale);
+    this.tweens.add({ targets: [u.sprite, u.glow], y: y - (side === 'enemy' ? 7 : 3), yoyo: true, repeat: -1, duration: side === 'enemy' ? 900 : 700, ease: 'Sine.inOut', delay: x * 3 });
 
-    this.mSprite.setDepth(21).setAlpha(0).setScale(6);
-    this.glow.setDepth(21).setAlpha(0);
-    introTweens.push(
-      this.tweens.add({ targets: [this.mSprite, this.glow], alpha: 1, duration: 900, ease: 'Sine.in' }),
-      this.tweens.add({ targets: this.mSprite, scale: 11, duration: 1100, ease: 'Back.out' }),
-    );
-    this.time.delayedCall(350, () => play('laugh'));
-    this.time.delayedCall(700, () => {
-      this.banner = this.add.text(180, 335, `— ${this.m.name} —`, { ...FONT, fontSize: '34px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(22).setAlpha(0);
-      this.bannerSub = this.add.text(180, 380, this.m.lore || '', { ...FONT, fontSize: '15px', color: '#ccccee', align: 'center', wordWrap: { width: 300 } }).setOrigin(0.5, 0).setDepth(22).setAlpha(0);
-      this.tweens.add({ targets: [this.banner, this.bannerSub], alpha: 1, duration: 400 });
-      play('growl');
-    });
-    this.time.delayedCall(2600, finish);
-    this.input.once('pointerdown', finish);
+    // name + HP bar under the sprite
+    const by = y + scale * 8 + 10, bw = side === 'enemy' && scale >= 10 ? 220 : 92;
+    u.label = this.add.text(x, by, name, { ...FONT, fontSize: '12px' }).setOrigin(0.5, 1);
+    this.add.rectangle(x, by + 7, bw + 4, 10, 0x000000);
+    this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x333344).setOrigin(0, 0.5);
+    u.bar = this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x55cc66).setOrigin(0, 0.5);
+    u.barW = bw;
+    u.hpText = this.add.text(x, by + 14, '', { ...FONT, fontSize: '11px', color: '#ccccee' }).setOrigin(0.5, 0);
+
+    // enemies show their skills (cooldowns visible) under the bar
+    if (side === 'enemy') {
+      u.tiles = u.skills.map((sid, i) => {
+        const tx = x + (i - (u.skills.length - 1) / 2) * 30, ty = by + 50;
+        const g = this.add.graphics();
+        const icon = this.add.image(tx, ty, SKILLS[sid].icon).setScale(2.5);
+        const cdText = this.add.text(tx, ty, '', { ...FONT, fontSize: '15px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
+        this.add.zone(tx, ty, 30, 30).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(SKILLS[sid], `ฤทธิ์ของ${def.name}`));
+        return { sid, g, icon, cdText, x: tx, y: ty };
+      });
+    }
+    u.marker = this.add.image(x, y - scale * 8 - 14, 'icon_target').setScale(3).setVisible(false).setDepth(6);
+    u.shieldIcon = this.add.image(x + scale * 6, y - scale * 6, 'icon_shield').setScale(3).setVisible(false).setDepth(6);
+
+    // tap the unit = use the selected skill on it
+    this.add.zone(x, y, Math.max(80, scale * 16), Math.max(90, scale * 16)).setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.useSelectedOn(u));
+    return u;
   }
 
-  // ---------- input ----------
-  // Generic wording: the target may not always be a ghost.
-  updateHint() {
-    if (!this.hint) return;
-    const s = SKILLS[this.selected];
-    this.hint.setText(s.target === 'self' ? `แตะตัวเองเพื่อใช้วิชา "${s.name}"` : `แตะเป้าเพื่อใช้วิชา "${s.name}"`);
+  alive(list) { return list.filter(u => u.alive); }
+
+  // ---------- turn flow ----------
+  // A round: every living retainer acts (player chooses), then every living enemy acts.
+  startRound() {
+    this.queue = this.alive(this.allies);
+    this.nextAllyTurn();
   }
 
+  nextAllyTurn() {
+    if (this.checkEnd()) return;
+    this.active = this.queue.shift();
+    while (this.active && !this.active.alive) this.active = this.queue.shift();
+    if (!this.active) return this.enemyPhase();
+    const ready = this.active.skills.filter(id => !this.active.cd[id]);
+    this.selected = ready[0] ?? this.active.skills[0];
+    this.buildButtons();
+    this.busy = false;
+    this.refresh();
+  }
+
+  enemyPhase() {
+    this.active = null;
+    this.buildButtons();
+    this.busy = true;
+    this.refresh();
+    const order = this.alive(this.enemies);
+    const step = () => {
+      if (this.checkEnd()) return;
+      const e = order.shift();
+      if (!e) return this.endRound();
+      if (!e.alive) return step();
+      this.enemyAct(e, () => this.time.delayedCall(350, step));
+    };
+    this.time.delayedCall(400, step);
+  }
+
+  endRound() {
+    for (const u of [...this.allies, ...this.enemies]) {
+      u.block = false;
+      u.shieldIcon.setVisible(false);
+      for (const k in u.cd) if (u.cd[k] > 0) u.cd[k]--;
+    }
+    this.refresh();
+    this.startRound();
+  }
+
+  checkEnd() {
+    if (this.ended) return true;
+    if (!this.alive(this.enemies).length) { this.ended = true; this.time.delayedCall(500, () => this.end(true)); return true; }
+    if (!this.alive(this.allies).length) { this.ended = true; this.time.delayedCall(700, () => this.end(false)); return true; }
+    return false;
+  }
+
+  // ---------- player input ----------
   select(skillId) {
     this.selected = skillId;
-    this.updateHint();
-    this.btns.forEach(b => this.drawBtn(b));
-    this.drawReticle(true);
-    const b = this.btns.find(x => x.skillId === skillId);
-    this.showItemInfo(b.item);
+    this.buildButtons();
+    this.refresh();
+    this.showSkillInfo(SKILLS[skillId], `ฤทธิ์ของ${this.active.name}`, SKILLS[skillId].target === 'ally' ? 'top' : 'bottom');
   }
 
   useSelectedOn(target) {
-    if (this.busy || !this.selected || this.p.cd[this.selected]) return;
-    const wantSelf = SKILLS[this.selected].target === 'self';
-    if ((target === this.p) !== wantSelf) return;
+    if (this.busy || !this.active || !target.alive || this.active.cd[this.selected]) return;
+    const wantAlly = SKILLS[this.selected].target === 'ally';
+    if ((target.side === 'ally') !== wantAlly) return;
     this.hideCard();
-    if (this.hint) { this.hint.destroy(); this.hint = null; storageSet('seenTapGhost', '1'); }
-    this.playerTurn(this.selected);
+    if (!storageGet('seenTapTarget')) storageSet('seenTapTarget', '1');
+    this.busy = true;
+    this.drawReticle(false);
+    this.perform(this.active, target, this.selected, 0, () => this.time.delayedCall(250, () => this.nextAllyTurn()));
+  }
+
+  // ---------- skills (shared by every unit) ----------
+  // Runs a skill's effects from `from`. A `wait` effect pauses the skill; the rest runs on the
+  // user's next turn (user.pending). Cooldown starts when the skill finishes.
+  applySkill(user, target, skillId, from = 0) {
+    const skill = SKILLS[skillId];
+    let dealt = 0, blocked = false, mult = 1;
+    for (let i = from; i < skill.effects.length; i++) {
+      const e = skill.effects[i];
+      if (e.wait) {
+        user.pending = { skillId, next: i + 1, target };
+        user.takenMult = e.takenMult || 1;
+        return { skill, waiting: true };
+      }
+      if (e.damage != null) {
+        if (target.block) blocked = true;
+        else { mult = target.takenMult; const d = e.damage * mult; target.hp -= d; dealt += d; }
+      }
+      if (e.block) { target.block = true; target.shieldIcon.setVisible(true); }
+    }
+    if (skill.cooldown) user.cd[skillId] = skill.cooldown + 1; // +1: ticks down at end of this round
+    return { skill, dealt, blocked, mult, waiting: false };
+  }
+
+  // Animate + apply + feedback, then call done().
+  perform(user, target, skillId, from, done) {
+    const skill = SKILLS[skillId];
+    if (skill.effects[from]?.wait) {
+      return this.animWindup(user, target, () => {
+        this.applySkill(user, target, skillId, from);
+        this.popup(user.x, user.y + 40, `ตั้งท่า${skill.name}!`, '#ff5577', 20);
+        this.refresh();
+        done();
+      });
+    }
+    const kind = skill.anim || (user.side === 'ally' ? 'slash' : 'claw');
+    this.animAttack(user, target, kind, () => {
+      const r = this.applySkill(user, target, skillId, from);
+      if (kind !== 'shield') this.popup(user.x, user.y + (user.side === 'enemy' ? 50 : -50), skill.name, '#ffffff', 16);
+      if (r.blocked) { this.popup(target.x, target.y - 30, 'กันไว้!', '#ffe066', 22); play('block'); }
+      else if (r.dealt) {
+        const heavy = r.dealt >= 12;
+        this.popup(target.x, target.y - 20, `-${r.dealt}`, target.side === 'ally' ? '#ff5566' : r.mult > 1 ? '#ff7733' : '#ffdd55', heavy ? 34 : 26);
+        if (r.mult > 1) this.popup(target.x, target.y + 20, 'โดนจุดอ่อน!', '#ff9944', 16);
+        if (target.side === 'ally') this.cameras.main.shake(heavy ? 300 : 120, heavy ? 0.02 : 0.006);
+        target.sprite.setTintFill(0xffffff);
+        this.time.delayedCall(90, () => target.alive && target.sprite.clearTint());
+      }
+      if (target.hp <= 0 && target.alive) this.knockOut(target);
+      this.refresh();
+      this.time.delayedCall(300, done);
+    });
+  }
+
+  knockOut(u) {
+    u.alive = false;
+    u.hp = 0;
+    u.pending = null;
+    u.marker.setVisible(false);
+    u.shieldIcon.setVisible(false);
+    if (u.side === 'enemy') {
+      for (let i = 0; i < 24; i++) {
+        const px = this.add.rectangle(u.x + Phaser.Math.Between(-40, 40), u.y + Phaser.Math.Between(-50, 50), 6, 6, Phaser.Math.RND.pick([0x5d4d6e, 0xffffff, 0xd01030]));
+        this.tweens.add({ targets: px, y: px.y - Phaser.Math.Between(40, 120), alpha: 0, duration: Phaser.Math.Between(400, 900), onComplete: () => px.destroy() });
+      }
+      this.tweens.add({ targets: [u.sprite, u.glow], alpha: 0, duration: 400 });
+      (u.tiles || []).forEach(t => { t.icon.setVisible(false); t.cdText.setVisible(false); t.g.clear(); });
+    } else {
+      u.sprite.setTint(0x444455);
+      this.tweens.add({ targets: u.sprite, alpha: 0.45, angle: 80, duration: 400 });
+      this.popup(u.x, u.y, 'หมดสติ', '#aaaacc', 18);
+    }
+  }
+
+  // Enemies use their strongest ready skill. Skills with useChance only start on a lucky roll.
+  pickEnemySkill(e) {
+    const ready = e.skills.filter(id => !e.cd[id] && Math.random() < (SKILLS[id].useChance ?? 1));
+    const pool = ready.length ? ready : e.skills.filter(id => !e.cd[id] && SKILLS[id].useChance == null);
+    return (pool.length ? pool : e.skills).reduce((a, b) => (skillDamage(SKILLS[b]) > skillDamage(SKILLS[a]) ? b : a));
+  }
+
+  enemyAct(e, done) {
+    const targets = this.alive(this.allies);
+    if (e.pending) {
+      let { skillId, next, target } = e.pending;
+      e.pending = null;
+      e.takenMult = 1;
+      target.marker.setVisible(false);
+      if (!target.alive) target = Phaser.Math.RND.pick(targets);
+      return this.perform(e, target, skillId, next, done);
+    }
+    this.perform(e, Phaser.Math.RND.pick(targets), this.pickEnemySkill(e), 0, done);
   }
 
   // ---------- UI ----------
-  bar(x, y, label) {
-    this.add.text(x, y, label, { ...FONT, fontSize: '15px' });
-    this.add.rectangle(x - 3, y + 19, 306, 20, 0x000000).setOrigin(0, 0);
-    this.add.rectangle(x - 1, y + 21, 302, 16, 0x8888aa).setOrigin(0, 0);
-    this.add.rectangle(x, y + 22, 300, 14, 0x333344).setOrigin(0, 0);
-    const fill = this.add.rectangle(x, y + 22, 300, 14, 0x55cc66).setOrigin(0, 0);
-    const num = this.add.text(x + 300, y, '', { ...FONT, fontSize: '15px' }).setOrigin(1, 0);
-    return { fill, num };
-  }
-
-  itemBtn(x, y, item, w) {
-    const skill = SKILLS[item.skill];
-    const g = this.add.graphics();
-    const zone = this.add.zone(x, y, w, 130);
-    const icon = this.add.image(x, y - 28, item.icon).setScale(5);
-    const name = this.add.text(x, y + 22, skill.name, { ...FONT, fontSize: '22px' }).setOrigin(0.5);
-    const dmg = skill.effects.find(e => e.damage != null)?.damage;
-    const dmgIcon = this.add.image(x - 14, y + 47, 'icon_dmg').setScale(2.5).setVisible(dmg != null);
-    const hint = dmg != null
-      ? this.add.text(x - 2, y + 47, String(dmg), { ...FONT, fontSize: '17px', color: '#d0d0ee' }).setOrigin(0, 0.5)
-      : this.add.text(x, y + 47, 'กันทั้งหมด', { ...FONT, fontSize: '15px', color: '#d0d0ee' }).setOrigin(0.5);
-    const cdText = this.add.text(x, y, '', { ...FONT, fontSize: '56px', fontStyle: 'bold' }).setOrigin(0.5);
-    const b = { item, skillId: item.skill, zone, g, x, y, w, h: 130, parts: [icon, name, dmgIcon, hint], cdText };
-    zone.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-      if (this.busy || this.p.cd[b.skillId]) { this.showItemInfo(item); return; }
-      this.select(b.skillId);
+  buildButtons() {
+    this.btns.forEach(b => b.parts.forEach(p => p.destroy()));
+    this.btns = [];
+    const u = this.active;
+    if (!u) { this.turnText.setText(this.ended ? '' : 'ฝ่ายศัตรูกำลังเคลื่อนไหว…'); return; }
+    const n = u.skills.length, w = n === 1 ? 220 : 160;
+    u.skills.forEach((id, i) => {
+      const x = 180 + (i - (n - 1) / 2) * 172, y = BTN_Y, s = SKILLS[id];
+      const cd = u.cd[id] || 0, sel = this.selected === id && !cd;
+      const g = this.add.graphics();
+      this.pixelPanel(g, x, y, w, 120, cd ? 0x1e1e2a : sel ? 0x3d3d5e : 0x33334d, cd ? 0x444455 : sel ? 0xffdd55 : 0x8888cc);
+      const icon = this.add.image(x, y - 28, s.icon).setScale(4.5);
+      const name = this.add.text(x, y + 16, s.name, { ...FONT, fontSize: '20px' }).setOrigin(0.5);
+      const dmg = skillDamage(s);
+      const sub = this.add.text(x, y + 42, dmg ? `อานุภาพ ${dmg}` : s.target === 'ally' ? 'กันให้พวกเดียวกัน' : '', { ...FONT, fontSize: '13px', color: '#d0d0ee' }).setOrigin(0.5);
+      const cdText = this.add.text(x, y, cd ? String(cd) : '', { ...FONT, fontSize: '52px', fontStyle: 'bold' }).setOrigin(0.5);
+      const parts = [g, icon, name, sub, cdText];
+      if (cd) [icon, name, sub].forEach(p => p.setAlpha(0.25));
+      const zone = this.add.zone(x, y, w, 120).setInteractive({ useHandCursor: true });
+      zone.on('pointerdown', () => { if (this.busy) return; if (cd) this.showSkillInfo(s, `ฤทธิ์ของ${u.name}`); else this.select(id); });
+      parts.push(zone);
+      this.btns.push({ id, parts });
     });
-    return b;
-  }
-
-  monsterSkillTile(x, y, id) {
-    const s = SKILLS[id];
-    const g = this.add.graphics();
-    this.drawTile(g, x, y, false);
-    const icon = this.add.image(x, y, s.icon).setScale(3);
-    const cdText = this.add.text(x, y, '', { ...FONT, fontSize: '20px', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
-    this.add.zone(x, y, 42, 42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(s, 'ฤทธิ์ผี'));
-    return { id, g, x, y, icon, cdText };
-  }
-
-  drawTile(g, x, y, windingUp) {
-    g.clear();
-    this.pixelPanel(g, x, y, 38, 38, windingUp ? 0x5a1020 : 0x2a1a2e, windingUp ? 0xff3355 : 0xaa6677, 3);
+    const s = SKILLS[this.selected];
+    const hint = storageGet('seenTapTarget') ? '' : (s.target === 'ally' ? ' — แตะบริวารเพื่อใช้' : ' — แตะศัตรูเพื่อใช้');
+    this.turnText.setText(`ตาของ ${u.name}${hint}`);
   }
 
   // Panel with notched (pixel-style) corners.
@@ -198,23 +305,52 @@ export class BattleScene extends Phaser.Scene {
     g.fillStyle(0x000000).fillRect(l + u, t, w - 2 * u, h).fillRect(l, t + u, w, h - 2 * u);
     g.fillStyle(border).fillRect(l + 2 * u, t + u, w - 4 * u, h - 2 * u).fillRect(l + u, t + 2 * u, w - 2 * u, h - 4 * u);
     g.fillStyle(fill).fillRect(l + 2 * u, t + 2 * u, w - 4 * u, h - 4 * u);
-    g.fillStyle(0xffffff, 0.12).fillRect(l + 2 * u, t + 2 * u, w - 4 * u, u); // top highlight
+    g.fillStyle(0xffffff, 0.12).fillRect(l + 2 * u, t + 2 * u, w - 4 * u, u);
   }
 
-  drawBtn(b) {
-    const cd = this.p.cd[b.skillId] || 0;
-    b.g.clear();
-    const sel = this.selected === b.skillId && !cd;
-    this.pixelPanel(b.g, b.x, b.y, b.w, b.h, cd ? 0x1e1e2a : sel ? 0x3d3d5e : 0x33334d, cd ? 0x444455 : sel ? 0xffdd55 : 0x8888cc);
-    b.parts.forEach(p => p.setAlpha(cd ? 0.25 : 1));
-    b.cdText.setText(cd ? String(cd) : '');
+  setBar(u) {
+    const ratio = Math.max(0, u.hp) / u.maxHp;
+    this.tweens.add({ targets: u.bar, width: u.barW * ratio, duration: 250 });
+    u.bar.setFillStyle(ratio > 0.5 ? 0x55cc66 : ratio > 0.25 ? 0xddbb33 : 0xdd4444);
+    u.hpText.setText(`ขวัญ ${Math.max(0, u.hp)}/${u.maxHp}`);
   }
 
-  // ---------- detail cards ----------
-  // Card layout: header (icon + name + type), then stat rows (icon · label · value), then lore.
-  // Keeps text short and puts numbers in a right-aligned column so they're easy to scan.
-  // The info panel is built from y=0 down, then the whole container is moved so its
-  // bottom sits just above the skill buttons (it never covers the buttons).
+  refresh() {
+    for (const u of [...this.allies, ...this.enemies]) {
+      this.setBar(u);
+      if (u.side === 'enemy' && u.alive) {
+        u.glow.setFillStyle(u.pending ? 0xff1030 : 0xff3060, u.pending ? 0.45 : 0.12);
+        u.tiles.forEach(t => {
+          const cd = u.cd[t.sid] || 0, winding = u.pending?.skillId === t.sid;
+          t.g.clear();
+          this.pixelPanel(t.g, t.x, t.y, 28, 28, winding ? 0x5a1020 : 0x2a1a2e, winding ? 0xff3355 : 0xaa6677, 3);
+          t.icon.setAlpha(cd ? 0.3 : 1);
+          t.cdText.setText(cd ? String(cd) : '');
+        });
+      }
+      // active retainer glows gold
+      if (u.side === 'ally') u.glow.setFillStyle(0xffd860, u === this.active ? 0.3 : 0);
+    }
+    this.drawReticle(!this.busy && !!this.active);
+  }
+
+  // Corner brackets around every valid target of the selected skill.
+  drawReticle(show) {
+    const g = this.reticle.clear();
+    if (!show) return;
+    const list = SKILLS[this.selected].target === 'ally' ? this.allies : this.enemies;
+    g.fillStyle(0xffdd55);
+    for (const u of this.alive(list)) {
+      const h = Math.max(36, u.scale * 9), k = 12;
+      const l = u.x - h, r = u.x + h, t = u.y - h, b = u.y + h;
+      [[l, t, 1, 1], [r, t, -1, 1], [l, b, 1, -1], [r, b, -1, -1]].forEach(([x, y, sx, sy]) => {
+        g.fillRect(Math.min(x, x + sx * k), y - (sy < 0 ? 3 : 0), k, 3);
+        g.fillRect(x - (sx < 0 ? 3 : 0), Math.min(y, y + sy * k), 3, k);
+      });
+    }
+  }
+
+  // ---------- info panel ----------
   openCard() {
     this.card.removeAll(true);
     this.cardBg = this.add.graphics();
@@ -222,10 +358,11 @@ export class BattleScene extends Phaser.Scene {
     return 0;
   }
 
-  finishCard(bottom) {
+  // where: 'bottom' = just above the buttons, 'top' = over the enemy row
+  finishCard(bottom, where = 'bottom') {
     const h = bottom + 10;
     this.pixelPanel(this.cardBg, 180, h / 2, 300, h, 0x1c1c30, 0xccccee);
-    this.card.y = PANEL_BOTTOM - h;
+    this.card.y = where === 'top' ? 40 : PANEL_BOTTOM - h;
   }
 
   cardHeader(top, iconKey, iconScale, title, type) {
@@ -238,7 +375,6 @@ export class BattleScene extends Phaser.Scene {
     return top + 74;
   }
 
-  // One row: [icon] label ........ value
   cardRow(y, icon, label, value, valueColor = '#ffffff') {
     this.card.add([
       this.add.image(62, y + 11, icon).setScale(2.5),
@@ -253,307 +389,176 @@ export class BattleScene extends Phaser.Scene {
       if (e.wait) y = this.cardRow(y, 'icon_clock', 'ตั้งท่าก่อน', `${e.wait} ตา`, '#ff8899');
       if (e.takenMult > 1) y = this.cardRow(y, 'icon_danger', 'ระหว่างตั้งท่าโดนตี', `x${e.takenMult}`, '#ff8899');
       if (e.damage != null) y = this.cardRow(y, 'icon_dmg', 'อานุภาพ', String(e.damage), '#ffdd55');
-      if (e.block) y = this.cardRow(y, 'icon_shield', 'กันการโจมตี', 'ตานี้', '#ffe066');
+      if (e.block) y = this.cardRow(y, 'icon_shield', 'กันการโจมตีให้เป้า', 'ตานี้', '#ffe066');
     }
     return this.cardRow(y, 'icon_clock', 'พักวิชา', skill.cooldown ? `${skill.cooldown} ตา` : 'มิต้องพัก');
   }
 
+  showSkillInfo(skill, type, where = 'bottom') {
+    const y = this.cardHeader(this.openCard(), skill.icon, 4, skill.name, type);
+    this.finishCard(this.skillRows(y, skill), where);
+  }
+
   hideCard() { this.card.setVisible(false); this.card.removeAll(true); }
 
-  showItemInfo(item) {
-    const skill = SKILLS[item.skill];
-    let y = this.cardHeader(this.openCard(), item.icon, 4, skill.name, `วิชาจาก${item.name}`);
-    this.finishCard(this.skillRows(y, skill));
-  }
-
-  showSkillInfo(skill, type) {
-    let y = this.cardHeader(this.openCard(), skill.icon, 4, skill.name, type);
-    this.finishCard(this.skillRows(y, skill));
-  }
-
-  // ---------- feedback ----------
-  popup(x, y, text, color = '#fff', size = 34) {
-    const t = this.add.text(x, y, text, { ...FONT, fontSize: `${size}px`, fontStyle: 'bold', color, stroke: '#000', strokeThickness: 5 }).setOrigin(0.5);
-    this.tweens.add({ targets: t, y: y - 50, alpha: 0, duration: 1000, ease: 'Cubic.out', onComplete: () => t.destroy() });
-  }
-
-  setBar(b, c) {
-    const ratio = Math.max(0, c.hp) / c.maxHp;
-    this.tweens.add({ targets: b.fill, width: 300 * ratio, duration: 250 });
-    b.fill.setFillStyle(ratio > 0.5 ? 0x55cc66 : ratio > 0.25 ? 0xddbb33 : 0xdd4444);
-    b.num.setText(`ขวัญ ${Math.max(0, c.hp)}/${c.maxHp}`);
-  }
-
-  refresh() {
-    this.setBar(this.mBar, this.m);
-    this.setBar(this.pBar, this.p);
-    this.btns.forEach(b => this.drawBtn(b));
-    this.mSkillTiles.forEach(t => {
-      const cd = this.m.cd[t.id] || 0;
-      const windingUp = this.m.pending?.skillId === t.id;
-      this.drawTile(t.g, t.x, t.y, windingUp);
-      this.tweens.killTweensOf(t.g);
-      t.g.setAlpha(1);
-      if (windingUp) this.tweens.add({ targets: t.g, alpha: 0.4, yoyo: true, repeat: -1, duration: 250 });
-      t.icon.setAlpha(cd ? 0.3 : 1);
-      t.cdText.setText(cd ? String(cd) : '');
-    });
-    // ghost glows hot red while winding up
-    this.glow.setFillStyle(this.m.pending ? 0xff1030 : 0xff3060, this.m.pending ? 0.45 : 0.12);
-    this.drawReticle(!this.busy);
-  }
-
-  // Corner brackets around what the selected skill targets: the ghost, or our own side.
-  drawReticle(show) {
-    const g = this.reticle.clear();
-    if (!show) return;
-    const self = SKILLS[this.selected]?.target === 'self';
-    const [l, r, t, b] = self ? [12, 348, 368, 630] : [MX - 85, MX + 85, MY - 95, MY + 95];
-    const k = 22;
-    g.fillStyle(0xffdd55);
-    [[l, t, 1, 1], [r, t, -1, 1], [l, b, 1, -1], [r, b, -1, -1]].forEach(([x, y, sx, sy]) => {
-      g.fillRect(Math.min(x, x + sx * k), y - (sy < 0 ? 4 : 0), k, 4);
-      g.fillRect(x - (sx < 0 ? 4 : 0), Math.min(y, y + sy * k), 4, k);
-    });
-  }
-
-  // ---------- skills (shared by both sides) ----------
-  // Run a skill's effects from `from`. A `wait` effect pauses the skill: the rest runs on the
-  // user's next turn (see user.pending). Cooldown starts when the skill finishes.
-  applySkill(user, target, skillId, from = 0) {
-    const skill = SKILLS[skillId];
-    let dealt = 0, blocked = false, mult = 1;
-    for (let i = from; i < skill.effects.length; i++) {
-      const e = skill.effects[i];
-      if (e.wait) {
-        user.pending = { skillId, next: i + 1 };
-        user.takenMult = e.takenMult || 1;
-        return { skill, dealt, blocked, waiting: true };
-      }
-      if (e.damage != null) {
-        if (target.block) blocked = true;
-        else { mult = target.takenMult; const d = e.damage * mult; target.hp -= d; dealt += d; }
-      }
-      if (e.block) user.block = true;
-    }
-    if (skill.cooldown) user.cd[skillId] = skill.cooldown + 1; // +1: ticks down at end of this round
-    return { skill, dealt, blocked, mult, waiting: false };
-  }
-
-  tickCooldowns(c) { for (const k in c.cd) if (c.cd[k] > 0) c.cd[k]--; }
-
-  // Ghosts use their strongest ready skill. Skills with useChance only fire on a lucky roll,
-  // so the player can't predict exactly when a big move starts.
-  pickMonsterSkill() {
-    const ready = this.m.skills.filter(id => !this.m.cd[id] && Math.random() < (SKILLS[id].useChance ?? 1));
-    const pool = ready.length ? ready : this.m.skills.filter(id => !this.m.cd[id] && SKILLS[id].useChance == null);
-    return (pool.length ? pool : this.m.skills).reduce((a, b) => (skillDamage(SKILLS[b]) > skillDamage(SKILLS[a]) ? b : a));
-  }
-
-  // ---------- turns ----------
-  playerTurn(skillId) {
-    this.busy = true;
-    this.drawReticle(false);
-    const self = SKILLS[skillId].target === 'self';
-    const anim = self ? (cb) => this.animWard(cb) : (cb) => this.animSlash(cb);
-    anim(() => {
-      const { dealt, mult } = this.applySkill(this.p, self ? this.p : this.m, skillId);
-      if (dealt) this.popup(MX, MY - 20, `-${dealt}`, mult > 1 ? '#ff7733' : '#ffdd55', mult > 1 ? 46 : 34);
-      if (mult > 1) this.popup(MX, MY + 40, 'โดนจุดอ่อน!', '#ff9944', 24);
-      this.setBar(this.mBar, this.m);
-      this.btns.forEach(b => this.drawBtn(b));
-      this.time.delayedCall(700, () => (this.m.hp <= 0 ? this.end(true) : this.monsterTurn()));
-    });
-  }
-
-  monsterTurn() {
-    // Finish a wound-up skill, or pick a new one.
-    let skillId, from = 0;
-    if (this.m.pending) {
-      ({ skillId, next: from } = this.m.pending);
-      this.m.pending = null;
-      this.m.takenMult = 1;
-    } else {
-      skillId = this.pickMonsterSkill();
-    }
-    const skill = SKILLS[skillId];
-    if (skill.effects[from]?.wait) return this.animWindup(() => {
-      this.applySkill(this.m, this.p, skillId, from);
-      this.popup(MX, MY + 70, `ตั้งท่า${skill.name}!`, '#ff5577', 28);
-      this.endRound();
-    });
-    const heavy = skillDamage(skill) >= 10;
-    this.animMonsterAttack(skill.anim || 'claw', heavy, () => {
-      const { dealt, blocked } = this.applySkill(this.m, this.p, skillId, from);
-      this.popup(MX, MY + 70, skill.name, heavy ? '#ff5577' : '#ffffff', heavy ? 30 : 22);
-      if (blocked) {
-        this.popup(180, 380, 'ตะกรุดกันไว้!', '#ffe066', 30);
-        play('block');
-      } else if (dealt) {
-        this.popup(280, 582, `-${dealt}`, '#ff5566', heavy ? 46 : 34);
-        this.cameras.main.shake(heavy ? 350 : 150, heavy ? 0.025 : 0.008);
-        if (heavy) this.cameras.main.flash(200, 255, 40, 80);
-      }
-      this.endRound();
-    });
-  }
-
-  endRound() {
-    {
-      // end of round: blocks expire, cooldowns tick
-      this.p.block = false; this.m.block = false;
-      this.hideWard();
-      this.tickCooldowns(this.p);
-      this.tickCooldowns(this.m);
-      if (this.p.cd[this.selected]) this.selected = this.btns[0].skillId; // back to the basic skill
-      this.busy = this.p.hp <= 0;
-      this.refresh();
-      if (this.p.hp <= 0) return this.time.delayedCall(900, () => this.end(false));
-      this.busy = false;
-    }
-  }
-
-  // Ghost shudders and growls: a big move is coming next turn.
-  animWindup(onDone) {
-    play('growl');
-    this.tweens.add({ targets: this.mSprite, x: MX + 5, duration: 40, yoyo: true, repeat: 7, onComplete: () => this.mSprite.setX(MX) });
-    this.tweens.add({ targets: this.mSprite, scale: 11 * 1.12, duration: 300, yoyo: true });
-    this.time.delayedCall(350, onDone);
+  popup(x, y, text, color = '#fff', size = 26) {
+    const t = this.add.text(x, y, text, { ...FONT, fontSize: `${size}px`, fontStyle: 'bold', color, stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(8);
+    this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 1000, ease: 'Cubic.out', onComplete: () => t.destroy() });
   }
 
   // ---------- animations ----------
-  // Hand thrusts up, a slash streak crosses the ghost, ghost flashes and is knocked back.
-  animSlash(onHit) {
+  // Enemy wind-up: shudders, glows red, marks its target.
+  animWindup(user, target, onDone) {
+    play('growl');
+    this.tweens.add({ targets: user.sprite, x: user.x + 4, duration: 40, yoyo: true, repeat: 7, onComplete: () => user.sprite.setX(user.x) });
+    this.tweens.add({ targets: user.sprite, scale: user.scale * 1.12, duration: 300, yoyo: true });
+    target.marker.setVisible(true);
+    this.tweens.add({ targets: target.marker, scale: 4, yoyo: true, repeat: 3, duration: 150 });
+    this.time.delayedCall(400, onDone);
+  }
+
+  // User lunges toward the target, then an impact effect plays at the target.
+  animAttack(user, target, kind, onHit) {
+    if (kind === 'shield') {
+      play('ward');
+      const glow = this.add.circle(target.x, target.y, 50, 0xffd860, 0.5).setDepth(3);
+      this.tweens.add({ targets: glow, scale: 1.6, alpha: 0, duration: 500, onComplete: () => glow.destroy() });
+      return this.time.delayedCall(200, onHit);
+    }
+    if (kind === 'spit') return this.animSpit(user, target, onHit);
+    const dx = (target.x - user.x) * 0.35, dy = (target.y - user.y) * 0.35;
+    let hit = false; // onYoyo fires once per tweened property — only hit once
     this.tweens.add({
-      targets: this.hand, x: HX - 60, y: HY - 90, angle: -35, duration: 120, ease: 'Cubic.out',
-      onStart: () => play('slash'),
-      onComplete: () => {
-        this.fxSlash.setAlpha(1).setScale(5);
-        this.tweens.add({ targets: this.fxSlash, scale: 7, alpha: 0, duration: 260, ease: 'Cubic.out' });
-        this.mSprite.setTintFill(0xffffff);
-        this.time.delayedCall(90, () => this.mSprite.clearTint());
-        this.tweens.add({ targets: this.mSprite, x: MX + 14, y: '-=10', duration: 70, yoyo: true });
-        play('hit');
-        onHit();
-        this.tweens.add({ targets: this.hand, x: HX, y: HY, angle: 0, duration: 250, ease: 'Sine.out' });
-      },
-    });
-  }
-
-  // Ghost lunges at the camera, claw marks rip across the screen.
-  // Left hand raises the takrut; golden light fills the screen until the round ends.
-  animWard(onDone) {
-    play('ward');
-    this.offHand.setVisible(true);
-    this.tweens.add({ targets: this.offHand, y: HY + 10, duration: 180, ease: 'Back.out' });
-    this.tweens.add({ targets: this.wardGlow, fillAlpha: 0.18, duration: 200 });
-    this.time.delayedCall(250, onDone);
-  }
-
-  hideWard() {
-    this.tweens.add({ targets: this.offHand, y: HY + 140, duration: 250, ease: 'Sine.in', onComplete: () => this.offHand.setVisible(false) });
-    this.tweens.add({ targets: this.wardGlow, fillAlpha: 0, duration: 250 });
-  }
-
-  // Ghost attack: a lunge, then an impact effect chosen by the skill's `anim`.
-  animMonsterAttack(kind, heavy, onHit) {
-    const impact = () => {
-      this.tweens.add({ targets: this.hand, y: HY + 40, duration: 80, yoyo: true });
-      play('hurt');
-      onHit();
-    };
-    if (kind === 'spit') return this.animSpit(impact);
-    let hit = false; // onYoyo fires once per tweened property — only apply the hit once
-    this.tweens.add({
-      targets: this.mSprite, scale: 11 * 1.6, y: MY + 60, duration: 160, ease: 'Cubic.in', yoyo: true,
-      onStart: () => play('laugh'),
+      targets: user.sprite, x: user.x + dx, y: user.y + dy, scale: user.scale * (user.side === 'enemy' ? 1.25 : 1.15),
+      duration: 150, ease: 'Cubic.in', yoyo: true,
+      onStart: () => play(user.side === 'enemy' ? 'laugh' : 'slash'),
       onYoyo: () => {
         if (hit) return;
         hit = true;
-        if (kind === 'bite') this.fxBite(); else this.fxClawMarks(heavy);
-        impact();
+        if (kind === 'bite') this.fxBite(target);
+        else if (kind === 'claw') this.fxClaw(target);
+        else this.fxSlash(target);
+        if (target.side === 'ally') play('hurt');
+        onHit();
       },
+      onComplete: () => user.sprite.setPosition(user.x, user.y),
     });
   }
 
-  fxClawMarks(heavy) {
+  fxSlash(t) {
+    play('hit');
+    const fx = this.add.image(t.x, t.y, 'fx_slash').setScale(3).setDepth(5);
+    this.tweens.add({ targets: fx, scale: 5, alpha: 0, duration: 260, onComplete: () => fx.destroy() });
+    this.tweens.add({ targets: t.sprite, x: t.x + 8, duration: 60, yoyo: true });
+  }
+
+  fxClaw(t) {
     play('scratch');
-    this.fxClaw.setAlpha(1).setScale(heavy ? 8 : 6);
-    this.tweens.add({ targets: this.fxClaw, alpha: 0, duration: 500, delay: 150 });
+    const fx = this.add.image(t.x, t.y, 'fx_claw').setScale(3).setDepth(5);
+    this.tweens.add({ targets: fx, alpha: 0, duration: 450, delay: 120, onComplete: () => fx.destroy() });
   }
 
-  // Two rows of teeth snap shut across the screen.
-  fxBite() {
+  fxBite(t) {
     play('chomp');
-    const top = this.add.image(180, 150, 'fx_jaw_top').setScale(15).setDepth(5);
-    const bot = this.add.image(180, 470, 'fx_jaw_bottom').setScale(15).setDepth(5);
-    this.tweens.add({ targets: top, y: 255, duration: 90, ease: 'Cubic.in' });
+    const top = this.add.image(t.x, t.y - 60, 'fx_jaw_top').setScale(5).setDepth(5);
+    const bot = this.add.image(t.x, t.y + 60, 'fx_jaw_bottom').setScale(5).setDepth(5);
+    this.tweens.add({ targets: top, y: t.y - 14, duration: 90, ease: 'Cubic.in' });
     this.tweens.add({
-      targets: bot, y: 345, duration: 90, ease: 'Cubic.in',
-      onComplete: () => {
-        this.cameras.main.shake(120, 0.012);
-        this.tweens.add({ targets: [top, bot], alpha: 0, duration: 350, delay: 120, onComplete: () => { top.destroy(); bot.destroy(); } });
-      },
+      targets: bot, y: t.y + 14, duration: 90, ease: 'Cubic.in',
+      onComplete: () => this.tweens.add({ targets: [top, bot], alpha: 0, duration: 300, delay: 120, onComplete: () => { top.destroy(); bot.destroy(); } }),
     });
   }
 
-  // Krasue rears back, then hurls a stream of glowing guts that splatter on the "camera".
-  animSpit(impact) {
+  // Rear back, then hurl glowing guts at the target; splats drip off.
+  animSpit(user, target, onHit) {
     this.tweens.add({
-      targets: this.mSprite, scale: 11 * 0.85, y: MY - 20, duration: 220, ease: 'Sine.out',
+      targets: user.sprite, scale: user.scale * 0.85, y: user.y - 15, duration: 220, ease: 'Sine.out',
       onComplete: () => {
         play('splash');
-        this.tweens.add({ targets: this.mSprite, scale: 11 * 1.3, y: MY + 30, duration: 120, yoyo: true });
-        for (let i = 0; i < 14; i++) {
-          const gut = this.add.image(MX, MY + 40, 'fx_gut').setScale(4).setDepth(5);
+        this.tweens.add({ targets: user.sprite, scale: user.scale * 1.2, y: user.y + 20, duration: 120, yoyo: true, onComplete: () => user.sprite.setY(user.y) });
+        for (let i = 0; i < 12; i++) {
+          const gut = this.add.image(user.x, user.y + 30, 'fx_gut').setScale(3).setDepth(5);
           this.tweens.add({
-            targets: gut, x: Phaser.Math.Between(20, 340), y: Phaser.Math.Between(180, 460), scale: Phaser.Math.Between(8, 14),
+            targets: gut, x: target.x + Phaser.Math.Between(-40, 40), y: target.y + Phaser.Math.Between(-40, 40), scale: Phaser.Math.Between(4, 7),
             duration: 260, delay: i * 12, ease: 'Quad.in', onComplete: () => gut.destroy(),
           });
         }
         this.time.delayedCall(280, () => {
-          impact();
-          // splats stick to the screen and slowly drip down
-          for (let i = 0; i < 6; i++) {
-            const sp = this.add.image(Phaser.Math.Between(40, 320), Phaser.Math.Between(150, 430), 'fx_splat')
-              .setScale(Phaser.Math.Between(7, 11)).setAngle(Phaser.Math.Between(-20, 20)).setDepth(5).setAlpha(0.9);
-            this.tweens.add({ targets: sp, y: sp.y + 50, alpha: 0, duration: 1400, delay: 300, ease: 'Sine.in', onComplete: () => sp.destroy() });
+          play('hurt');
+          onHit();
+          for (let i = 0; i < 4; i++) {
+            const sp = this.add.image(target.x + Phaser.Math.Between(-45, 45), target.y + Phaser.Math.Between(-45, 30), 'fx_splat')
+              .setScale(Phaser.Math.Between(4, 6)).setDepth(5).setAlpha(0.9);
+            this.tweens.add({ targets: sp, y: sp.y + 30, alpha: 0, duration: 1200, delay: 200, onComplete: () => sp.destroy() });
           }
         });
       },
     });
   }
 
+  // ---------- entrance ----------
+  // Darkness, enemies emerge, their names appear, then the round starts. Tap to skip.
+  intro(short) {
+    const veil = this.add.rectangle(180, 320, 360, 640, 0x000000, 1).setDepth(20);
+    let done = false;
+    const raised = this.enemies.flatMap(e => [e.sprite, e.glow]);
+    const finish = () => {
+      if (done) return;
+      done = true;
+      this.time.removeAllEvents();
+      this.tweens.killTweensOf([veil, this.banner, this.bannerSub].filter(Boolean));
+      raised.forEach(o => o.setDepth(0).setAlpha(1));
+      this.enemies.forEach(e => e.sprite.setScale(e.scale));
+      this.banner?.destroy(); this.bannerSub?.destroy();
+      this.banner = this.bannerSub = null;
+      this.tweens.add({ targets: veil, alpha: 0, duration: 350, onComplete: () => veil.destroy() });
+      this.startRound();
+    };
+    if (short) return this.time.delayedCall(10, finish);
 
+    raised.forEach(o => o.setDepth(21).setAlpha(0));
+    this.enemies.forEach(e => {
+      e.sprite.setScale(e.scale * 0.5);
+      this.tweens.add({ targets: [e.sprite, e.glow], alpha: 1, duration: 900, ease: 'Sine.in' });
+      this.tweens.add({ targets: e.sprite, scale: e.scale, duration: 1100, ease: 'Back.out' });
+    });
+    this.time.delayedCall(350, () => play('laugh'));
+    this.time.delayedCall(700, () => {
+      const counts = {};
+      this.enemies.forEach(e => { counts[e.def.name] = (counts[e.def.name] || 0) + 1; });
+      const title = Object.entries(counts).map(([n, c]) => (c > 1 ? `${n} ×${c}` : n)).join(' · ');
+      this.banner = this.add.text(180, 300, `— ${title} —`, { ...FONT, fontSize: '28px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(22).setAlpha(0);
+      this.bannerSub = this.add.text(180, 335, this.enemies[0].def.lore || '', { ...FONT, fontSize: '14px', color: '#ccccee', align: 'center', wordWrap: { width: 300 } }).setOrigin(0.5, 0).setDepth(22).setAlpha(0);
+      this.tweens.add({ targets: [this.banner, this.bannerSub], alpha: 1, duration: 400 });
+      play('growl');
+    });
+    this.time.delayedCall(2600, finish);
+    this.input.once('pointerdown', finish);
+  }
+
+  // ---------- end ----------
   end(won) {
     this.busy = true;
+    this.active = null;
     this.hideCard();
-    if (won) {
-      play('win');
-      // ghost dissolves into rising pixels
-      for (let i = 0; i < 40; i++) {
-        const px = this.add.rectangle(MX + Phaser.Math.Between(-70, 70), MY + Phaser.Math.Between(-80, 80), 8, 8, Phaser.Math.RND.pick([0x5d4d6e, 0xffffff, 0xd01030]));
-        this.tweens.add({ targets: px, y: px.y - Phaser.Math.Between(60, 160), alpha: 0, duration: Phaser.Math.Between(500, 1100), onComplete: () => px.destroy() });
-      }
-      this.tweens.add({ targets: [this.mSprite, this.glow], alpha: 0, duration: 400 });
-    } else {
-      play('lose');
-      const red = this.add.rectangle(180, 320, 360, 640, 0x660011, 0);
-      this.tweens.add({ targets: red, fillAlpha: 0.55, duration: 900 });
-    }
-    this.add.image(180, 250, won ? 'icon_star' : 'icon_danger').setScale(7);
-    this.add.text(180, 310, won ? 'ผีสิ้นฤทธิ์!' : 'ขวัญกระเจิง...', { ...FONT, fontSize: '40px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
-    this.btns.forEach(b => { b.zone.disableInteractive(); b.g.setVisible(false); b.parts.forEach(p => p.setVisible(false)); b.cdText.setVisible(false); });
-    if (this.hint) this.hint.setVisible(false);
     this.drawReticle(false);
-    this.mSkillTiles.forEach(t => { t.g.setVisible(false); t.icon.setVisible(false); t.cdText.setVisible(false); });
-    // Win → continue the journey (story pages). Lose → retry this ghost.
+    this.btns.forEach(b => b.parts.forEach(p => p.destroy()));
+    this.btns = [];
+    this.turnText.setText('');
+    if (won) play('win');
+    else {
+      play('lose');
+      const red = this.add.rectangle(180, 320, 360, 640, 0x660011, 0).setDepth(7);
+      this.tweens.add({ targets: red, fillAlpha: 0.5, duration: 900 });
+    }
+    this.add.image(180, 230, won ? 'icon_star' : 'icon_danger').setScale(7).setDepth(9);
+    this.add.text(180, 290, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
     const next = won ? () => afterVictory(this, this.stage) : () => this.scene.restart({ stage: this.stage, retry: true });
-    this.pixelPanel(this.add.graphics(), 180, BTN_Y, 240, 90, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
-    this.add.image(100, BTN_Y, 'icon_retry').setScale(4);
-    this.add.text(125, BTN_Y, label, { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5);
-    const r = this.add.zone(180, BTN_Y, 240, 90).setInteractive({ useHandCursor: true });
-    r.on('pointerdown', () => { play('click'); next(); });
+    this.pixelPanel(this.add.graphics().setDepth(9), 180, BTN_Y, 240, 90, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
+    this.add.image(100, BTN_Y, 'icon_retry').setScale(4).setDepth(9);
+    this.add.text(125, BTN_Y, label, { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5).setDepth(9);
+    this.add.zone(180, BTN_Y, 240, 90).setInteractive({ useHandCursor: true }).setDepth(9)
+      .on('pointerdown', () => { play('click'); next(); });
   }
 }

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { MONSTERS } from '../data/monsters.js';
 import { ITEMS, STARTING_ITEMS } from '../data/items.js';
-import { STATUSES } from '../data/statuses.js';
+import { SKILLS, describeSkill } from '../data/skills.js';
 import { registerSprites } from '../art/sprites.js';
 import { ZOOM, setupCamera } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
@@ -10,6 +10,10 @@ const FONT = { fontFamily: 'sans-serif', color: '#fff', resolution: ZOOM };
 const MX = 180, MY = 200; // monster position
 const HX = 300, HY = 436; // first-person hand (bottom of battle area)
 const BTN_Y = 505;
+const LONG_PRESS_MS = 400;
+
+function storageGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function storageSet(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } }
 
 export class BattleScene extends Phaser.Scene {
   constructor() { super('Battle'); }
@@ -18,19 +22,19 @@ export class BattleScene extends Phaser.Scene {
     registerSprites(this);
     setupCamera(this);
     const def = MONSTERS.kongkoi;
-    this.m = { ...def, maxHp: def.hp, turn: 0, statuses: new Set() };
-    this.p = { name: 'หมอผีน้อย', hp: 30, maxHp: 30, statuses: new Set(), cd: {} };
+    // Both sides share the same shape: hp, skills, cooldowns.
+    this.m = { ...def, maxHp: def.hp, cd: {} };
+    this.p = { name: 'หมอผีน้อย', hp: 30, maxHp: 30, cd: {} };
     this.busy = false;
 
     this.add.image(180, 0, 'bg_night').setOrigin(0.5, 0).setScale(4);
     this.glow = this.add.circle(MX, MY, 95, 0xff3060, 0.12);
     this.mSprite = this.add.image(MX, MY, def.sprite).setScale(11);
     this.tweens.add({ targets: [this.mSprite, this.glow], y: '-=8', yoyo: true, repeat: -1, duration: 900, ease: 'Sine.inOut' });
-    this.intentIcon = this.add.image(MX, 85, 'icon_claw').setScale(4);
-    this.intentNum = this.add.text(MX, 85, '', { ...FONT, fontSize: '28px', fontStyle: 'bold', stroke: '#000', strokeThickness: 5 }).setOrigin(0, 0.5);
+    this.onLongPress(this.add.zone(MX, MY, 180, 190), () => this.showMonsterCard());
 
     this.mBar = this.bar(30, 20, def.name);
-    this.pBar = this.bar(30, 585, this.p.name);
+    this.pBar = this.bar(30, 592, this.p.name);
 
     // First-person view: our hand holding the knife.
     this.hand = this.add.image(HX, HY, 'hand_knife').setOrigin(0.5, 1).setScale(7);
@@ -42,40 +46,65 @@ export class BattleScene extends Phaser.Scene {
     const mute = this.add.image(338, 78, muteKey()).setScale(3.5).setInteractive({ useHandCursor: true });
     mute.on('pointerdown', () => { toggleMute(); mute.setTexture(muteKey()); });
 
-    const skills = STARTING_ITEMS.map(id => ({ id, icon: ITEMS[id].icon, ...ITEMS[id].skill }));
-    const n = skills.length, w = n === 1 ? 220 : 155;
-    this.btns = skills.map((s, i) => this.skillBtn(180 + (i - (n - 1) / 2) * 170, BTN_Y, s, w));
+    const items = STARTING_ITEMS.map(id => ITEMS[id]);
+    const n = items.length, w = n === 1 ? 220 : 155;
+    this.btns = items.map((item, i) => this.itemBtn(180 + (i - (n - 1) / 2) * 170, BTN_Y, item, w));
+
+    // First-time hint, hidden forever after the player long-presses once.
+    this.hint = storageGet('seenLongPress') ? null
+      : this.add.text(180, 579, 'กดค้างเพื่อดูรายละเอียด', { ...FONT, fontSize: '12px', color: '#aaaacc' }).setOrigin(0.5);
+
+    this.card = this.add.container(0, 0).setDepth(10).setVisible(false);
     this.refresh();
+  }
+
+  // ---------- input ----------
+  // Tap → onTap, hold → onHold (card stays while finger is down).
+  onLongPress(obj, onHold, onTap) {
+    obj.setInteractive({ useHandCursor: true });
+    let timer = null, held = false;
+    obj.on('pointerdown', () => {
+      held = false;
+      timer = this.time.delayedCall(LONG_PRESS_MS, () => {
+        held = true;
+        onHold();
+        if (this.hint) { this.hint.destroy(); this.hint = null; storageSet('seenLongPress', '1'); }
+      });
+    });
+    const release = (tapped) => {
+      if (timer) { timer.remove(); timer = null; }
+      if (held) { this.hideCard(); held = false; } else if (tapped && onTap) onTap();
+    };
+    obj.on('pointerup', () => release(true));
+    obj.on('pointerout', () => release(false));
   }
 
   // ---------- UI ----------
   bar(x, y, label) {
-    const name = this.add.text(x, y, label, { ...FONT, fontSize: '15px' });
-    const st = this.add.container(x + name.width + 14, y + 9);
+    this.add.text(x, y, label, { ...FONT, fontSize: '15px' });
     this.add.rectangle(x - 3, y + 19, 306, 20, 0x000000).setOrigin(0, 0);
     this.add.rectangle(x - 1, y + 21, 302, 16, 0x8888aa).setOrigin(0, 0);
     this.add.rectangle(x, y + 22, 300, 14, 0x333344).setOrigin(0, 0);
     const fill = this.add.rectangle(x, y + 22, 300, 14, 0x55cc66).setOrigin(0, 0);
     const num = this.add.text(x + 300, y, '', { ...FONT, fontSize: '15px' }).setOrigin(1, 0);
-    return { fill, num, st, x, y };
+    return { fill, num };
   }
 
-  skillBtn(x, y, s, w) {
+  itemBtn(x, y, item, w) {
+    const skill = SKILLS[item.skill];
     const g = this.add.graphics();
-    const r = this.add.zone(x, y, w, 130).setInteractive({ useHandCursor: true });
-    const icon = this.add.image(x, y - 28, s.icon).setScale(5);
-    const name = this.add.text(x, y + 22, s.name, { ...FONT, fontSize: '22px' }).setOrigin(0.5);
-    const dmgIcon = this.add.image(x - 14, y + 47, 'icon_dmg').setScale(2.5);
-    const hint = this.add.text(x - 2, y + 47, String(s.dmg), { ...FONT, fontSize: '17px', color: '#d0d0ee' }).setOrigin(0, 0.5);
+    const zone = this.add.zone(x, y, w, 130);
+    const icon = this.add.image(x, y - 28, item.icon).setScale(5);
+    const name = this.add.text(x, y + 22, skill.name, { ...FONT, fontSize: '22px' }).setOrigin(0.5);
+    const dmg = skill.effects.find(e => e.damage != null)?.damage;
+    const dmgIcon = this.add.image(x - 14, y + 47, 'icon_dmg').setScale(2.5).setVisible(dmg != null);
+    const hint = this.add.text(x - 2, y + 47, dmg != null ? String(dmg) : '', { ...FONT, fontSize: '17px', color: '#d0d0ee' }).setOrigin(0, 0.5);
     const cdText = this.add.text(x, y, '', { ...FONT, fontSize: '56px', fontStyle: 'bold' }).setOrigin(0.5);
-    const b = { s, r, g, x, y, w, h: 130, parts: [icon, name, dmgIcon, hint], cdText, pressed: false };
-    r.on('pointerdown', () => {
-      if (this.busy || this.p.cd[s.id]) return;
-      b.pressed = true; this.drawBtn(b);
-      this.useSkill(s);
+    const b = { item, skillId: item.skill, zone, g, x, y, w, h: 130, parts: [icon, name, dmgIcon, hint], cdText };
+    this.onLongPress(zone, () => this.showItemCard(item), () => {
+      if (this.busy || this.p.cd[b.skillId]) return;
+      this.playerTurn(b.skillId);
     });
-    r.on('pointerup', () => { b.pressed = false; this.drawBtn(b); });
-    r.on('pointerout', () => { b.pressed = false; this.drawBtn(b); });
     return b;
   }
 
@@ -89,76 +118,109 @@ export class BattleScene extends Phaser.Scene {
   }
 
   drawBtn(b) {
-    const cd = this.p.cd[b.s.id] || 0;
+    const cd = this.p.cd[b.skillId] || 0;
     b.g.clear();
-    this.pixelPanel(b.g, b.x, b.y + (b.pressed ? 3 : 0), b.w, b.h, cd ? 0x1e1e2a : b.pressed ? 0x4a4a70 : 0x33334d, cd ? 0x444455 : 0x8888cc);
+    this.pixelPanel(b.g, b.x, b.y, b.w, b.h, cd ? 0x1e1e2a : 0x33334d, cd ? 0x444455 : 0x8888cc);
+    b.parts.forEach(p => p.setAlpha(cd ? 0.25 : 1));
+    b.cdText.setText(cd ? String(cd) : '');
   }
 
+  // ---------- detail cards ----------
+  showCard(iconKey, iconScale, title, lines, lore) {
+    this.card.removeAll(true);
+    const h = 200 + lines.length * 26 + (lore ? 50 : 0);
+    const g = this.add.graphics();
+    this.pixelPanel(g, 180, 300, 280, h, 0x22223a, 0xccccee);
+    const top = 300 - h / 2;
+    const parts = [
+      this.add.rectangle(180, 320, 360, 640, 0x000000, 0.6),
+      g,
+      this.add.image(180, top + 60, iconKey).setScale(iconScale),
+      this.add.text(180, top + 120, title, { ...FONT, fontSize: '24px', fontStyle: 'bold' }).setOrigin(0.5),
+      ...lines.map((l, i) => this.add.text(180, top + 160 + i * 26, l, { ...FONT, fontSize: '17px', color: '#e0e0ff' }).setOrigin(0.5)),
+    ];
+    if (lore) parts.push(this.add.text(180, top + 170 + lines.length * 26, lore, { ...FONT, fontSize: '14px', color: '#9999bb', align: 'center', wordWrap: { width: 240 } }).setOrigin(0.5, 0));
+    this.card.add(parts).setVisible(true);
+  }
+
+  hideCard() { this.card.setVisible(false); this.card.removeAll(true); }
+
+  showItemCard(item) {
+    const skill = SKILLS[item.skill];
+    this.showCard(item.icon, 7, item.name, [`สกิล: ${skill.name}`, ...describeSkill(skill)], item.lore);
+  }
+
+  showMonsterCard() {
+    const lines = [`HP ${Math.max(0, this.m.hp)}/${this.m.maxHp}`];
+    this.m.skills.forEach(id => {
+      const s = SKILLS[id];
+      lines.push(`— ${s.name} —`, describeSkill(s).join(' · '));
+    });
+    this.showCard(this.m.sprite, 6, this.m.name, lines, this.m.lore);
+  }
+
+  // ---------- feedback ----------
   popup(x, y, text, color = '#fff', size = 34) {
     const t = this.add.text(x, y, text, { ...FONT, fontSize: `${size}px`, fontStyle: 'bold', color, stroke: '#000', strokeThickness: 5 }).setOrigin(0.5);
     this.tweens.add({ targets: t, y: y - 50, alpha: 0, duration: 1000, ease: 'Cubic.out', onComplete: () => t.destroy() });
   }
-
 
   setBar(b, c) {
     const ratio = Math.max(0, c.hp) / c.maxHp;
     this.tweens.add({ targets: b.fill, width: 300 * ratio, duration: 250 });
     b.fill.setFillStyle(ratio > 0.5 ? 0x55cc66 : ratio > 0.25 ? 0xddbb33 : 0xdd4444);
     b.num.setText(`${Math.max(0, c.hp)}/${c.maxHp}`);
-    b.st.removeAll(true);
-    [...c.statuses].forEach((k, i) => b.st.add(this.add.image(i * 30, 0, STATUSES[k].icon).setScale(3)));
   }
 
   refresh() {
     this.setBar(this.mBar, this.m);
     this.setBar(this.pBar, this.p);
-    this.btns.forEach(b => {
-      const cd = this.p.cd[b.s.id] || 0;
-      this.drawBtn(b);
-      b.parts.forEach(p => p.setAlpha(cd ? 0.25 : 1));
-      b.cdText.setText(cd ? String(cd) : '');
-    });
-    this.showIntent();
+    this.btns.forEach(b => this.drawBtn(b));
   }
 
-  // Icon above the monster telling what it will do next turn.
-  showIntent() {
-    const mv = this.m.moves[this.nextMove()];
-    const fizzles = mv.needs && !this.m.statuses.has(mv.needs);
-    const parts = [this.intentIcon, this.intentNum];
-    this.tweens.killTweensOf(parts);
-    parts.forEach(o => o.setAlpha(1).setVisible(true));
-    this.intentIcon.setScale(4);
-    this.intentNum.setScale(1);
-    const icon = fizzles ? 'icon_stun' : mv.icon;
-    const num = !fizzles && mv.dmg ? String(mv.dmg) : '';
-    this.intentIcon.setTexture(icon);
-    this.intentNum.setText(num).setColor(mv.danger && !fizzles ? '#ff4466' : '#ffffff');
-    // center icon + number as a group
-    const total = 32 + (num ? 8 + this.intentNum.width : 0);
-    this.intentIcon.setX(MX - total / 2 + 16);
-    this.intentNum.setX(MX - total / 2 + 40);
-    if (mv.danger && !fizzles) this.tweens.add({ targets: parts, scale: '*=1.25', yoyo: true, repeat: -1, duration: 300 });
-    this.glow.setFillStyle(0xff3060, this.m.statuses.has('charge') ? 0.5 : 0.12);
+  // ---------- skills (shared by both sides) ----------
+  applySkill(user, target, skillId) {
+    const skill = SKILLS[skillId];
+    if (skill.cooldown) user.cd[skillId] = skill.cooldown + 1; // +1: ticks down at end of this round
+    for (const e of skill.effects) {
+      if (e.damage != null) target.hp -= e.damage;
+    }
+    return skill;
   }
 
-  nextMove() { return this.m.pattern[this.m.turn % this.m.pattern.length]; }
+  tickCooldowns(c) { for (const k in c.cd) if (c.cd[k] > 0) c.cd[k]--; }
 
-  // ---------- turn logic ----------
-  useSkill(s) {
+  pickMonsterSkill() {
+    const ready = this.m.skills.filter(id => !this.m.cd[id]);
+    return Phaser.Math.RND.pick(ready.length ? ready : this.m.skills);
+  }
+
+  // ---------- turns ----------
+  playerTurn(skillId) {
     this.busy = true;
-    // +1 because cooldowns tick down at the end of the monster's turn
-    if (s.cooldown) this.p.cd[s.id] = s.cooldown + 1;
-
     this.animSlash(() => {
-      this.m.hp -= s.dmg;
-      this.popup(MX, MY - 20, `-${s.dmg}`, '#ffdd55');
-      if (s.removes && this.m.statuses.delete(s.removes)) {
-        this.time.delayedCall(250, () => this.popup(MX, MY + 40, `ล้าง${STATUSES[s.removes].name}!`, '#66ccff', 28));
-      }
+      const skill = this.applySkill(this.p, this.m, skillId);
+      const dmg = skill.effects.reduce((s, e) => s + (e.damage || 0), 0);
+      if (dmg) this.popup(MX, MY - 20, `-${dmg}`, '#ffdd55');
       this.setBar(this.mBar, this.m);
-      this.showIntent();
       this.time.delayedCall(700, () => (this.m.hp <= 0 ? this.end(true) : this.monsterTurn()));
+    });
+  }
+
+  monsterTurn() {
+    const skillId = this.pickMonsterSkill();
+    this.animMonsterAttack(() => {
+      const skill = this.applySkill(this.m, this.p, skillId);
+      const dmg = skill.effects.reduce((s, e) => s + (e.damage || 0), 0);
+      if (dmg) {
+        this.popup(280, 582, `-${dmg}`, '#ff5566', 34);
+        this.cameras.main.shake(150, 0.008);
+      }
+      this.tickCooldowns(this.p);
+      this.tickCooldowns(this.m);
+      this.refresh();
+      if (this.p.hp <= 0) return this.time.delayedCall(900, () => this.end(false));
+      this.busy = false;
     });
   }
 
@@ -182,7 +244,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // Ghost lunges at the camera, claw marks rip across the screen.
-  animMonsterAttack(danger, onHit) {
+  animMonsterAttack(onHit) {
     let hit = false; // onYoyo fires once per tweened property — only apply the hit once
     this.tweens.add({
       targets: this.mSprite, scale: 11 * 1.6, y: MY + 60, duration: 160, ease: 'Cubic.in', yoyo: true,
@@ -191,7 +253,7 @@ export class BattleScene extends Phaser.Scene {
         if (hit) return;
         hit = true;
         play('scratch');
-        this.fxClaw.setAlpha(1).setScale(danger ? 8 : 6);
+        this.fxClaw.setAlpha(1).setScale(6);
         this.tweens.add({ targets: this.fxClaw, alpha: 0, duration: 500, delay: 150 });
         this.tweens.add({ targets: this.hand, y: HY + 40, duration: 80, yoyo: true });
         play('hurt');
@@ -200,42 +262,9 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  monsterTurn() {
-    const mv = this.m.moves[this.nextMove()];
-    this.m.turn++;
-    if (mv.dmg && !(mv.needs && !this.m.statuses.has(mv.needs))) {
-      this.animMonsterAttack(mv.danger, () => this.resolveMonsterMove(mv));
-    } else {
-      this.resolveMonsterMove(mv);
-    }
-  }
-
-  resolveMonsterMove(mv) {
-    if (mv.needs && !this.m.statuses.has(mv.needs)) {
-      this.popup(MX, MY - 20, mv.fizzle, '#ffffff', 28);
-    } else {
-      if (mv.needs) this.m.statuses.delete(mv.needs);
-      if (mv.addStatus) {
-        this.m.statuses.add(mv.addStatus);
-        this.popup(MX, MY - 20, STATUSES[mv.addStatus].name, '#ff8899', 30);
-      }
-      if (mv.dmg) {
-        this.p.hp -= mv.dmg;
-        this.popup(280, 575, `-${mv.dmg}`, '#ff5566', mv.danger ? 48 : 34);
-        this.cameras.main.shake(mv.danger ? 350 : 150, mv.danger ? 0.025 : 0.008);
-        if (mv.danger) this.cameras.main.flash(200, 255, 40, 80);
-      }
-    }
-    for (const k in this.p.cd) if (this.p.cd[k] > 0) this.p.cd[k]--;
-    this.refresh();
-    if (this.p.hp <= 0) return this.time.delayedCall(900, () => this.end(false));
-    this.busy = false;
-  }
-
   end(won) {
     this.busy = true;
-    this.tweens.killTweensOf([this.intentIcon, this.intentNum]);
-    this.intentIcon.setVisible(false); this.intentNum.setVisible(false);
+    this.hideCard();
     if (won) {
       play('win');
       // ghost dissolves into rising pixels
@@ -251,7 +280,8 @@ export class BattleScene extends Phaser.Scene {
     }
     this.add.image(180, 250, won ? 'icon_star' : 'icon_danger').setScale(7);
     this.add.text(180, 310, won ? 'ชนะ!' : 'แพ้...', { ...FONT, fontSize: '40px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
-    this.btns.forEach(b => { b.r.disableInteractive(); b.g.setVisible(false); b.parts.forEach(p => p.setVisible(false)); b.cdText.setVisible(false); });
+    this.btns.forEach(b => { b.zone.disableInteractive(); b.g.setVisible(false); b.parts.forEach(p => p.setVisible(false)); b.cdText.setVisible(false); });
+    if (this.hint) this.hint.setVisible(false);
     this.pixelPanel(this.add.graphics(), 180, BTN_Y, 240, 90, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
     this.add.image(110, BTN_Y, 'icon_retry').setScale(4);
     this.add.text(135, BTN_Y, 'สู้อีกครั้ง', { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5);

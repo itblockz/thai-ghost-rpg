@@ -1,24 +1,9 @@
-// Monsters loop through `pattern`. Moves:
-//  dmg        – damage dealt to the player
-//  addStatus  – status the monster gives itself
-//  needs      – status required; if missing the move fizzles (monster is stunned that turn)
+// Ghosts use the same skills as the player (see skills.js).
+// Each turn a ghost picks a random skill that is off cooldown.
 export const MONSTERS = {
-  // Tutorial ghost: one simple move every turn.
+  // Tutorial ghost.
   kongkoi: {
-    name: 'ผีกองกอย', sprite: 'kongkoi', hp: 18,
-    pattern: ['scratch'],
-    moves: {
-      scratch: { icon: 'icon_claw', dmg: 3 },
-    },
-  },
-  // Planned 2nd ghost (needs ตะกรุด) — not used yet.
-  krasue: {
-    name: 'กระสือ', sprite: 'krasue', hp: 30,
-    pattern: ['bite', 'inhale', 'spit'],
-    moves: {
-      bite: { icon: 'icon_fang', dmg: 5 },
-      inhale: { icon: 'icon_charge', addStatus: 'charge' },
-      spit: { icon: 'icon_danger', dmg: 20, needs: 'charge', danger: true, fizzle: 'สำลัก!' },
-    },
+    name: 'ผีกองกอย', sprite: 'kongkoi', hp: 18, skills: ['scratch'],
+    lore: 'ผีป่าตัวเล็ก ขาเดียว ชอบแกล้งคนหลงป่า',
   },
 };

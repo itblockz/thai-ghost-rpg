@@ -1,4 +1,4 @@
-# ตำนานผีไทย (Thai Ghost RPG)
+# ตำราปราบผี (Thai Ghost RPG)
 
 เกม RPG ตำนานผีไทย เล่นบนมือถือเป็นหลัก — Phaser 3 + Vite
 

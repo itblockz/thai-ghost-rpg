@@ -24,7 +24,7 @@ export class BattleScene extends Phaser.Scene {
     const def = MONSTERS.kongkoi;
     // Both sides share the same shape: hp, skills, cooldowns.
     this.m = { ...def, maxHp: def.hp, cd: {} };
-    this.p = { name: 'หมอผีน้อย', hp: 30, maxHp: 30, cd: {} };
+    this.p = { name: 'ศิษย์หมอผี', hp: 30, maxHp: 30, cd: {} };
     this.busy = false;
 
     this.add.image(180, 0, 'bg_night').setOrigin(0.5, 0).setScale(4);
@@ -71,7 +71,7 @@ export class BattleScene extends Phaser.Scene {
   // ---------- input ----------
   // Generic wording: the target may not always be a ghost.
   updateHint() {
-    if (this.hint) this.hint.setText(`แตะเป้าหมายเพื่อใช้ "${SKILLS[this.selected].name}"`);
+    if (this.hint) this.hint.setText(`แตะเป้าเพื่อใช้วิชา "${SKILLS[this.selected].name}"`);
   }
 
   select(skillId) {
@@ -125,8 +125,8 @@ export class BattleScene extends Phaser.Scene {
     this.pixelPanel(g, x, y, 38, 38, 0x2a1a2e, 0xaa6677, 3);
     const icon = this.add.image(x, y, s.icon).setScale(3);
     const cdText = this.add.text(x, y, '', { ...FONT, fontSize: '20px', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
-    this.add.zone(x, y, 42, 42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(s, 'สกิลของผี'));
-    return { id, icon, cdText };
+    this.add.zone(x, y, 42, 42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(s, 'ฤทธิ์ผี'));
+    return { id, g, icon, cdText };
   }
 
   // Panel with notched (pixel-style) corners.
@@ -186,15 +186,15 @@ export class BattleScene extends Phaser.Scene {
   }
 
   skillRows(y, skill) {
-    for (const e of skill.effects) if (e.damage != null) y = this.cardRow(y, 'icon_dmg', 'ความเสียหาย', String(e.damage), '#ffdd55');
-    return this.cardRow(y, 'icon_clock', 'คูลดาวน์', skill.cooldown ? `${skill.cooldown} ตา` : 'ไม่มี');
+    for (const e of skill.effects) if (e.damage != null) y = this.cardRow(y, 'icon_dmg', 'อานุภาพ', String(e.damage), '#ffdd55');
+    return this.cardRow(y, 'icon_clock', 'พักวิชา', skill.cooldown ? `${skill.cooldown} ตา` : 'มิต้องพัก');
   }
 
   hideCard() { this.card.setVisible(false); this.card.removeAll(true); }
 
   showItemInfo(item) {
     const skill = SKILLS[item.skill];
-    let y = this.cardHeader(this.openCard(), item.icon, 4, `${item.name} · ${skill.name}`, 'ของขลัง');
+    let y = this.cardHeader(this.openCard(), item.icon, 4, skill.name, `วิชาจาก${item.name}`);
     this.finishCard(this.skillRows(y, skill));
   }
 
@@ -213,7 +213,7 @@ export class BattleScene extends Phaser.Scene {
     const ratio = Math.max(0, c.hp) / c.maxHp;
     this.tweens.add({ targets: b.fill, width: 300 * ratio, duration: 250 });
     b.fill.setFillStyle(ratio > 0.5 ? 0x55cc66 : ratio > 0.25 ? 0xddbb33 : 0xdd4444);
-    b.num.setText(`${Math.max(0, c.hp)}/${c.maxHp}`);
+    b.num.setText(`ขวัญ ${Math.max(0, c.hp)}/${c.maxHp}`);
   }
 
   refresh() {
@@ -344,14 +344,14 @@ export class BattleScene extends Phaser.Scene {
       this.tweens.add({ targets: red, fillAlpha: 0.55, duration: 900 });
     }
     this.add.image(180, 250, won ? 'icon_star' : 'icon_danger').setScale(7);
-    this.add.text(180, 310, won ? 'ชนะ!' : 'แพ้...', { ...FONT, fontSize: '40px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
+    this.add.text(180, 310, won ? 'ผีสิ้นฤทธิ์!' : 'ขวัญกระเจิง...', { ...FONT, fontSize: '40px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
     this.btns.forEach(b => { b.zone.disableInteractive(); b.g.setVisible(false); b.parts.forEach(p => p.setVisible(false)); b.cdText.setVisible(false); });
     if (this.hint) this.hint.setVisible(false);
     this.drawReticle(false);
-    this.mSkillTiles.forEach(t => { t.icon.setVisible(false); t.cdText.setVisible(false); });
+    this.mSkillTiles.forEach(t => { t.g.setVisible(false); t.icon.setVisible(false); t.cdText.setVisible(false); });
     this.pixelPanel(this.add.graphics(), 180, BTN_Y, 240, 90, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
     this.add.image(110, BTN_Y, 'icon_retry').setScale(4);
-    this.add.text(135, BTN_Y, 'สู้อีกครั้ง', { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5);
+    this.add.text(135, BTN_Y, 'ตั้งจิตใหม่', { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5);
     const r = this.add.zone(180, BTN_Y, 240, 90).setInteractive({ useHandCursor: true });
     r.on('pointerdown', () => { play('click'); this.scene.restart(); });
   }

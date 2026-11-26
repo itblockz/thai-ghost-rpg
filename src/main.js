@@ -1,15 +1,12 @@
 import Phaser from 'phaser';
-import { WorldScene } from './scenes/WorldScene.js';
 import { BattleScene } from './scenes/BattleScene.js';
-import { GameOverScene } from './scenes/GameOverScene.js';
 
-export const W = 360, H = 640;
-
+// Map (WorldScene) is kept in the repo but not loaded yet — focusing on combat first.
 new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#0b0b1a',
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: W, height: H },
-  input: { activePointers: 3 },
-  scene: [WorldScene, BattleScene, GameOverScene],
+  pixelArt: true,
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 360, height: 640 },
+  scene: [BattleScene],
 });

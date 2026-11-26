@@ -1,89 +1,120 @@
 import Phaser from 'phaser';
-import { player } from '../state.js';
 import { MONSTERS } from '../data/monsters.js';
+import { registerSprites } from '../art/sprites.js';
 
 const FONT = { fontFamily: 'sans-serif', color: '#fff' };
-const dmg = (atk, def) => Math.max(1, atk - def + Phaser.Math.Between(-2, 2));
+const PLAYER = { name: 'หมอผีน้อย', hp: 30, atk: [5, 7] };
 
 export class BattleScene extends Phaser.Scene {
   constructor() { super('Battle'); }
 
-  create(data) {
-    this.data_ = data;
-    this.m = { ...MONSTERS[data.monster] };
-    this.m.maxHp = this.m.hp;
+  create() {
+    registerSprites(this);
+    const def = MONSTERS.krasue;
+    this.m = { ...def, maxHp: def.hp, turn: 0 };
+    this.p = { ...PLAYER, maxHp: PLAYER.hp };
     this.busy = false;
-    this.guard = false;
 
-    this.add.rectangle(180, 200, 360, 400, 0x140a1e);
-    this.mSprite = this.add.text(180, 170, this.m.emoji, { fontSize: '96px' }).setOrigin(0.5);
-    this.tweens.add({ targets: this.mSprite, y: 160, yoyo: true, repeat: -1, duration: 900 });
-    this.mName = this.add.text(180, 50, '', { ...FONT, fontSize: '20px' }).setOrigin(0.5);
-    this.pText = this.add.text(16, 300, '', { ...FONT, fontSize: '16px' });
-    this.log = this.add.text(16, 340, '', { ...FONT, fontSize: '16px', wordWrap: { width: 328 } });
+    this.add.rectangle(180, 210, 360, 420, 0x140a1e);
+    // monster
+    this.glow = this.add.circle(180, 175, 95, 0xff3060, 0.12);
+    this.mSprite = this.add.image(180, 175, def.sprite).setScale(11);
+    this.tweens.add({ targets: [this.mSprite, this.glow], y: '-=8', yoyo: true, repeat: -1, duration: 900, ease: 'Sine.inOut' });
+    this.mBar = this.bar(30, 40, def.name);
+    this.intent = this.add.text(180, 300, '', { ...FONT, fontSize: '16px', color: '#ff6688' }).setOrigin(0.5);
 
-    this.buttons = [
-      this.btn(70, 520, '⚔️ โจมตี', () => this.attack()),
-      this.btn(180, 520, '🛡️ ป้องกัน', () => this.defend()),
-      this.btn(290, 520, '🏃 หนี', () => this.run()),
+    // player
+    this.pBar = this.bar(30, 335, this.p.name);
+    this.log = this.add.text(180, 395, '', { ...FONT, fontSize: '16px', align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5, 0);
+
+    this.btns = [
+      this.btn(95, 545, '⚔️ โจมตี', () => this.act('attack')),
+      this.btn(265, 545, '🛡️ ป้องกัน', () => this.act('defend')),
     ];
-    this.say(`${this.m.name} ปรากฏตัว!`);
+    this.say(`${def.name}ลอยออกมาจากความมืด!`);
     this.refresh();
+  }
+
+  bar(x, y, label) {
+    const t = this.add.text(x, y, label, { ...FONT, fontSize: '14px' });
+    this.add.rectangle(x, y + 22, 300, 14, 0x333344).setOrigin(0, 0);
+    const fill = this.add.rectangle(x, y + 22, 300, 14, 0x55cc66).setOrigin(0, 0);
+    const num = this.add.text(x + 300, y, '', { ...FONT, fontSize: '14px' }).setOrigin(1, 0);
+    return { fill, num, t };
   }
 
   btn(x, y, label, fn) {
-    const r = this.add.rectangle(x, y, 100, 64, 0x33334d).setStrokeStyle(2, 0x8888cc).setInteractive();
-    this.add.text(x, y, label, { ...FONT, fontSize: '16px' }).setOrigin(0.5);
-    r.on('pointerdown', () => { if (!this.busy) fn(); });
-    return r;
+    const r = this.add.rectangle(x, y, 150, 90, 0x33334d).setStrokeStyle(3, 0x8888cc).setInteractive();
+    const t = this.add.text(x, y, label, { ...FONT, fontSize: '22px' }).setOrigin(0.5);
+    r.on('pointerdown', () => { if (!this.busy) { r.setFillStyle(0x4a4a70); fn(); } });
+    r.on('pointerup', () => r.setFillStyle(0x33334d));
+    r.on('pointerout', () => r.setFillStyle(0x33334d));
+    return { r, t };
   }
 
   say(t) { this.log.setText(t); }
+
+  setBar(b, hp, max) {
+    const ratio = Math.max(0, hp) / max;
+    this.tweens.add({ targets: b.fill, width: 300 * ratio, duration: 250 });
+    b.fill.setFillStyle(ratio > 0.5 ? 0x55cc66 : ratio > 0.25 ? 0xddbb33 : 0xdd4444);
+    b.num.setText(`${Math.max(0, hp)}/${max}`);
+  }
+
   refresh() {
-    this.mName.setText(`${this.m.name}  HP ${Math.max(0, this.m.hp)}/${this.m.maxHp}`);
-    this.pText.setText(`${player.name}  HP ${Math.max(0, player.hp)}/${player.maxHp}`);
+    this.setBar(this.mBar, this.m.hp, this.m.maxHp);
+    this.setBar(this.pBar, this.p.hp, this.p.maxHp);
   }
 
-  attack() {
-    const d = dmg(player.atk, this.m.def);
-    this.m.hp -= d;
-    this.tweens.add({ targets: this.mSprite, alpha: 0.2, yoyo: true, duration: 80, repeat: 1 });
-    this.say(`คุณโจมตี ${this.m.name} เสียหาย ${d}`);
-    this.endTurn();
-  }
-  defend() { this.guard = true; this.say('คุณตั้งท่าป้องกัน'); this.endTurn(); }
-  run() {
-    if (Math.random() < 0.5) {
-      this.say('หนีสำเร็จ!');
-      this.busy = true;
-      this.time.delayedCall(700, () => this.scene.start('World', { pos: this.data_.pos }));
-    } else { this.say('หนีไม่พ้น!'); this.endTurn(); }
-  }
+  nextMove() { return this.m.pattern[this.m.turn % this.m.pattern.length]; }
 
-  endTurn() {
+  act(choice) {
     this.busy = true;
+    const guarding = choice === 'defend';
+    if (choice === 'attack') {
+      const d = Phaser.Math.Between(...this.p.atk);
+      this.m.hp -= d;
+      this.tweens.add({ targets: this.mSprite, alpha: 0.2, yoyo: true, duration: 70, repeat: 1 });
+      this.say(`คุณฟาดด้วยไม้เท้า! ${this.m.name}เสียหาย ${d}`);
+    } else {
+      this.say('คุณตั้งท่าป้องกัน พนมมือสวดมนต์...');
+    }
     this.refresh();
-    this.time.delayedCall(700, () => {
-      if (this.m.hp <= 0) return this.win();
-      let d = dmg(this.m.atk, player.def);
-      if (this.guard) d = Math.ceil(d / 2);
-      this.guard = false;
-      player.hp -= d;
-      this.cameras.main.shake(150, 0.01);
-      this.say(`${this.m.name} พุ่งเข้ากัด! เสียหาย ${d}`);
-      this.refresh();
-      if (player.hp <= 0) return this.time.delayedCall(800, () => this.scene.start('GameOver'));
-      this.busy = false;
-    });
+    this.time.delayedCall(800, () => (this.m.hp <= 0 ? this.end(true) : this.monsterTurn(guarding)));
   }
 
-  win() {
-    player.exp += this.m.exp;
-    const set = this.registry.get('defeated') || new Set();
-    set.add(this.data_.key);
-    this.registry.set('defeated', set);
-    this.mSprite.setVisible(false);
-    this.say(`ปราบ ${this.m.name} สำเร็จ! ได้ ${this.m.exp} EXP`);
-    this.time.delayedCall(1200, () => this.scene.start('World', { pos: this.data_.pos }));
+  monsterTurn(guarding) {
+    const key = this.nextMove();
+    const mv = this.m.moves[key];
+    this.m.turn++;
+    let d = Phaser.Math.Between(...mv.dmg);
+    let msg = mv.text;
+    if (d > 0 && guarding) {
+      if (mv.blockable) { d = 0; msg += '\nแต่คุณป้องกันได้ทั้งหมด! 🛡️'; }
+      else { d = Math.ceil(d / 2); msg += `\nคุณป้องกันไว้ได้ครึ่งหนึ่ง เสียหาย ${d}`; }
+    } else if (d > 0) msg += `\nคุณเสียหาย ${d}`;
+    if (d > 0) { this.p.hp -= d; this.cameras.main.shake(key === 'special' ? 300 : 150, key === 'special' ? 0.02 : 0.008); }
+    this.say(msg);
+
+    // telegraph
+    const charging = key === 'charge';
+    this.intent.setText(charging ? mv.intent : '');
+    this.glow.setFillStyle(0xff3060, charging ? 0.45 : 0.12);
+    if (charging) this.tweens.add({ targets: this.intent, alpha: 0.3, yoyo: true, repeat: 3, duration: 200 });
+
+    this.refresh();
+    if (this.p.hp <= 0) return this.time.delayedCall(900, () => this.end(false));
+    this.busy = false;
+  }
+
+  end(won) {
+    this.busy = true;
+    this.intent.setText('');
+    if (won) this.tweens.add({ targets: [this.mSprite, this.glow], alpha: 0, scale: '+=2', duration: 600 });
+    this.say(won ? `ปราบ${this.m.name}สำเร็จ! 🎉` : `คุณถูก${this.m.name}เล่นงานจนสลบ...`);
+    this.btns.forEach(b => { b.r.setVisible(false); b.t.setVisible(false); });
+    const r = this.add.rectangle(180, 545, 240, 80, won ? 0x2d5a3a : 0x5a2d3a).setStrokeStyle(3, 0xffffff).setInteractive();
+    this.add.text(180, 545, won ? '🔁 สู้อีกครั้ง' : '🔁 ลองใหม่', { ...FONT, fontSize: '22px' }).setOrigin(0.5);
+    r.on('pointerdown', () => this.scene.restart());
   }
 }

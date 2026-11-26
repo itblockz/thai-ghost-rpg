@@ -8,7 +8,7 @@ export const MONSTERS = {
     name: 'ผีกองกอย', sprite: 'kongkoi', hp: 18,
     pattern: ['scratch'],
     moves: {
-      scratch: { icon: '🐾', dmg: 3 },
+      scratch: { icon: 'icon_claw', dmg: 3 },
     },
   },
   // Planned 2nd ghost (needs ตะกรุด) — not used yet.
@@ -16,9 +16,9 @@ export const MONSTERS = {
     name: 'กระสือ', sprite: 'krasue', hp: 30,
     pattern: ['bite', 'inhale', 'spit'],
     moves: {
-      bite: { icon: '🦷', dmg: 5 },
-      inhale: { icon: '💨', addStatus: 'charge' },
-      spit: { icon: '⚠️', dmg: 20, needs: 'charge', danger: true, fizzle: 'สำลัก!' },
+      bite: { icon: 'icon_fang', dmg: 5 },
+      inhale: { icon: 'icon_charge', addStatus: 'charge' },
+      spit: { icon: 'icon_danger', dmg: 20, needs: 'charge', danger: true, fizzle: 'สำลัก!' },
     },
   },
 };

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ZOOM, setupCamera } from '../display.js';
+import { registerSprites } from '../art/sprites.js';
 import { unlockAudio, play } from '../audio/sfx.js';
 
 const FONT = { fontFamily: 'sans-serif', color: '#fff', resolution: ZOOM };
@@ -9,8 +10,11 @@ export class TitleScene extends Phaser.Scene {
   constructor() { super('Title'); }
   create() {
     setupCamera(this);
-    this.add.text(180, 250, 'ตำนานผีไทย', { ...FONT, fontSize: '40px', fontStyle: 'bold', color: '#ff5577' }).setOrigin(0.5);
-    const t = this.add.text(180, 360, 'แตะเพื่อเริ่ม', { ...FONT, fontSize: '22px' }).setOrigin(0.5);
+    registerSprites(this);
+    this.add.image(180, 0, 'bg_night').setOrigin(0.5, 0).setScale(4);
+    this.add.image(180, 450, 'kongkoi').setScale(6).setAlpha(0.5);
+    this.add.text(180, 250, 'ตำนานผีไทย', { ...FONT, fontSize: '40px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
+    const t = this.add.text(180, 360, 'แตะเพื่อเริ่ม', { ...FONT, fontSize: '22px', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
     this.tweens.add({ targets: t, alpha: 0.3, yoyo: true, repeat: -1, duration: 700 });
     this.input.once('pointerdown', () => {
       unlockAudio();

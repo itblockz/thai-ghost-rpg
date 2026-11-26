@@ -199,7 +199,6 @@ export class BattleScene extends Phaser.Scene {
     if (skill.effects[from]?.wait) {
       return this.animWindup(user, target, () => {
         this.applySkill(user, target, skillId, from);
-        this.popup(user.x, user.y + 40, `ตั้งท่า${skill.name}!`, '#ff5577', 20);
         this.refresh();
         done();
       });
@@ -207,7 +206,6 @@ export class BattleScene extends Phaser.Scene {
     const kind = skill.anim || (user.side === 'ally' ? 'slash' : 'claw');
     this.animAttack(user, target, kind, () => {
       const r = this.applySkill(user, target, skillId, from);
-      if (kind !== 'shield') this.popup(user.x, user.y + (user.side === 'enemy' ? 50 : -50), skill.name, '#ffffff', 16);
       if (r.blocked) { this.popup(target.x, target.y - 30, 'กันไว้!', '#ffe066', 22); play('block'); }
       else if (r.dealt) {
         const heavy = r.dealt >= 12;
@@ -239,7 +237,6 @@ export class BattleScene extends Phaser.Scene {
     } else {
       u.sprite.setTint(0x444455);
       this.tweens.add({ targets: u.sprite, alpha: 0.45, angle: 80, duration: 400 });
-      this.popup(u.x, u.y, 'หมดสติ', '#aaaacc', 18);
     }
   }
 
@@ -268,28 +265,26 @@ export class BattleScene extends Phaser.Scene {
     this.btns.forEach(b => b.parts.forEach(p => p.destroy()));
     this.btns = [];
     const u = this.active;
-    if (!u) { this.turnText.setText(this.ended ? '' : 'ฝ่ายศัตรูกำลังเคลื่อนไหว…'); return; }
+    if (!u) { this.turnText.setText(''); return; }
     const n = u.skills.length, w = n === 1 ? 220 : 160;
     u.skills.forEach((id, i) => {
       const x = 180 + (i - (n - 1) / 2) * 172, y = BTN_Y, s = SKILLS[id];
       const cd = u.cd[id] || 0, sel = this.selected === id && !cd;
       const g = this.add.graphics();
       this.pixelPanel(g, x, y, w, 120, cd ? 0x1e1e2a : sel ? 0x3d3d5e : 0x33334d, cd ? 0x444455 : sel ? 0xffdd55 : 0x8888cc);
-      const icon = this.add.image(x, y - 28, s.icon).setScale(4.5);
-      const name = this.add.text(x, y + 16, s.name, { ...FONT, fontSize: '20px' }).setOrigin(0.5);
-      const dmg = skillDamage(s);
-      const sub = this.add.text(x, y + 42, dmg ? `อานุภาพ ${dmg}` : s.target === 'ally' ? 'กันให้พวกเดียวกัน' : '', { ...FONT, fontSize: '13px', color: '#d0d0ee' }).setOrigin(0.5);
+      const icon = this.add.image(x, y - 14, s.icon).setScale(6);
+      const name = this.add.text(x, y + 36, s.name, { ...FONT, fontSize: '20px' }).setOrigin(0.5);
       const cdText = this.add.text(x, y, cd ? String(cd) : '', { ...FONT, fontSize: '52px', fontStyle: 'bold' }).setOrigin(0.5);
-      const parts = [g, icon, name, sub, cdText];
-      if (cd) [icon, name, sub].forEach(p => p.setAlpha(0.25));
+      const parts = [g, icon, name, cdText];
+      if (cd) [icon, name].forEach(p => p.setAlpha(0.25));
       const zone = this.add.zone(x, y, w, 120).setInteractive({ useHandCursor: true });
       zone.on('pointerdown', () => { if (this.busy) return; if (cd) this.showSkillInfo(s, `ฤทธิ์ของ${u.name}`); else this.select(id); });
       parts.push(zone);
       this.btns.push({ id, parts });
     });
     const s = SKILLS[this.selected];
-    const hint = storageGet('seenTapTarget') ? '' : (s.target === 'ally' ? ' — แตะบริวารเพื่อใช้' : ' — แตะศัตรูเพื่อใช้');
-    this.turnText.setText(`ตาของ ${u.name}${hint}`);
+    // only a first-time hint; the gold glow shows whose turn it is
+    this.turnText.setText(storageGet('seenTapTarget') ? '' : (s.target === 'ally' ? 'แตะบริวารเพื่อใช้' : 'แตะศัตรูเพื่อใช้'));
   }
 
   // Panel with notched (pixel-style) corners.
@@ -313,6 +308,8 @@ export class BattleScene extends Phaser.Scene {
       this.setBar(u);
       if (u.side === 'enemy' && u.alive) {
         u.glow.setFillStyle(u.pending ? 0xff1030 : 0xff3060, u.pending ? 0.45 : 0.12);
+        // winding up: the body itself burns red
+        if (u.pending) u.sprite.setTint(0xff7788); else u.sprite.clearTint();
         u.tiles.forEach(t => {
           const cd = u.cd[t.sid] || 0, winding = u.pending?.skillId === t.sid;
           t.g.clear();

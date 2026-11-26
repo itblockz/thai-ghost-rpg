@@ -48,8 +48,13 @@ export class StoryScene extends Phaser.Scene {
       const tex = this.textures.get(page.art).getSourceImage();
       const wide = tex.width >= 60;
       const scale = wide ? 340 / tex.width : Math.min(14, 200 / tex.height);
-      this.art.setTexture(page.art).setScale(scale).setVisible(true).setAlpha(0);
-      this.tweens.add({ targets: this.art, alpha: 1, duration: 400 });
+      this.tweens.killTweensOf(this.art);
+      this.art.setTexture(page.art).setScale(scale).setVisible(true).setAlpha(0).setY(210);
+      this.tweens.add({ targets: this.art, alpha: 1, duration: 400, onComplete: () => {
+        // gentle life: figures float, scenes flicker like lamplight
+        if (wide) this.tweens.add({ targets: this.art, alpha: 0.82, yoyo: true, repeat: -1, duration: 1300, ease: 'Sine.inOut' });
+        else this.tweens.add({ targets: this.art, y: 200, yoyo: true, repeat: -1, duration: 1100, ease: 'Sine.inOut' });
+      } });
       if (wide) {
         const h = tex.height * scale;
         this.frame.lineStyle(4, 0x55557a).strokeRect(180 - 172, 210 - h / 2 - 2, 344, h + 4);

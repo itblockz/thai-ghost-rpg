@@ -47,6 +47,9 @@ export class BattleScene extends Phaser.Scene {
     });
     const team = currentTeam(this);
     const ax = slots(team.length);
+    this.time.addEvent({ delay: 420, loop: true, callback: () => {
+      for (const u of [...this.allies, ...this.enemies]) if (u.alive && (u.pose === 'idle' || u.pose === 'idle2')) this.pose(u, u.pose === 'idle' ? 'idle2' : 'idle');
+    } });
     this.allies = team.map((id, i) => this.makeUnit('ally', id, ALLIES[id], ALLIES[id].name, ax[i], ALLY_Y, 5));
 
     const muteKey = () => (isMuted() ? 'icon_sound_off' : 'icon_sound_on');
@@ -63,6 +66,22 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ---------- units ----------
+  // Swap to a drawn animation frame: idle | idle2 | wind | atk (falls back to the base sprite).
+  pose(u, name) {
+    u.pose = name;
+    const key = name === 'idle' ? u.def.sprite : `${u.def.sprite}_${name}`;
+    u.sprite.setTexture(this.textures.exists(key) ? key : u.def.sprite);
+  }
+
+  // Pixel-art feel: units move in whole art pixels, never sub-pixel.
+  update() {
+    for (const u of [...(this.allies || []), ...(this.enemies || [])]) {
+      const sp = u.sprite, st = u.scale / 2;
+      sp.x = u.x + Math.round((sp.x - u.x) / st) * st;
+      sp.y = u.y + Math.round((sp.y - u.y) / st) * st;
+    }
+  }
+
   makeUnit(side, id, def, name, x, y, scale) {
     const u = {
       side, id, def, name, x, y, scale,
@@ -70,6 +89,7 @@ export class BattleScene extends Phaser.Scene {
     };
     u.glow = this.add.circle(x, y, scale * 9, side === 'enemy' ? 0xff3060 : 0xffd860, side === 'enemy' ? 0.12 : 0);
     u.sprite = this.add.image(x, y, def.sprite).setScale(scale);
+    u.pose = 'idle';
     this.tweens.add({ targets: [u.sprite, u.glow], y: y - (side === 'enemy' ? 7 : 3), yoyo: true, repeat: -1, duration: side === 'enemy' ? 900 : 700, ease: 'Sine.inOut', delay: x * 3 });
 
     // HP bar under the sprite (no name label: the art identifies the unit)
@@ -228,6 +248,7 @@ export class BattleScene extends Phaser.Scene {
     u.alive = false;
     u.hp = 0;
     u.pending = null;
+    this.pose(u, 'idle');
     u.marker.setVisible(false);
     u.shieldIcon.setVisible(false);
     if (u.side === 'enemy') {
@@ -239,7 +260,7 @@ export class BattleScene extends Phaser.Scene {
       (u.tiles || []).forEach(t => { t.icon.setVisible(false); t.cdText.setVisible(false); t.g.clear(); });
     } else {
       u.sprite.setTint(0x444455);
-      this.tweens.add({ targets: u.sprite, alpha: 0.45, angle: 80, duration: 400 });
+      this.tweens.add({ targets: u.sprite, alpha: 0.45, angle: 90, duration: 400 });
     }
   }
 
@@ -404,7 +425,7 @@ export class BattleScene extends Phaser.Scene {
   animWindup(user, target, onDone) {
     play('growl');
     this.tweens.add({ targets: user.sprite, x: user.x + 4, duration: 40, yoyo: true, repeat: 7, onComplete: () => user.sprite.setX(user.x) });
-    this.tweens.add({ targets: user.sprite, scale: user.scale * 1.12, duration: 300, yoyo: true });
+    this.pose(user, 'wind');
     target.marker.setVisible(true);
     this.tweens.add({ targets: target.marker, scale: 4, yoyo: true, repeat: 3, duration: 150 });
     this.time.delayedCall(400, onDone);
@@ -427,12 +448,12 @@ export class BattleScene extends Phaser.Scene {
     const sx = user.scale;
     // 1) anticipation: pull back and squash
     this.tweens.add({
-      targets: sp, x: back.x, y: back.y, scaleX: sx * 1.15, scaleY: sx * 0.85, duration: 180, ease: 'Sine.out',
+      targets: sp, x: back.x, y: back.y, duration: 180, ease: 'Sine.out', onStart: () => this.pose(user, 'wind'),
       onComplete: () => {
         play(enemy ? 'laugh' : 'slash');
         // 2) dash: stretched along the move, leaving after-images
         const trail = this.time.addEvent({ delay: 25, repeat: 4, callback: () => {
-          const ghost = this.add.image(sp.x, sp.y, sp.texture.key).setScale(sp.scaleX, sp.scaleY).setAlpha(0.35).setTint(enemy ? 0xff6080 : 0xffe08a).setDepth(sp.depth - 0.1);
+          const ghost = this.add.image(sp.x, sp.y, sp.texture.key).setScale(sx).setAlpha(0.35).setTint(enemy ? 0xff6080 : 0xffe08a).setDepth(sp.depth - 0.1);
           this.tweens.add({ targets: ghost, alpha: 0, duration: 200, onComplete: () => ghost.destroy() });
         } });
         const style = MOTION[user.id] || 'dash';
@@ -442,20 +463,20 @@ export class BattleScene extends Phaser.Scene {
           // ผีกองกอย: one big arcing leap, landing claws-first
           const p = { t: 0 };
           move = { targets: p, t: 1, duration: 260, ease: 'Sine.inOut',
-            onUpdate: () => { sp.setPosition(user.x + dx * p.t, user.y + dy * p.t - Math.sin(p.t * Math.PI) * 70); sp.setAngle((enemy ? 1 : -1) * 20 * Math.sin(p.t * Math.PI)); } };
+            onUpdate: () => { sp.setPosition(user.x + dx * p.t, user.y + dy * p.t - Math.sin(p.t * Math.PI) * 70) } };
         } else if (style === 'float') {
           // กระสือ: glides in on a wavering S-curve, then snaps forward
           const p = { t: 0 };
           move = { targets: p, t: 1, duration: 420, ease: 'Quad.in',
             onUpdate: () => sp.setPosition(user.x + dx * p.t + Math.sin(p.t * Math.PI * 2) * 30, user.y + dy * p.t) };
         } else {
-          move = { targets: sp, x: to.x, y: to.y, scaleX: sx * 0.9, scaleY: sx * 1.15, duration: 110, ease: 'Cubic.in' };
+          move = { targets: sp, x: to.x, y: to.y, duration: 110, ease: 'Cubic.in' };
         }
+        this.pose(user, 'atk');
         this.tweens.add({
           ...move,
           onComplete: () => {
             trail.remove();
-            sp.setScale(sx * 1.1);
             // 3) impact: effect, flash, knockback, then a brief freeze (hit-stop)
             const k = { x: target.x + dx / len * 16, y: target.y + dy / len * 16 };
             if (kind === 'frenzy') {
@@ -470,7 +491,7 @@ export class BattleScene extends Phaser.Scene {
             }
             // 4) recovery: hold for a beat, then hop home and settle
             this.time.delayedCall(kind === 'frenzy' ? 380 : 90, () => this.tweens.add({
-              targets: sp, x: user.x, y: user.y, scaleX: sx, scaleY: sx, angle: 0, duration: 260, ease: 'Back.out',
+              targets: sp, x: user.x, y: user.y, duration: 260, ease: 'Back.out', onComplete: () => this.pose(user, 'idle'),
             }));
           },
         });
@@ -506,7 +527,7 @@ export class BattleScene extends Phaser.Scene {
   animRam(user, target, onHit) {
     const s = user.sprite;
     this.tweens.add({
-      targets: s, scaleY: user.scale * 0.8, y: user.y + 6, duration: 140, ease: 'Sine.out',
+      targets: s, y: user.y + 6, duration: 140, ease: 'Sine.out', onStart: () => this.pose(user, 'wind'),
       onComplete: () => {
         play('rush');
         // dust trail
@@ -515,7 +536,7 @@ export class BattleScene extends Phaser.Scene {
           this.tweens.add({ targets: d, scale: 2.2, alpha: 0, duration: 400, onComplete: () => d.destroy() });
         });
         this.tweens.add({
-          targets: s, x: target.x, y: target.y + 40, scaleY: user.scale, duration: 170, ease: 'Cubic.in',
+          targets: s, x: target.x, y: target.y + 40, duration: 170, ease: 'Cubic.in', onStart: () => this.pose(user, 'atk'),
           onComplete: () => {
             play('thud');
             this.cameras.main.shake(160, 0.012);
@@ -523,7 +544,7 @@ export class BattleScene extends Phaser.Scene {
             this.tweens.add({ targets: ring, scale: 2.5, alpha: 0, duration: 300, onComplete: () => ring.destroy() });
             this.tweens.add({ targets: target.sprite, y: target.y - 18, duration: 90, yoyo: true });
             onHit();
-            this.tweens.add({ targets: s, x: user.x, y: user.y, duration: 260, ease: 'Back.out' });
+            this.tweens.add({ targets: s, x: user.x, y: user.y, duration: 260, ease: 'Back.out', onComplete: () => this.pose(user, 'idle') });
           },
         });
       },
@@ -544,10 +565,11 @@ export class BattleScene extends Phaser.Scene {
   // Rear back, then hurl glowing guts at the target; splats drip off.
   animSpit(user, target, onHit) {
     this.tweens.add({
-      targets: user.sprite, scale: user.scale * 0.85, y: user.y - 15, duration: 220, ease: 'Sine.out',
+      targets: user.sprite, y: user.y - 15, duration: 220, ease: 'Sine.out', onStart: () => this.pose(user, 'wind'),
       onComplete: () => {
         play('splash');
-        this.tweens.add({ targets: user.sprite, scale: user.scale * 1.2, y: user.y + 20, duration: 120, yoyo: true, onComplete: () => user.sprite.setY(user.y) });
+        this.pose(user, 'atk');
+        this.tweens.add({ targets: user.sprite, y: user.y + 20, duration: 120, yoyo: true, onComplete: () => { user.sprite.setY(user.y); this.time.delayedCall(250, () => user.alive && this.pose(user, 'idle')); } });
         for (let i = 0; i < 12; i++) {
           const gut = this.add.image(user.x, user.y + 30, 'fx_gut').setScale(3).setDepth(5);
           this.tweens.add({

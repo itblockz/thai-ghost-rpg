@@ -1,0 +1,29 @@
+{
+  "name": "thai-ghost-rpg",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itblockz/thai-ghost-rpg.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/itblockz/thai-ghost-rpg/issues"
+  },
+  "homepage": "https://github.com/itblockz/thai-ghost-rpg#readme",
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "vite": "^8.4.0"
+  },
+  "type": "module"
+}

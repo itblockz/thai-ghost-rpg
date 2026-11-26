@@ -77,7 +77,47 @@ export class BattleScene extends Phaser.Scene {
 
     this.selected = items[0].skill; // basic skill pre-selected
     this.updateHint();
+    this.busy = true; // locked until the ghost has made its entrance
     this.refresh();
+    this.intro(!!data?.retry);
+  }
+
+  // Ghost entrance: darkness, the ghost emerges, its name appears, then the fight UI fades in.
+  // Tap to skip. Retries use a short fade only.
+  intro(short) {
+    const veil = this.add.rectangle(180, 320, 360, 640, 0x000000, 1).setDepth(20);
+    this.introDone = false; // scene instance is reused on restart
+    const introTweens = [];
+    const finish = () => {
+      if (this.introDone) return;
+      this.introDone = true;
+      this.time.removeAllEvents();
+      introTweens.forEach(t => t.stop());
+      this.tweens.killTweensOf([veil, this.banner, this.bannerSub].filter(Boolean));
+      this.mSprite.setDepth(0).setAlpha(1).setScale(11);
+      this.glow.setDepth(0).setAlpha(1);
+      this.banner?.destroy(); this.bannerSub?.destroy();
+      this.tweens.add({ targets: veil, alpha: 0, duration: 350, onComplete: () => veil.destroy() });
+      this.busy = false;
+      this.refresh();
+    };
+    if (short) return this.time.delayedCall(10, finish);
+
+    this.mSprite.setDepth(21).setAlpha(0).setScale(6);
+    this.glow.setDepth(21).setAlpha(0);
+    introTweens.push(
+      this.tweens.add({ targets: [this.mSprite, this.glow], alpha: 1, duration: 900, ease: 'Sine.in' }),
+      this.tweens.add({ targets: this.mSprite, scale: 11, duration: 1100, ease: 'Back.out' }),
+    );
+    this.time.delayedCall(350, () => play('laugh'));
+    this.time.delayedCall(700, () => {
+      this.banner = this.add.text(180, 335, `— ${this.m.name} —`, { ...FONT, fontSize: '34px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(22).setAlpha(0);
+      this.bannerSub = this.add.text(180, 380, this.m.lore || '', { ...FONT, fontSize: '15px', color: '#ccccee', align: 'center', wordWrap: { width: 300 } }).setOrigin(0.5, 0).setDepth(22).setAlpha(0);
+      this.tweens.add({ targets: [this.banner, this.bannerSub], alpha: 1, duration: 400 });
+      play('growl');
+    });
+    this.time.delayedCall(2600, finish);
+    this.input.once('pointerdown', finish);
   }
 
   // ---------- input ----------
@@ -509,7 +549,7 @@ export class BattleScene extends Phaser.Scene {
     this.mSkillTiles.forEach(t => { t.g.setVisible(false); t.icon.setVisible(false); t.cdText.setVisible(false); });
     // Win → continue the journey (story pages). Lose → retry this ghost.
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
-    const next = won ? () => afterVictory(this, this.stage) : () => this.scene.restart({ stage: this.stage });
+    const next = won ? () => afterVictory(this, this.stage) : () => this.scene.restart({ stage: this.stage, retry: true });
     this.pixelPanel(this.add.graphics(), 180, BTN_Y, 240, 90, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
     this.add.image(100, BTN_Y, 'icon_retry').setScale(4);
     this.add.text(125, BTN_Y, label, { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5);

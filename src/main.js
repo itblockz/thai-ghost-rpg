@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BattleScene } from './scenes/BattleScene.js';
+import { W, H, ZOOM } from './display.js';
 
 // Map (WorldScene) is kept in the repo but not loaded yet — focusing on combat first.
 new Phaser.Game({
@@ -7,6 +8,6 @@ new Phaser.Game({
   parent: 'game',
   backgroundColor: '#0b0b1a',
   antialias: true,
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 360, height: 640 },
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: W * ZOOM, height: H * ZOOM },
   scene: [BattleScene],
 });

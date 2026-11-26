@@ -1,10 +1,9 @@
 import Phaser from 'phaser';
 import { MONSTERS } from '../data/monsters.js';
 import { registerSprites } from '../art/sprites.js';
+import { ZOOM, setupCamera } from '../display.js';
 
-// Game is 360x640 scaled up to fit the screen; render text at the real screen resolution so it stays sharp.
-const TEXT_RES = Math.ceil((window.devicePixelRatio || 1) * Math.max(1, Math.min(window.innerWidth / 360, window.innerHeight / 640)));
-const FONT = { fontFamily: 'sans-serif', color: '#fff', resolution: TEXT_RES };
+const FONT = { fontFamily: 'sans-serif', color: '#fff', resolution: ZOOM };
 const PLAYER = { name: 'หมอผีน้อย', hp: 30, atk: [5, 7] };
 
 export class BattleScene extends Phaser.Scene {
@@ -12,6 +11,7 @@ export class BattleScene extends Phaser.Scene {
 
   create() {
     registerSprites(this);
+    setupCamera(this);
     const def = MONSTERS.krasue;
     this.m = { ...def, maxHp: def.hp, turn: 0 };
     this.p = { ...PLAYER, maxHp: PLAYER.hp };

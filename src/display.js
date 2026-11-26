@@ -9,7 +9,6 @@ export function setupCamera(scene) {
   scene.cameras.main.setZoom(ZOOM).centerOn(W / 2, H / 2);
 }
 
-// UI font. ?font=Mitr (etc.) in the URL overrides it — handy for comparing fonts.
-const FONTS = { 'Chakra Petch': true, Mitr: true, Kanit: true };
-const requested = new URLSearchParams(window.location.search).get('font');
-export const FONT_FAMILY = requested && FONTS[requested] ? `"${requested}"` : 'sans-serif';
+
+// UI font (bundled via @fontsource/kanit, Thai + Latin, 400/700).
+export const FONT_FAMILY = '"Kanit", sans-serif';

@@ -9,10 +9,10 @@
 // useChance (enemies only): when ready, chance per turn that the enemy starts this skill.
 export const SKILLS = {
   // retainers
-  ram: { name: 'วิ่งชน', icon: 'icon_ram', cooldown: 0, effects: [{ damage: 6 }] },
+  ram: { name: 'วิ่งชน', icon: 'icon_ram', anim: 'ram', cooldown: 0, effects: [{ damage: 6 }] },
   guard: { name: 'กางกันภัย', icon: 'icon_shield', cooldown: 3, target: 'ally', anim: 'shield', effects: [{ block: true }] },
   rake: { name: 'ตะกุย', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 4 }] },
-  frenzy: { name: 'ตะกุยรัว', icon: 'icon_frenzy', anim: 'claw', cooldown: 2, effects: [{ damage: 10 }] },
+  frenzy: { name: 'ตะกุยรัว', icon: 'icon_frenzy', anim: 'frenzy', cooldown: 2, effects: [{ damage: 10 }] },
   // enemies
   scratch: { name: 'ตะกุย', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 3 }] },
   bite: { name: 'กัด', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 10 }] },

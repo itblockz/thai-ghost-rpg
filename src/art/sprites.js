@@ -439,6 +439,38 @@ function drawBackdrop(scene) {
 }
 
 
+/** Village battle backdrop (90x110, shown at 4x): red-lit sky, shut stilt houses, dirt yard. */
+function drawVillageBackdrop(scene) {
+  canvasArt(scene, 'bg_village', 90, 110, (px, rect, W, H) => {
+    const bands = ['#0b0820', '#160a26', '#22102c', '#2e1430', '#3a1830'];
+    for (let y = 0; y < 80; y++) for (let x = 0; x < W; x++) {
+      const f = y / 80 * (bands.length - 1), i = Math.floor(f);
+      px(x, y, bands[Math.min(bands.length - 1, f - i + ((x + y) % 2 ? 0.25 : -0.25) > 0.5 ? i + 1 : i)]);
+    }
+    [[6, 5], [24, 9], [41, 3], [58, 12], [86, 4], [12, 20]].forEach(([x, y]) => px(x, y, '#7a6a90'));
+    // red glow over the treetops
+    for (let y = -16; y <= 16; y++) for (let x = -16; x <= 16; x++) {
+      const d = Math.sqrt(x * x + y * y);
+      if (d < 16 && (d < 5 || (x + y) % 2 === 0)) px(70 + x, 26 + y, d < 3 ? '#ff6688' : d < 8 ? '#8a1830' : '#3a0c22');
+    }
+    // trees behind houses
+    const tree = (cx, top) => { for (let y = top; y < 66; y++) { const h = Math.min(7, Math.floor((y - top) / 2) + 1); rect(cx - h, y, 2 * h + 1, 1, '#08040e'); } };
+    tree(10, 36); tree(36, 42); tree(62, 38); tree(84, 34);
+    // stilt houses
+    const house = (x, w, top) => {
+      for (let y = 0; y < 8; y++) rect(x - y, top + y, w + 2 * y, 1, '#0e0814');
+      rect(x - 5, top + 8, w + 10, 10, '#150c1a');
+      rect(x + 1, top + 11, 4, 4, '#050208'); rect(x + w - 5, top + 11, 4, 4, '#050208');
+      for (let i = 0; i < 4; i++) rect(x - 4 + i * Math.floor((w + 8) / 3), top + 18, 1, 80 - top - 18, '#0e0814');
+    };
+    house(8, 14, 50); house(40, 16, 46); house(72, 12, 52);
+    // dirt yard
+    for (let y = 80; y < H; y++) for (let x = 0; x < W; x++) px(x, y, (x * 5 + y * 3) % 13 === 0 ? '#2e2220' : y < 84 ? '#151010' : '#1c1414');
+    // red haze near the ground
+    for (let y = 74; y < 86; y++) for (let x = 0; x < W; x++) if (Math.sin(x / 5 + y) + Math.sin(x / 9) > 0.7 && (x + y) % 2 === 0) px(x, y, '#3a1a2a');
+  });
+}
+
 /** Story illustrations (procedural pixel art). */
 function canvasArt(scene, key, W, H, draw) {
   if (scene.textures.exists(key)) return;
@@ -520,6 +552,7 @@ function drawStoryArt(scene) {
 export function registerSprites(scene) {
   drawBackdrop(scene);
   drawStoryArt(scene);
+  drawVillageBackdrop(scene);
   for (const [key, rows] of Object.entries(SPRITES)) {
     if (scene.textures.exists(key)) continue;
     const tex = scene.textures.createCanvas(key, rows[0].length, rows.length);

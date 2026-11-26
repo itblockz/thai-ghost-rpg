@@ -30,7 +30,7 @@ export class BattleScene extends Phaser.Scene {
     this.ended = false;
     this.active = null;
 
-    this.add.image(180, 0, 'bg_night').setOrigin(0.5, 0).setScale(4);
+    this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(4);
     this.add.rectangle(180, 540, 360, 200, 0x0b0b1a);
     this.reticle = this.add.graphics().setDepth(4);
     this.tweens.add({ targets: this.reticle, alpha: 0.35, yoyo: true, repeat: -1, duration: 500 });
@@ -416,6 +416,7 @@ export class BattleScene extends Phaser.Scene {
       return this.time.delayedCall(200, onHit);
     }
     if (kind === 'spit') return this.animSpit(user, target, onHit);
+    if (kind === 'ram') return this.animRam(user, target, onHit);
     const dx = (target.x - user.x) * 0.35, dy = (target.y - user.y) * 0.35;
     let hit = false; // onYoyo fires once per tweened property — only hit once
     this.tweens.add({
@@ -427,6 +428,7 @@ export class BattleScene extends Phaser.Scene {
         hit = true;
         if (kind === 'bite') this.fxBite(target);
         else if (kind === 'claw') this.fxClaw(target);
+        else if (kind === 'frenzy') return this.fxFrenzy(target, onHit);
         else this.fxSlash(target);
         if (target.side === 'ally') play('hurt');
         onHit();
@@ -446,6 +448,45 @@ export class BattleScene extends Phaser.Scene {
     play('scratch');
     const fx = this.add.image(t.x, t.y, 'fx_claw').setScale(3).setDepth(5);
     this.tweens.add({ targets: fx, alpha: 0, duration: 450, delay: 120, onComplete: () => fx.destroy() });
+  }
+
+  // Three quick rakes from alternating angles; damage lands on the last one.
+  fxFrenzy(t, onHit) {
+    [-35, 35, 0].forEach((ang, i) => this.time.delayedCall(i * 140, () => {
+      play('scratch');
+      const fx = this.add.image(t.x + (i - 1) * 10, t.y, 'fx_claw').setScale(i === 2 ? 4 : 3).setAngle(ang).setDepth(5);
+      this.tweens.add({ targets: fx, alpha: 0, duration: 350, delay: 80, onComplete: () => fx.destroy() });
+      this.tweens.add({ targets: t.sprite, x: t.x + (i % 2 ? -6 : 6), duration: 50, yoyo: true });
+      if (i === 2) { if (t.side === 'ally') play('hurt'); onHit(); }
+    }));
+  }
+
+  // Full-body charge: crouch, dash all the way in, big thud, target knocked back, bounce home.
+  animRam(user, target, onHit) {
+    const s = user.sprite;
+    this.tweens.add({
+      targets: s, scaleY: user.scale * 0.8, y: user.y + 6, duration: 140, ease: 'Sine.out',
+      onComplete: () => {
+        play('rush');
+        // dust trail
+        for (let i = 0; i < 4; i++) this.time.delayedCall(i * 35, () => {
+          const d = this.add.circle(s.x, s.y + 30, 6, 0x8a8070, 0.6).setDepth(2);
+          this.tweens.add({ targets: d, scale: 2.2, alpha: 0, duration: 400, onComplete: () => d.destroy() });
+        });
+        this.tweens.add({
+          targets: s, x: target.x, y: target.y + 40, scaleY: user.scale, duration: 170, ease: 'Cubic.in',
+          onComplete: () => {
+            play('thud');
+            this.cameras.main.shake(160, 0.012);
+            const ring = this.add.circle(target.x, target.y + 20, 20, 0xffffff, 0).setStrokeStyle(4, 0xffe9a0).setDepth(5);
+            this.tweens.add({ targets: ring, scale: 2.5, alpha: 0, duration: 300, onComplete: () => ring.destroy() });
+            this.tweens.add({ targets: target.sprite, y: target.y - 18, duration: 90, yoyo: true });
+            onHit();
+            this.tweens.add({ targets: s, x: user.x, y: user.y, duration: 260, ease: 'Back.out' });
+          },
+        });
+      },
+    });
   }
 
   fxBite(t) {

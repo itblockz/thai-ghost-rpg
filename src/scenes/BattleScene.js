@@ -30,10 +30,11 @@ export class BattleScene extends Phaser.Scene {
     this.log = this.add.text(180, 395, '', { ...FONT, fontSize: '16px', align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5, 0);
 
     this.btns = [
-      this.btn(95, 545, '⚔️ โจมตี', () => this.act('attack')),
-      this.btn(265, 545, '🛡️ ป้องกัน', () => this.act('defend')),
+      this.btn(95, 545, '⚔️ โจมตี', 'ความเสียหาย 5–7', () => this.act('attack')),
+      this.btn(265, 545, '🛡️ ป้องกัน', 'ลดความเสียหายครึ่งหนึ่ง\nกันท่าไม้ตายได้หมด', () => this.act('defend')),
     ];
     this.say(`${def.name}ลอยออกมาจากความมืด!`);
+    this.showIntent();
     this.refresh();
   }
 
@@ -45,13 +46,14 @@ export class BattleScene extends Phaser.Scene {
     return { fill, num, t };
   }
 
-  btn(x, y, label, fn) {
-    const r = this.add.rectangle(x, y, 150, 90, 0x33334d).setStrokeStyle(3, 0x8888cc).setInteractive();
-    const t = this.add.text(x, y, label, { ...FONT, fontSize: '22px' }).setOrigin(0.5);
+  btn(x, y, label, hint, fn) {
+    const r = this.add.rectangle(x, y, 160, 100, 0x33334d).setStrokeStyle(3, 0x8888cc).setInteractive();
+    const t = this.add.text(x, y - 18, label, { ...FONT, fontSize: '22px' }).setOrigin(0.5);
+    const h = this.add.text(x, y + 22, hint, { ...FONT, fontSize: '13px', color: '#d0d0ee', align: 'center' }).setOrigin(0.5);
     r.on('pointerdown', () => { if (!this.busy) { r.setFillStyle(0x4a4a70); fn(); } });
     r.on('pointerup', () => r.setFillStyle(0x33334d));
     r.on('pointerout', () => r.setFillStyle(0x33334d));
-    return { r, t };
+    return { r, t, h };
   }
 
   say(t) { this.log.setText(t); }
@@ -69,6 +71,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   nextMove() { return this.m.pattern[this.m.turn % this.m.pattern.length]; }
+
+  // Tell the player what the monster will do next turn.
+  showIntent() {
+    const next = this.m.moves[this.nextMove()];
+    this.intent.setText(next.intent).setColor(next.danger ? '#ff5577' : '#ccccee').setAlpha(1);
+    this.glow.setFillStyle(0xff3060, next.danger ? 0.45 : 0.12);
+    if (next.danger) this.tweens.add({ targets: this.intent, alpha: 0.4, yoyo: true, repeat: 3, duration: 200 });
+  }
 
   act(choice) {
     this.busy = true;
@@ -98,11 +108,7 @@ export class BattleScene extends Phaser.Scene {
     if (d > 0) { this.p.hp -= d; this.cameras.main.shake(key === 'special' ? 300 : 150, key === 'special' ? 0.02 : 0.008); }
     this.say(msg);
 
-    // telegraph
-    const charging = key === 'charge';
-    this.intent.setText(charging ? mv.intent : '');
-    this.glow.setFillStyle(0xff3060, charging ? 0.45 : 0.12);
-    if (charging) this.tweens.add({ targets: this.intent, alpha: 0.3, yoyo: true, repeat: 3, duration: 200 });
+    this.showIntent();
 
     this.refresh();
     if (this.p.hp <= 0) return this.time.delayedCall(900, () => this.end(false));
@@ -114,7 +120,7 @@ export class BattleScene extends Phaser.Scene {
     this.intent.setText('');
     if (won) this.tweens.add({ targets: [this.mSprite, this.glow], alpha: 0, scale: '+=2', duration: 600 });
     this.say(won ? `ปราบ${this.m.name}สำเร็จ! 🎉` : `คุณถูก${this.m.name}เล่นงานจนสลบ...`);
-    this.btns.forEach(b => { b.r.setVisible(false); b.t.setVisible(false); });
+    this.btns.forEach(b => { b.r.setVisible(false); b.t.setVisible(false); b.h.setVisible(false); });
     const r = this.add.rectangle(180, 545, 240, 80, won ? 0x2d5a3a : 0x5a2d3a).setStrokeStyle(3, 0xffffff).setInteractive();
     this.add.text(180, 545, won ? '🔁 สู้อีกครั้ง' : '🔁 ลองใหม่', { ...FONT, fontSize: '22px' }).setOrigin(0.5);
     r.on('pointerdown', () => this.scene.restart());

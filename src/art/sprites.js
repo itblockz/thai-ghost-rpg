@@ -471,6 +471,52 @@ function drawVillageBackdrop(scene) {
   });
 }
 
+/** Title art (90x160, shown at 4x): a cracked Thai gate leaking light from the other side. */
+function drawTitleArt(scene) {
+  canvasArt(scene, 'art_gate', 90, 160, (px, rect, W, H) => {
+    const bands = ['#06051a', '#0b0820', '#120b2c', '#1a1036', '#221440'];
+    for (let y = 0; y < 130; y++) for (let x = 0; x < W; x++) {
+      const f = y / 130 * (bands.length - 1), i = Math.floor(f);
+      px(x, y, bands[Math.min(bands.length - 1, f - i + ((x + y) % 2 ? 0.25 : -0.25) > 0.5 ? i + 1 : i)]);
+    }
+    [[6, 4], [18, 12], [70, 6], [84, 15], [10, 30], [80, 34], [30, 3], [57, 9], [4, 50], [86, 52]].forEach(([x, y]) => px(x, y, '#8a86b0'));
+    // light from the other side, haloing the gate
+    for (let y = -40; y <= 40; y++) for (let x = -34; x <= 34; x++) {
+      const d = Math.sqrt(x * x + (y * 0.8) ** 2);
+      if (d < 34 && (d < 14 || (x + y) % 2 === 0)) px(45 + x, 98 + y, d < 14 ? '#3a2850' : d < 24 ? '#261a40' : '#1a1232');
+    }
+    const dark = '#0a0612', trim = '#3a2a40', gold = '#8a6a30';
+    // tiered spire (ยอดปราสาท)
+    rect(44, 30, 2, 6, gold);
+    for (let t = 0; t < 4; t++) {
+      const top = 36 + t * 8, half = 4 + t * 4;
+      for (let y = 0; y < 8; y++) { const h = half + Math.floor(y / 2); rect(45 - h, top + y, 2 * h, 1, dark); }
+      rect(45 - half - 4, top + 7, 2 * half + 8, 1, trim);
+    }
+    // lintel and pillars
+    rect(20, 68, 50, 5, dark); rect(20, 68, 50, 1, gold);
+    rect(23, 73, 7, 57, dark); rect(60, 73, 7, 57, dark);
+    rect(24, 73, 1, 57, trim); rect(65, 73, 1, 57, trim);
+    // door panels
+    rect(30, 73, 14, 57, '#140c1c'); rect(46, 73, 14, 57, '#140c1c');
+    for (let y = 78; y < 128; y += 10) { rect(32, y, 10, 1, '#22162a'); rect(48, y, 10, 1, '#22162a'); }
+    // jagged crack of light between the doors
+    let cx = 45;
+    for (let y = 73; y < 130; y++) {
+      if (y % 4 === 0) cx += ((y * 7) % 3) - 1;
+      cx = Math.max(43, Math.min(47, cx));
+      rect(cx - 1, y, 3, 1, '#c8a8ff'); px(cx, y, '#ffffff');
+      if (y === 84 || y === 101 || y === 117) { rect(cx + 2, y, 4, 1, '#a080e0'); px(cx + 6, y - 1, '#a080e0'); }
+      if (y === 92 || y === 110) { rect(cx - 5, y, 4, 1, '#a080e0'); px(cx - 6, y + 1, '#a080e0'); }
+    }
+    // ground and path
+    for (let y = 130; y < H; y++) for (let x = 0; x < W; x++) px(x, y, (x * 7 + y * 3) % 11 === 0 ? '#1c2a1c' : '#0d140f');
+    for (let y = 130; y < H; y++) { const h = 8 + Math.floor((y - 130) / 2); rect(45 - h, y, 2 * h, 1, (y % 3) ? '#1c1626' : '#241c30'); }
+    // light spilling on the path
+    for (let y = 130; y < 140; y++) for (let x = 40; x < 51; x++) if ((x + y) % 2 === 0) px(x, y, '#5a4880');
+  });
+}
+
 /** Story illustrations (procedural pixel art). */
 function canvasArt(scene, key, W, H, draw) {
   if (scene.textures.exists(key)) return;
@@ -553,6 +599,7 @@ export function registerSprites(scene) {
   drawBackdrop(scene);
   drawStoryArt(scene);
   drawVillageBackdrop(scene);
+  drawTitleArt(scene);
   for (const [key, rows] of Object.entries(SPRITES)) {
     if (scene.textures.exists(key)) continue;
     const tex = scene.textures.createCanvas(key, rows[0].length, rows.length);

@@ -12,12 +12,22 @@ export class TitleScene extends Phaser.Scene {
   create() {
     setupCamera(this);
     registerSprites(this);
-    this.add.image(180, 0, 'bg_night').setOrigin(0.5, 0).setScale(4);
-    this.add.image(130, 470, 'kumarn').setScale(5).setAlpha(0.7);
-    this.add.image(240, 460, 'krasue').setScale(5).setAlpha(0.45);
-    this.add.text(180, 300, 'บทที่ ๑ — คืนเดือนดับ', { ...FONT, fontSize: '17px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
-    this.add.text(180, 250, 'ประตูหิมพานต์', { ...FONT, fontSize: '40px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
-    const t = this.add.text(180, 380, 'แตะเพื่อเริ่มเดินทาง', { ...FONT, fontSize: '22px', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+    this.add.image(180, 0, 'art_gate').setOrigin(0.5, 0).setScale(4);
+    // the crack breathes
+    const glow = this.add.ellipse(180, 405, 70, 230, 0xb090ff, 0.18).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: glow, alpha: 0.05, scaleX: 0.7, yoyo: true, repeat: -1, duration: 1400, ease: 'Sine.inOut' });
+    // things slipping out through the gap
+    const ghost = (key, x, y, sc, a, d) => {
+      const g = this.add.image(x, y, key).setScale(sc).setAlpha(a).setTint(0xb8a0ff);
+      this.tweens.add({ targets: g, y: y - 10, alpha: a * 0.5, yoyo: true, repeat: -1, duration: d, ease: 'Sine.inOut' });
+    };
+    ghost('krasue', 312, 320, 4, 0.85, 1700);
+    ghost('kongkoi', 46, 450, 4, 0.8, 1300);
+    // the heir's companion, seen from behind as a silhouette, facing the gate
+    this.add.image(180, 572, 'kumarn').setScale(4).setTintFill(0x05030a);
+    this.add.text(180, 52, 'ประตูหิมพานต์', { ...FONT, fontSize: '40px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
+    this.add.text(180, 92, 'บทที่ ๑ — คืนเดือนดับ', { ...FONT, fontSize: '17px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+    const t = this.add.text(180, 618, 'แตะเพื่อเริ่มเดินทาง', { ...FONT, fontSize: '20px', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
     this.tweens.add({ targets: t, alpha: 0.3, yoyo: true, repeat: -1, duration: 700 });
     this.input.once('pointerdown', () => {
       unlockAudio();

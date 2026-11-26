@@ -26,9 +26,9 @@ export class BattleScene extends Phaser.Scene {
     if (!this.registry.get('items')) this.registry.set('items', [...STARTING_ITEMS]);
     const def = MONSTERS[STAGES[this.stage]];
     // Both sides share the same shape: hp, skills, cooldowns, block.
-    this.m = { ...def, maxHp: def.hp, cd: {}, block: false };
-    for (const id of def.skills) if (SKILLS[id].startCooldown) this.m.cd[id] = SKILLS[id].startCooldown;
-    this.p = { name: 'ศิษย์หมอผี', hp: 30, maxHp: 30, cd: {}, block: false };
+    // pending: a wound-up skill waiting to finish; takenMult: damage multiplier while winding up.
+    this.m = { ...def, maxHp: def.hp, cd: {}, block: false, pending: null, takenMult: 1 };
+    this.p = { name: 'ศิษย์หมอผี', hp: 30, maxHp: 30, cd: {}, block: false, pending: null, takenMult: 1 };
     this.busy = false;
 
     this.add.image(180, 0, 'bg_night').setOrigin(0.5, 0).setScale(4);
@@ -139,11 +139,16 @@ export class BattleScene extends Phaser.Scene {
   monsterSkillTile(x, y, id) {
     const s = SKILLS[id];
     const g = this.add.graphics();
-    this.pixelPanel(g, x, y, 38, 38, 0x2a1a2e, 0xaa6677, 3);
+    this.drawTile(g, x, y, false);
     const icon = this.add.image(x, y, s.icon).setScale(3);
     const cdText = this.add.text(x, y, '', { ...FONT, fontSize: '20px', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
     this.add.zone(x, y, 42, 42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(s, 'ฤทธิ์ผี'));
-    return { id, g, icon, cdText };
+    return { id, g, x, y, icon, cdText };
+  }
+
+  drawTile(g, x, y, windingUp) {
+    g.clear();
+    this.pixelPanel(g, x, y, 38, 38, windingUp ? 0x5a1020 : 0x2a1a2e, windingUp ? 0xff3355 : 0xaa6677, 3);
   }
 
   // Panel with notched (pixel-style) corners.
@@ -204,6 +209,8 @@ export class BattleScene extends Phaser.Scene {
 
   skillRows(y, skill) {
     for (const e of skill.effects) {
+      if (e.wait) y = this.cardRow(y, 'icon_clock', 'ตั้งท่าก่อน', `${e.wait} ตา`, '#ff8899');
+      if (e.takenMult > 1) y = this.cardRow(y, 'icon_danger', 'ระหว่างตั้งท่าโดนตี', `x${e.takenMult}`, '#ff8899');
       if (e.damage != null) y = this.cardRow(y, 'icon_dmg', 'อานุภาพ', String(e.damage), '#ffdd55');
       if (e.block) y = this.cardRow(y, 'icon_shield', 'กันการโจมตี', 'ตานี้', '#ffe066');
     }
@@ -242,9 +249,16 @@ export class BattleScene extends Phaser.Scene {
     this.btns.forEach(b => this.drawBtn(b));
     this.mSkillTiles.forEach(t => {
       const cd = this.m.cd[t.id] || 0;
+      const windingUp = this.m.pending?.skillId === t.id;
+      this.drawTile(t.g, t.x, t.y, windingUp);
+      this.tweens.killTweensOf(t.g);
+      t.g.setAlpha(1);
+      if (windingUp) this.tweens.add({ targets: t.g, alpha: 0.4, yoyo: true, repeat: -1, duration: 250 });
       t.icon.setAlpha(cd ? 0.3 : 1);
       t.cdText.setText(cd ? String(cd) : '');
     });
+    // ghost glows hot red while winding up
+    this.glow.setFillStyle(this.m.pending ? 0xff1030 : 0xff3060, this.m.pending ? 0.45 : 0.12);
     this.drawReticle(!this.busy);
   }
 
@@ -263,23 +277,36 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ---------- skills (shared by both sides) ----------
-  applySkill(user, target, skillId) {
+  // Run a skill's effects from `from`. A `wait` effect pauses the skill: the rest runs on the
+  // user's next turn (see user.pending). Cooldown starts when the skill finishes.
+  applySkill(user, target, skillId, from = 0) {
     const skill = SKILLS[skillId];
-    if (skill.cooldown) user.cd[skillId] = skill.cooldown + 1; // +1: ticks down at end of this round
-    let dealt = 0;
-    for (const e of skill.effects) {
-      if (e.damage != null && !target.block) { target.hp -= e.damage; dealt += e.damage; }
+    let dealt = 0, blocked = false, mult = 1;
+    for (let i = from; i < skill.effects.length; i++) {
+      const e = skill.effects[i];
+      if (e.wait) {
+        user.pending = { skillId, next: i + 1 };
+        user.takenMult = e.takenMult || 1;
+        return { skill, dealt, blocked, waiting: true };
+      }
+      if (e.damage != null) {
+        if (target.block) blocked = true;
+        else { mult = target.takenMult; const d = e.damage * mult; target.hp -= d; dealt += d; }
+      }
       if (e.block) user.block = true;
     }
-    return { skill, dealt, blocked: skillDamage(skill) > 0 && target.block };
+    if (skill.cooldown) user.cd[skillId] = skill.cooldown + 1; // +1: ticks down at end of this round
+    return { skill, dealt, blocked, mult, waiting: false };
   }
 
   tickCooldowns(c) { for (const k in c.cd) if (c.cd[k] > 0) c.cd[k]--; }
 
-  // Ghosts use their strongest ready skill.
+  // Ghosts use their strongest ready skill. Skills with useChance only fire on a lucky roll,
+  // so the player can't predict exactly when a big move starts.
   pickMonsterSkill() {
-    const ready = this.m.skills.filter(id => !this.m.cd[id]);
-    return (ready.length ? ready : this.m.skills).reduce((a, b) => (skillDamage(SKILLS[b]) > skillDamage(SKILLS[a]) ? b : a));
+    const ready = this.m.skills.filter(id => !this.m.cd[id] && Math.random() < (SKILLS[id].useChance ?? 1));
+    const pool = ready.length ? ready : this.m.skills.filter(id => !this.m.cd[id] && SKILLS[id].useChance == null);
+    return (pool.length ? pool : this.m.skills).reduce((a, b) => (skillDamage(SKILLS[b]) > skillDamage(SKILLS[a]) ? b : a));
   }
 
   // ---------- turns ----------
@@ -289,8 +316,9 @@ export class BattleScene extends Phaser.Scene {
     const self = SKILLS[skillId].target === 'self';
     const anim = self ? (cb) => this.animWard(cb) : (cb) => this.animSlash(cb);
     anim(() => {
-      const { dealt } = this.applySkill(this.p, self ? this.p : this.m, skillId);
-      if (dealt) this.popup(MX, MY - 20, `-${dealt}`, '#ffdd55');
+      const { dealt, mult } = this.applySkill(this.p, self ? this.p : this.m, skillId);
+      if (dealt) this.popup(MX, MY - 20, `-${dealt}`, mult > 1 ? '#ff7733' : '#ffdd55', mult > 1 ? 46 : 34);
+      if (mult > 1) this.popup(MX, MY + 40, 'โดนจุดอ่อน!', '#ff9944', 24);
       this.setBar(this.mBar, this.m);
       this.btns.forEach(b => this.drawBtn(b));
       this.time.delayedCall(700, () => (this.m.hp <= 0 ? this.end(true) : this.monsterTurn()));
@@ -298,11 +326,25 @@ export class BattleScene extends Phaser.Scene {
   }
 
   monsterTurn() {
-    const skillId = this.pickMonsterSkill();
-    const heavy = skillDamage(SKILLS[skillId]) >= 10;
+    // Finish a wound-up skill, or pick a new one.
+    let skillId, from = 0;
+    if (this.m.pending) {
+      ({ skillId, next: from } = this.m.pending);
+      this.m.pending = null;
+      this.m.takenMult = 1;
+    } else {
+      skillId = this.pickMonsterSkill();
+    }
+    const skill = SKILLS[skillId];
+    if (skill.effects[from]?.wait) return this.animWindup(() => {
+      this.applySkill(this.m, this.p, skillId, from);
+      this.popup(MX, MY + 70, `ตั้งท่า${skill.name}!`, '#ff5577', 28);
+      this.endRound();
+    });
+    const heavy = skillDamage(skill) >= 10;
     this.animMonsterAttack(heavy, () => {
-      const { dealt, blocked } = this.applySkill(this.m, this.p, skillId);
-      this.popup(MX, MY + 70, SKILLS[skillId].name, heavy ? '#ff5577' : '#ffffff', heavy ? 30 : 22);
+      const { dealt, blocked } = this.applySkill(this.m, this.p, skillId, from);
+      this.popup(MX, MY + 70, skill.name, heavy ? '#ff5577' : '#ffffff', heavy ? 30 : 22);
       if (blocked) {
         this.popup(180, 380, 'ตะกรุดกันไว้!', '#ffe066', 30);
         play('block');
@@ -311,6 +353,12 @@ export class BattleScene extends Phaser.Scene {
         this.cameras.main.shake(heavy ? 350 : 150, heavy ? 0.025 : 0.008);
         if (heavy) this.cameras.main.flash(200, 255, 40, 80);
       }
+      this.endRound();
+    });
+  }
+
+  endRound() {
+    {
       // end of round: blocks expire, cooldowns tick
       this.p.block = false; this.m.block = false;
       this.hideWard();
@@ -321,7 +369,15 @@ export class BattleScene extends Phaser.Scene {
       this.refresh();
       if (this.p.hp <= 0) return this.time.delayedCall(900, () => this.end(false));
       this.busy = false;
-    });
+    }
+  }
+
+  // Ghost shudders and growls: a big move is coming next turn.
+  animWindup(onDone) {
+    play('growl');
+    this.tweens.add({ targets: this.mSprite, x: MX + 5, duration: 40, yoyo: true, repeat: 7, onComplete: () => this.mSprite.setX(MX) });
+    this.tweens.add({ targets: this.mSprite, scale: 11 * 1.12, duration: 300, yoyo: true });
+    this.time.delayedCall(350, onDone);
   }
 
   // ---------- animations ----------

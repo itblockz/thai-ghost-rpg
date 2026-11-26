@@ -71,6 +71,8 @@ const SOUNDS = {
   ward: () => [660, 880, 1320].forEach((f, i) => tone({ type: 'triangle', from: f, dur: 0.25, vol: 0.1, at: i * 0.05 })),
   block: () => { tone({ type: 'square', from: 1200, to: 900, dur: 0.12, vol: 0.12 }); tone({ type: 'triangle', from: 1800, dur: 0.3, vol: 0.08, at: 0.05 }); },
   growl: () => { tone({ type: 'sawtooth', from: 90, to: 60, dur: 0.5, vol: 0.18 }); noise({ dur: 0.5, vol: 0.12, freq: 300, type: 'lowpass' }); },
+  chomp: () => { noise({ dur: 0.07, vol: 0.35, freq: 1500, type: 'bandpass' }); tone({ type: 'square', from: 200, to: 80, dur: 0.12, vol: 0.15, at: 0.02 }); },
+  splash: () => { noise({ dur: 0.45, vol: 0.3, freq: 600, toFreq: 200, type: 'lowpass' }); [0.1, 0.2, 0.32].forEach(at => noise({ dur: 0.05, vol: 0.15, freq: 900, at })); },
   click: () => tone({ from: 600, to: 900, dur: 0.05, vol: 0.08 }),
 };
 

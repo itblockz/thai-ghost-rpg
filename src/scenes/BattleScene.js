@@ -342,7 +342,7 @@ export class BattleScene extends Phaser.Scene {
       this.endRound();
     });
     const heavy = skillDamage(skill) >= 10;
-    this.animMonsterAttack(heavy, () => {
+    this.animMonsterAttack(skill.anim || 'claw', heavy, () => {
       const { dealt, blocked } = this.applySkill(this.m, this.p, skillId, from);
       this.popup(MX, MY + 70, skill.name, heavy ? '#ff5577' : '#ffffff', heavy ? 30 : 22);
       if (blocked) {
@@ -414,7 +414,14 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: this.wardGlow, fillAlpha: 0, duration: 250 });
   }
 
-  animMonsterAttack(heavy, onHit) {
+  // Ghost attack: a lunge, then an impact effect chosen by the skill's `anim`.
+  animMonsterAttack(kind, heavy, onHit) {
+    const impact = () => {
+      this.tweens.add({ targets: this.hand, y: HY + 40, duration: 80, yoyo: true });
+      play('hurt');
+      onHit();
+    };
+    if (kind === 'spit') return this.animSpit(impact);
     let hit = false; // onYoyo fires once per tweened property — only apply the hit once
     this.tweens.add({
       targets: this.mSprite, scale: 11 * 1.6, y: MY + 60, duration: 160, ease: 'Cubic.in', yoyo: true,
@@ -422,15 +429,60 @@ export class BattleScene extends Phaser.Scene {
       onYoyo: () => {
         if (hit) return;
         hit = true;
-        play('scratch');
-        this.fxClaw.setAlpha(1).setScale(heavy ? 8 : 6);
-        this.tweens.add({ targets: this.fxClaw, alpha: 0, duration: 500, delay: 150 });
-        this.tweens.add({ targets: this.hand, y: HY + 40, duration: 80, yoyo: true });
-        play('hurt');
-        onHit();
+        if (kind === 'bite') this.fxBite(); else this.fxClawMarks(heavy);
+        impact();
       },
     });
   }
+
+  fxClawMarks(heavy) {
+    play('scratch');
+    this.fxClaw.setAlpha(1).setScale(heavy ? 8 : 6);
+    this.tweens.add({ targets: this.fxClaw, alpha: 0, duration: 500, delay: 150 });
+  }
+
+  // Two rows of teeth snap shut across the screen.
+  fxBite() {
+    play('chomp');
+    const top = this.add.image(180, 150, 'fx_jaw_top').setScale(15).setDepth(5);
+    const bot = this.add.image(180, 470, 'fx_jaw_bottom').setScale(15).setDepth(5);
+    this.tweens.add({ targets: top, y: 255, duration: 90, ease: 'Cubic.in' });
+    this.tweens.add({
+      targets: bot, y: 345, duration: 90, ease: 'Cubic.in',
+      onComplete: () => {
+        this.cameras.main.shake(120, 0.012);
+        this.tweens.add({ targets: [top, bot], alpha: 0, duration: 350, delay: 120, onComplete: () => { top.destroy(); bot.destroy(); } });
+      },
+    });
+  }
+
+  // Krasue rears back, then hurls a stream of glowing guts that splatter on the "camera".
+  animSpit(impact) {
+    this.tweens.add({
+      targets: this.mSprite, scale: 11 * 0.85, y: MY - 20, duration: 220, ease: 'Sine.out',
+      onComplete: () => {
+        play('splash');
+        this.tweens.add({ targets: this.mSprite, scale: 11 * 1.3, y: MY + 30, duration: 120, yoyo: true });
+        for (let i = 0; i < 14; i++) {
+          const gut = this.add.image(MX, MY + 40, 'fx_gut').setScale(4).setDepth(5);
+          this.tweens.add({
+            targets: gut, x: Phaser.Math.Between(20, 340), y: Phaser.Math.Between(180, 460), scale: Phaser.Math.Between(8, 14),
+            duration: 260, delay: i * 12, ease: 'Quad.in', onComplete: () => gut.destroy(),
+          });
+        }
+        this.time.delayedCall(280, () => {
+          impact();
+          // splats stick to the screen and slowly drip down
+          for (let i = 0; i < 6; i++) {
+            const sp = this.add.image(Phaser.Math.Between(40, 320), Phaser.Math.Between(150, 430), 'fx_splat')
+              .setScale(Phaser.Math.Between(7, 11)).setAngle(Phaser.Math.Between(-20, 20)).setDepth(5).setAlpha(0.9);
+            this.tweens.add({ targets: sp, y: sp.y + 50, alpha: 0, duration: 1400, delay: 300, ease: 'Sine.in', onComplete: () => sp.destroy() });
+          }
+        });
+      },
+    });
+  }
+
 
   end(won) {
     this.busy = true;

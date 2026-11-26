@@ -6,12 +6,3 @@ export const SKILLS = {
   scratch: { name: 'ข่วน', icon: 'icon_claw', cooldown: 0, effects: [{ damage: 3 }] },
 };
 
-// Turn effects into short Thai lines for the detail card.
-export function describeSkill(skill) {
-  const lines = skill.effects.map(e => {
-    if (e.damage != null) return `ความเสียหาย ${e.damage}`;
-    return '';
-  });
-  lines.push(skill.cooldown ? `คูลดาวน์ ${skill.cooldown} ตา` : 'ใช้ได้ทุกตา');
-  return lines.filter(Boolean);
-}

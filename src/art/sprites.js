@@ -202,6 +202,26 @@ export const SPRITES = {
     'yy....yy',
     '........',
   ],
+  icon_heart: [
+    '.ee..ee.',
+    'eeeeeeee',
+    'eweeeeee',
+    'eeeeeeee',
+    '.eeeeee.',
+    '..eeee..',
+    '...ee...',
+    '........',
+  ],
+  icon_clock: [
+    '..wwww..',
+    '.w..w.w.',
+    'w...w..w',
+    'w...ww.w',
+    'w......w',
+    '.w....w.',
+    '..wwww..',
+    '........',
+  ],
   // item icons (12x12)
   item_knife: [
     '..........v.',

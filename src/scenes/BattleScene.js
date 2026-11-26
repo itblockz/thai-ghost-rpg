@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { MONSTERS } from '../data/monsters.js';
 import { ITEMS, STARTING_ITEMS } from '../data/items.js';
-import { SKILLS, describeSkill } from '../data/skills.js';
+import { SKILLS } from '../data/skills.js';
 import { registerSprites } from '../art/sprites.js';
 import { ZOOM, setupCamera } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
@@ -126,37 +126,73 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ---------- detail cards ----------
-  showCard(iconKey, iconScale, title, lines, lore) {
+  // Card layout: header (icon + name + type), then stat rows (icon · label · value), then lore.
+  // Keeps text short and puts numbers in a right-aligned column so they're easy to scan.
+  openCard() {
     this.card.removeAll(true);
-    const h = 200 + lines.length * 26 + (lore ? 50 : 0);
-    const g = this.add.graphics();
-    this.pixelPanel(g, 180, 300, 280, h, 0x22223a, 0xccccee);
-    const top = 300 - h / 2;
-    const parts = [
-      this.add.rectangle(180, 320, 360, 640, 0x000000, 0.6),
-      g,
-      this.add.image(180, top + 60, iconKey).setScale(iconScale),
-      this.add.text(180, top + 120, title, { ...FONT, fontSize: '24px', fontStyle: 'bold' }).setOrigin(0.5),
-      ...lines.map((l, i) => this.add.text(180, top + 160 + i * 26, l, { ...FONT, fontSize: '17px', color: '#e0e0ff' }).setOrigin(0.5)),
-    ];
-    if (lore) parts.push(this.add.text(180, top + 170 + lines.length * 26, lore, { ...FONT, fontSize: '14px', color: '#9999bb', align: 'center', wordWrap: { width: 240 } }).setOrigin(0.5, 0));
-    this.card.add(parts).setVisible(true);
+    this.cardBg = this.add.graphics();
+    this.card.add([this.add.rectangle(180, 320, 360, 640, 0x000000, 0.65), this.cardBg]).setVisible(true);
+    return 150; // card top
+  }
+
+  // Draw the panel once the content height is known.
+  finishCard(bottom) {
+    const top = 150, h = bottom - top + 14;
+    this.pixelPanel(this.cardBg, 180, top + h / 2, 300, h, 0x1c1c30, 0xccccee);
+  }
+
+  cardHeader(top, iconKey, iconScale, title, type) {
+    this.card.add([
+      this.add.image(76, top + 48, iconKey).setScale(iconScale),
+      this.add.text(124, top + 36, title, { ...FONT, fontSize: '24px', fontStyle: 'bold' }).setOrigin(0, 0.5),
+      this.add.text(124, top + 64, type, { ...FONT, fontSize: '13px', color: '#9999bb' }).setOrigin(0, 0.5),
+      this.add.rectangle(180, top + 96, 260, 2, 0x55557a),
+    ]);
+    return top + 112;
+  }
+
+  // One row: [icon] label ........ value
+  cardRow(y, icon, label, value, valueColor = '#ffffff') {
+    this.card.add([
+      this.add.image(62, y + 11, icon).setScale(2.5),
+      this.add.text(80, y + 11, label, { ...FONT, fontSize: '16px', color: '#ccccee' }).setOrigin(0, 0.5),
+      this.add.text(306, y + 11, value, { ...FONT, fontSize: '18px', fontStyle: 'bold', color: valueColor }).setOrigin(1, 0.5),
+    ]);
+    return y + 32;
+  }
+
+  cardLore(y, lore) {
+    if (!lore) return y;
+    this.card.add(this.add.rectangle(180, y + 4, 260, 2, 0x55557a));
+    const t = this.add.text(180, y + 16, lore, { ...FONT, fontSize: '13px', color: '#8f8fb0', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5, 0);
+    this.card.add(t);
+    return y + 24 + t.height;
+  }
+
+  skillRows(y, skill) {
+    for (const e of skill.effects) if (e.damage != null) y = this.cardRow(y, 'icon_dmg', 'ความเสียหาย', String(e.damage), '#ffdd55');
+    return this.cardRow(y, 'icon_clock', 'คูลดาวน์', skill.cooldown ? `${skill.cooldown} ตา` : 'ไม่มี');
   }
 
   hideCard() { this.card.setVisible(false); this.card.removeAll(true); }
 
   showItemCard(item) {
     const skill = SKILLS[item.skill];
-    this.showCard(item.icon, 7, item.name, [`สกิล: ${skill.name}`, ...describeSkill(skill)], item.lore);
+    let y = this.cardHeader(this.openCard(), item.icon, 5, item.name, `ของขลัง · สกิล "${skill.name}"`);
+    y = this.skillRows(y, skill);
+    this.finishCard(this.cardLore(y + 6, item.lore));
   }
 
   showMonsterCard() {
-    const lines = [`HP ${Math.max(0, this.m.hp)}/${this.m.maxHp}`];
-    this.m.skills.forEach(id => {
+    const m = this.m;
+    let y = this.cardHeader(this.openCard(), m.sprite, 3.5, m.name, 'ผี');
+    y = this.cardRow(y, 'icon_heart', 'HP', `${Math.max(0, m.hp)}/${m.maxHp}`, '#ff8899');
+    for (const id of m.skills) {
       const s = SKILLS[id];
-      lines.push(`— ${s.name} —`, describeSkill(s).join(' · '));
-    });
-    this.showCard(this.m.sprite, 6, this.m.name, lines, this.m.lore);
+      this.card.add(this.add.text(60, y + 14, s.name, { ...FONT, fontSize: '17px', fontStyle: 'bold' }).setOrigin(0, 0.5));
+      y = this.skillRows(y + 30, s);
+    }
+    this.finishCard(this.cardLore(y + 6, m.lore));
   }
 
   // ---------- feedback ----------

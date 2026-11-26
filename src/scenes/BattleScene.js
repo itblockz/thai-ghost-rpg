@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { MONSTERS } from '../data/monsters.js';
-import { SKILLS } from '../data/skills.js';
+import { ITEMS, STARTING_ITEMS } from '../data/items.js';
 import { STATUSES } from '../data/statuses.js';
 import { registerSprites } from '../art/sprites.js';
 import { ZOOM, setupCamera } from '../display.js';
@@ -14,7 +14,7 @@ export class BattleScene extends Phaser.Scene {
   create() {
     registerSprites(this);
     setupCamera(this);
-    const def = MONSTERS.krasue;
+    const def = MONSTERS.kongkoi;
     this.m = { ...def, maxHp: def.hp, turn: 0, statuses: new Set() };
     this.p = { name: 'หมอผีน้อย', hp: 30, maxHp: 30, statuses: new Set(), cd: {} };
     this.busy = false;
@@ -28,7 +28,9 @@ export class BattleScene extends Phaser.Scene {
     this.mBar = this.bar(30, 20, def.name);
     this.pBar = this.bar(30, 360, this.p.name);
 
-    this.btns = SKILLS.map((s, i) => this.skillBtn(95 + i * 170, 520, s));
+    const skills = STARTING_ITEMS.map(id => ({ id, icon: ITEMS[id].icon, ...ITEMS[id].skill }));
+    const n = skills.length, w = n === 1 ? 220 : 155;
+    this.btns = skills.map((s, i) => this.skillBtn(180 + (i - (n - 1) / 2) * 170, 520, s, w));
     this.refresh();
   }
 
@@ -42,11 +44,11 @@ export class BattleScene extends Phaser.Scene {
     return { fill, num, st, x, y };
   }
 
-  skillBtn(x, y, s) {
-    const r = this.add.rectangle(x, y, 155, 150, 0x33334d).setStrokeStyle(3, 0x8888cc).setInteractive();
-    const icon = this.add.text(x, y - 35, s.icon, { ...FONT, fontSize: '44px' }).setOrigin(0.5);
-    const name = this.add.text(x, y + 20, s.name, { ...FONT, fontSize: '20px' }).setOrigin(0.5);
-    const hint = this.add.text(x, y + 50, s.hint, { ...FONT, fontSize: '15px', color: '#d0d0ee' }).setOrigin(0.5);
+  skillBtn(x, y, s, w) {
+    const r = this.add.rectangle(x, y, w, 150, 0x33334d).setStrokeStyle(3, 0x8888cc).setInteractive();
+    const icon = this.add.image(x, y - 32, s.icon).setScale(5);
+    const name = this.add.text(x, y + 25, s.name, { ...FONT, fontSize: '22px' }).setOrigin(0.5);
+    const hint = this.add.text(x, y + 52, `⚔ ${s.dmg}`, { ...FONT, fontSize: '16px', color: '#d0d0ee' }).setOrigin(0.5);
     const cdText = this.add.text(x, y, '', { ...FONT, fontSize: '56px', fontStyle: 'bold' }).setOrigin(0.5);
     r.on('pointerdown', () => { if (!this.busy && !this.p.cd[s.id]) this.useSkill(s); });
     return { s, r, parts: [icon, name, hint], cdText };

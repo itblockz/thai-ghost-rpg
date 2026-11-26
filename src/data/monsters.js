@@ -1,13 +1,15 @@
-// `intent` is shown one turn BEFORE the move happens.
-// Each monster has a repeating move pattern. A 'charge' move announces the next 'special'.
+// Monsters loop through `pattern`. Moves:
+//  dmg        – damage dealt to the player
+//  addStatus  – status the monster gives itself
+//  needs      – status required; if missing the move fizzles (monster is stunned that turn)
 export const MONSTERS = {
   krasue: {
-    name: 'กระสือ', sprite: 'krasue', hp: 40,
-    pattern: ['bite', 'charge', 'special'],
+    name: 'กระสือ', sprite: 'krasue', hp: 30,
+    pattern: ['bite', 'inhale', 'spit'],
     moves: {
-      bite: { text: 'กระสือพุ่งเข้ากัด!', intent: '👁️ ตาหน้า: กระสือจะกัด (5–6)', dmg: [5, 6] },
-      charge: { text: 'กระสือสูดลมหายใจลึก... ไส้เรืองแสงแดง!', intent: '😮 ตาหน้า: กระสือจะสูดลมหายใจ', dmg: [0, 0] },
-      special: { text: 'กระสือพ่นไส้ใส่!', intent: '⚠️ ตาหน้า: พ่นไส้! (18) ป้องกันได้', danger: true, dmg: [18, 18], blockable: true },
+      bite: { icon: '🦷', dmg: 5 },
+      inhale: { icon: '💨', addStatus: 'charge' },
+      spit: { icon: '⚠️', dmg: 20, needs: 'charge', danger: true, fizzle: 'สำลัก!' },
     },
   },
 };

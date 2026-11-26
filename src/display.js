@@ -12,3 +12,8 @@ export function setupCamera(scene) {
 
 // UI font (bundled via @fontsource/kanit, Thai + Latin, 400/700).
 export const FONT_FAMILY = '"Kanit", sans-serif';
+
+// Thai stacks vowels + tone marks above letters (e.g. สิ้, ทธิ์). Phaser measures text height
+// with a Latin test string, so on Safari the top marks get clipped. Measure with tall Thai
+// clusters and add a little top padding so nothing is cut off.
+export const TEXT_METRICS = { testString: '|MÉqgyสิ้ทธิ์ปั้ญฐ', padding: { top: 4, bottom: 2 } };

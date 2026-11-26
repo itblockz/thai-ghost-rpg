@@ -11,7 +11,6 @@ const ENEMY_Y = 140;   // enemy sprite centre
 const ALLY_Y = 345;    // retainer sprite centre
 const BTN_Y = 505;     // skill buttons
 const PANEL_BOTTOM = 436;
-const THAI_LETTERS = ['ก', 'ข', 'ค'];
 
 // x positions for 1–3 units in a row
 const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : [65, 180, 295]);
@@ -37,16 +36,11 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: this.reticle, alpha: 0.35, yoyo: true, repeat: -1, duration: 500 });
 
     // ----- units -----
-    const counts = {};
-    stage.enemies.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
-    const seen = {};
     const ex = slots(stage.enemies.length);
     const eScale = stage.enemies.length === 1 ? 10 : stage.enemies.length === 2 ? 7 : 5;
     this.enemies = stage.enemies.map((id, i) => {
       const def = ENEMIES[id];
-      seen[id] = (seen[id] || 0) + 1;
-      const name = counts[id] > 1 ? `${def.name} ${THAI_LETTERS[seen[id] - 1]}` : def.name;
-      return this.makeUnit('enemy', id, def, name, ex[i], ENEMY_Y, eScale);
+      return this.makeUnit('enemy', id, def, def.name, ex[i], ENEMY_Y, eScale);
     });
     const team = currentTeam(this);
     const ax = slots(team.length);
@@ -75,9 +69,8 @@ export class BattleScene extends Phaser.Scene {
     u.sprite = this.add.image(x, y, def.sprite).setScale(scale);
     this.tweens.add({ targets: [u.sprite, u.glow], y: y - (side === 'enemy' ? 7 : 3), yoyo: true, repeat: -1, duration: side === 'enemy' ? 900 : 700, ease: 'Sine.inOut', delay: x * 3 });
 
-    // name + HP bar under the sprite
+    // HP bar under the sprite (no name label: the art identifies the unit)
     const by = y + scale * 8 + 10, bw = side === 'enemy' && scale >= 10 ? 220 : 92;
-    u.label = this.add.text(x, by, name, { ...FONT, fontSize: '12px' }).setOrigin(0.5, 1);
     this.add.rectangle(x, by + 7, bw + 4, 10, 0x000000);
     this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x333344).setOrigin(0, 0.5);
     u.bar = this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x55cc66).setOrigin(0, 0.5);

@@ -10,7 +10,7 @@ export const ALLIES = {
     lore: 'ผีป่าขาเดียว ว่องไว ขี้แกล้ง',
   },
   krahang: {
-    name: 'ผีกระหัง', sprite: 'krahang', hp: 16, atk: 3, spd: 14, skills: ['flap', 'whack'],
+    name: 'ผีกระหัง', sprite: 'krahang', hp: 20, atk: 3, spd: 14, skills: ['flap', 'whack'],
     lore: 'ผีชายบินด้วยกระด้งสองใบ ว่องไวกว่าผีใด',
   },
   khamot: {
@@ -34,7 +34,7 @@ export const ENEMIES = {
     lore: 'ผีสิงกินของดิบ ยิ่งกินยิ่งมีแรง',
   },
   pret: {
-    name: 'ผีเปรต', sprite: 'pret', hp: 250, spd: 7, boss: true, skills: ['smash', 'hunger'],
+    name: 'ผีเปรต', sprite: 'pret', hp: 280, spd: 7, boss: true, skills: ['smash', 'hunger'],
     lore: 'เปรตสูงเท่าต้นตาล ปากเท่ารูเข็ม หิวโหยชั่วกัปชั่วกัลป์',
   },
   phrai: {

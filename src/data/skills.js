@@ -24,7 +24,7 @@ export const SKILLS = {
   khamotBlind: { name: 'ไฟหลอกตา', desc: 'ล่อไฟวูบวาบใส่ศัตรูหนึ่งตนจนตาพร่า การโจมตีครั้งถัดไปของมันจะพลาด', icon: 'icon_blind', anim: 'wisp', cooldown: 3, effects: [{ damage: 2 }, { blind: true }] },
   khamotHeal: { name: 'ไฟอุ่นใจ', desc: 'ส่องไฟอุ่นปลอบขวัญ และถอนพิษบริวารหนึ่งตน ยิ่งมีขวัญมากยิ่งปลอบได้มาก', icon: 'icon_heal', anim: 'heal', cooldown: 2, target: 'ally', effects: [{ heal: 2, scale: 0.4, stat: 'hp' }] },
   // enemies
-  flap: { name: 'กระพือกระด้ง', desc: 'กระพือกระด้งเป็นลมแรงใส่ศัตรูทุกตน ยิ่งมีกำลังยิ่งแรง', icon: 'icon_flap', anim: 'flap', cooldown: 0, area: true, effects: [{ damage: 0, scale: 0.6 }] },
+  flap: { name: 'กระพือกระด้ง', desc: 'กระพือกระด้งเป็นลมแรงใส่ศัตรูทุกตน ยิ่งมีกำลังยิ่งแรง', icon: 'icon_flap', anim: 'flap', cooldown: 0, area: true, effects: [{ damage: 1, scale: 0.8 }] },
   whack: { name: 'ฟาดกระด้ง', desc: 'ฟาดกระด้งใส่ศัตรูหนึ่งตนอย่างแรง ยิ่งมีกำลังยิ่งฟาดแรง', icon: 'icon_whack', anim: 'ram', cooldown: 2, effects: [{ damage: 3, scale: 2 }] },
   swoop: { name: 'โฉบ', desc: 'โฉบลงตีบริวารหนึ่งตน', icon: 'icon_whack', anim: 'claw', cooldown: 0, effects: [{ damage: 5 }] },
   devour: { name: 'กินขวัญ', desc: 'กัดกินบริวารหนึ่งตน แล้วฟื้นขวัญตนเองเท่าที่กินได้', icon: 'icon_devour', anim: 'bite', cooldown: 0, effects: [{ damage: 5, drain: true }] },

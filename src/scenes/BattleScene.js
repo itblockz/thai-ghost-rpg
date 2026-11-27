@@ -68,6 +68,17 @@ export class BattleScene extends Phaser.Scene {
     const mute = this.add.image(334, 26, muteKey()).setScale(PX).setInteractive({ useHandCursor: true });
     mute.on('pointerdown', () => { toggleMute(); mute.setTexture(muteKey()); });
 
+    // battle speed ×1 / ×2 (remembered): animations and pauses run faster, nothing else changes
+    const speedOf = () => { try { return localStorage.getItem('himmapan-speed') === '2' ? 2 : 1; } catch { return 1; } };
+    const applySpeed = v => { this.time.timeScale = v; this.tweens.timeScale = v; };
+    applySpeed(speedOf());
+    const spd = this.add.text(290, 26, `×${speedOf()}`, numFont(16, '#ffe08a')).setOrigin(0.5).setPadding(8, 6, 8, 6).setDepth(10)
+      .setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+        const v = speedOf() === 2 ? 1 : 2;
+        try { localStorage.setItem('himmapan-speed', String(v)); } catch { /* ignore */ }
+        applySpeed(v); spd.setText(`×${v}`); play('click');
+      });
+
     // retreat to the prep screen (tap twice, so a stray tap doesn't throw the fight away)
     let sure = false;
     const flee = this.add.text(14, 26, '‹ ถอย', { ...FONT, fontSize: '15px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0, 0.5).setPadding(6, 6, 6, 6).setDepth(10)
@@ -854,10 +865,20 @@ export class BattleScene extends Phaser.Scene {
     this.add.text(180, 250, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
     const next = won ? () => afterVictory(this, this.stage, this.first) : () => this.scene.start('Prep', { stage: this.stage, first: this.first, retry: true });
-    this.pixelPanel(this.add.graphics().setDepth(9), 180, BTN_Y, 332, 120, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
-    this.add.image(84, BTN_Y, won ? 'icon_next' : 'icon_retry').setScale(PX).setDepth(9);
-    this.add.text(124, BTN_Y, label, { ...FONT, fontSize: '28px' }).setOrigin(0, 0.5).setDepth(9);
-    this.add.zone(180, BTN_Y, 332, 120).setInteractive({ useHandCursor: true }).setDepth(9)
+    // farming: after a replayed win, fight the same stage again straight away (same team, same charms)
+    const again = won && !this.first;
+    const W = again ? 196 : 332, X = again ? 346 - W / 2 : 180;
+    this.pixelPanel(this.add.graphics().setDepth(9), X, BTN_Y, W, 120, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
+    this.add.image(X - W / 2 + 40, BTN_Y, won ? 'icon_next' : 'icon_retry').setScale(PX).setDepth(9);
+    this.add.text(X - W / 2 + 72, BTN_Y, label, { ...FONT, fontSize: again ? '22px' : '28px' }).setOrigin(0, 0.5).setDepth(9);
+    this.add.zone(X, BTN_Y, W, 120).setInteractive({ useHandCursor: true }).setDepth(9)
       .on('pointerdown', () => { play('click'); next(); });
+    if (again) {
+      this.pixelPanel(this.add.graphics().setDepth(9), 82, BTN_Y, 128, 120, 0x3d3d5e, 0xffdd55);
+      this.add.image(82, BTN_Y - 18, 'icon_retry').setScale(PX).setDepth(9);
+      this.add.text(82, BTN_Y + 26, 'สู้ซ้ำ', { ...FONT, fontSize: '20px' }).setOrigin(0.5).setDepth(9);
+      this.add.zone(82, BTN_Y, 128, 120).setInteractive({ useHandCursor: true }).setDepth(9)
+        .on('pointerdown', () => { play('click'); this.scene.restart({ stage: this.stage, first: false }); });
+    }
   }
 }

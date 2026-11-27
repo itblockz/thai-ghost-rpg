@@ -22,7 +22,7 @@ export const SKILLS = {
   frenzy: { name: 'ตะกุยรัว', desc: 'ข่วนรัวใส่ศัตรูหนึ่งตนอย่างแรง ยิ่งมีกำลังยิ่งรุนแรงทวีคูณ', icon: 'icon_frenzy', anim: 'frenzy', cooldown: 2, effects: [{ damage: 2, scale: 2 }] },
   khamotEmber: { name: 'ไฟลวก', desc: 'ปล่อยไฟลวกศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งร้อน', icon: 'icon_heal', anim: 'wisp', cooldown: 0, effects: [{ damage: 1, scale: 1 }] },
   khamotBlind: { name: 'ไฟหลอกตา', desc: 'ล่อไฟวูบวาบใส่ศัตรูหนึ่งตนจนตาพร่า การโจมตีครั้งถัดไปของมันจะพลาด', icon: 'icon_blind', anim: 'wisp', cooldown: 3, effects: [{ damage: 2 }, { blind: true }] },
-  khamotHeal: { name: 'ไฟอุ่นใจ', desc: 'ส่องไฟอุ่นปลอบขวัญบริวารหนึ่งตน ผู้ใช้ยิ่งมีขวัญมาก ยิ่งฟื้นได้มาก', icon: 'icon_heal', anim: 'heal', cooldown: 2, target: 'ally', effects: [{ heal: 5, scale: 0.2, stat: 'hp' }] },
+  khamotHeal: { name: 'ไฟอุ่นใจ', desc: 'ส่องไฟอุ่นปลอบขวัญบริวารหนึ่งตน ผีโขมดยิ่งมีขวัญมาก ยิ่งปลอบขวัญได้มาก', icon: 'icon_heal', anim: 'heal', cooldown: 2, target: 'ally', effects: [{ heal: 2, scale: 0.4, stat: 'hp' }] },
   // enemies
   scratch: { name: 'ตะกุย', desc: 'ข่วนบริวารหนึ่งตน', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 3 }] },
   bite: { name: 'กัด', desc: 'งับบริวารหนึ่งตนจนเจ็บ', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 10 }] },

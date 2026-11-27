@@ -757,12 +757,33 @@ function drawStoryArt(scene) {
   });
 }
 
+/** Pixel-grid glow disc (18x18, dithered rim) and thin ring (16x16) — tint and scale by whole steps. */
+function drawPixelShapes(scene) {
+  canvasArt(scene, 'px_disc', 18, 18, (px) => {
+    for (let y = 0; y < 18; y++) for (let x = 0; x < 18; x++) {
+      const d = Math.hypot(x - 8.5, y - 8.5);
+      if (d < 6 || (d < 9 && (x + y) % 2 === 0)) px(x, y, '#ffffff');
+    }
+  });
+  canvasArt(scene, 'px_ring', 16, 16, (px) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const d = Math.hypot(x - 7.5, y - 7.5);
+      if (d > 6 && d < 7.6) px(x, y, '#ffffff');
+    }
+  });
+}
+
 /** Register every sprite as a Phaser texture (1px per cell; scale when displaying). */
 export function registerSprites(scene) {
   drawBackdrop(scene);
   drawStoryArt(scene);
   drawVillageBackdrop(scene);
   drawTitleArt(scene);
+  drawPixelShapes(scene);
+  for (const key of ['kumarn', 'kongkoi', 'krasue']) {
+    const rows = SPRITES[key], n = rows.length;
+    SPRITES[`${key}_ko`] = rows[0].split('').map((_, x) => Array.from({ length: n }, (_, y) => rows[n - 1 - y][x]).join(''));
+  }
   for (const [key, rows] of Object.entries(SPRITES)) {
     if (scene.textures.exists(key)) continue;
     const tex = scene.textures.createCanvas(key, rows[0].length, rows.length);

@@ -36,7 +36,7 @@ export class BattleScene extends Phaser.Scene {
     this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(4);
     this.add.rectangle(180, 540, 360, 200, 0x0b0b1a);
     this.reticle = this.add.graphics().setDepth(4);
-    this.tweens.add({ targets: this.reticle, alpha: 0.35, yoyo: true, repeat: -1, duration: 500 });
+    this.tweens.add({ targets: this.reticle, alpha: 0.35, yoyo: true, repeat: -1, duration: 500, ease: 'Stepped', easeParams: [1] });
 
     // ----- units -----
     const ex = slots(stage.enemies.length);
@@ -73,12 +73,22 @@ export class BattleScene extends Phaser.Scene {
     u.sprite.setTexture(this.textures.exists(key) ? key : u.def.sprite);
   }
 
+  // Screen shake in whole-pixel jumps.
+  pixelShake(duration, amp) {
+    const cam = this.cameras.main, n = Math.max(2, Math.round(duration / 40));
+    this.time.addEvent({ delay: 40, repeat: n - 1, callback: () => {
+      cam.setScroll(Phaser.Math.RND.pick([-amp, 0, amp]), Phaser.Math.RND.pick([-amp, 0, amp]));
+    } });
+    this.time.delayedCall(n * 40 + 10, () => cam.setScroll(0, 0));
+  }
+
   // Pixel-art feel: units move in whole art pixels, never sub-pixel.
   update() {
     for (const u of [...(this.allies || []), ...(this.enemies || [])]) {
       const sp = u.sprite, st = u.scale / 2;
       sp.x = u.x + Math.round((sp.x - u.x) / st) * st;
       sp.y = u.y + Math.round((sp.y - u.y) / st) * st;
+      u.glow.y = u.y + Math.round((u.glow.y - u.y) / st) * st;
     }
   }
 
@@ -87,7 +97,7 @@ export class BattleScene extends Phaser.Scene {
       side, id, def, name, x, y, scale,
       hp: def.hp, maxHp: def.hp, skills: def.skills, cd: {}, block: false, pending: null, takenMult: 1, alive: true,
     };
-    u.glow = this.add.circle(x, y, scale * 9, side === 'enemy' ? 0xff3060 : 0xffd860, side === 'enemy' ? 0.12 : 0);
+    u.glow = this.add.image(x, y, 'px_disc').setScale(scale).setTint(side === 'enemy' ? 0xff3060 : 0xffd860).setAlpha(side === 'enemy' ? 0.12 : 0);
     u.sprite = this.add.image(x, y, def.sprite).setScale(scale);
     u.pose = 'idle';
     this.tweens.add({ targets: [u.sprite, u.glow], y: y - (side === 'enemy' ? 7 : 3), yoyo: true, repeat: -1, duration: side === 'enemy' ? 900 : 700, ease: 'Sine.inOut', delay: x * 3 });
@@ -234,7 +244,7 @@ export class BattleScene extends Phaser.Scene {
         const heavy = r.dealt >= 12;
         this.popup(target.x, target.y - 20, `-${r.dealt}`, target.side === 'ally' ? '#ff5566' : r.mult > 1 ? '#ff7733' : '#ffdd55', heavy ? 34 : 26);
         if (r.mult > 1) this.popup(target.x, target.y + 20, 'โดนจุดอ่อน!', '#ff9944', 16);
-        if (target.side === 'ally') this.cameras.main.shake(heavy ? 300 : 120, heavy ? 0.02 : 0.006);
+        if (target.side === 'ally') this.pixelShake(heavy ? 300 : 120, heavy ? 8 : 4);
         target.sprite.setTintFill(0xffffff);
         this.time.delayedCall(90, () => target.alive && target.sprite.clearTint());
       }
@@ -254,13 +264,14 @@ export class BattleScene extends Phaser.Scene {
     if (u.side === 'enemy') {
       for (let i = 0; i < 24; i++) {
         const px = this.add.rectangle(u.x + Phaser.Math.Between(-40, 40), u.y + Phaser.Math.Between(-50, 50), 6, 6, Phaser.Math.RND.pick([0x5d4d6e, 0xffffff, 0xd01030]));
-        this.tweens.add({ targets: px, y: px.y - Phaser.Math.Between(40, 120), alpha: 0, duration: Phaser.Math.Between(400, 900), onComplete: () => px.destroy() });
+        this.tweens.add({ targets: px, y: px.y - Phaser.Math.Between(40, 120), alpha: 0, duration: Phaser.Math.Between(400, 900), ease: 'Stepped', easeParams: [4], onComplete: () => px.destroy() });
       }
-      this.tweens.add({ targets: [u.sprite, u.glow], alpha: 0, duration: 400 });
+      this.tweens.add({ targets: [u.sprite, u.glow], alpha: 0, duration: 400, ease: 'Stepped', easeParams: [3] });
       (u.tiles || []).forEach(t => { t.icon.setVisible(false); t.cdText.setVisible(false); t.g.clear(); });
     } else {
       u.sprite.setTint(0x444455);
-      this.tweens.add({ targets: u.sprite, alpha: 0.45, angle: 90, duration: 400 });
+      u.sprite.setTexture(`${u.def.sprite}_ko`);
+      this.tweens.add({ targets: u.sprite, alpha: 0.45, duration: 300, ease: 'Stepped', easeParams: [2] });
     }
   }
 
@@ -322,7 +333,7 @@ export class BattleScene extends Phaser.Scene {
 
   setBar(u) {
     const ratio = Math.max(0, u.hp) / u.maxHp;
-    this.tweens.add({ targets: u.bar, width: u.barW * ratio, duration: 250 });
+    this.tweens.add({ targets: u.bar, width: Math.round(u.barW * ratio / 4) * 4, duration: 250, ease: 'Stepped', easeParams: [3] });
     u.bar.setFillStyle(ratio > 0.5 ? 0x55cc66 : ratio > 0.25 ? 0xddbb33 : 0xdd4444);
     u.hpText.setText(`ขวัญ ${Math.max(0, u.hp)}/${u.maxHp}`);
   }
@@ -331,7 +342,7 @@ export class BattleScene extends Phaser.Scene {
     for (const u of [...this.allies, ...this.enemies]) {
       this.setBar(u);
       if (u.side === 'enemy' && u.alive) {
-        u.glow.setFillStyle(u.pending ? 0xff1030 : 0xff3060, u.pending ? 0.45 : 0.12);
+        u.glow.setTint(u.pending ? 0xff1030 : 0xff3060).setAlpha(u.pending ? 0.45 : 0.12);
         // winding up: the body itself burns red
         if (u.pending) u.sprite.setTint(0xff7788); else u.sprite.clearTint();
         u.tiles.forEach(t => {
@@ -343,7 +354,7 @@ export class BattleScene extends Phaser.Scene {
         });
       }
       // active retainer glows gold
-      if (u.side === 'ally') u.glow.setFillStyle(0xffd860, u === this.active ? 0.3 : 0);
+      if (u.side === 'ally') u.glow.setTint(0xffd860).setAlpha(u === this.active ? 0.3 : 0);
     }
     this.drawReticle(!this.busy && !!this.active);
   }
@@ -417,7 +428,7 @@ export class BattleScene extends Phaser.Scene {
 
   popup(x, y, text, color = '#fff', size = 26) {
     const t = this.add.text(x, y, text, { ...FONT, fontSize: `${size}px`, fontStyle: 'bold', color, stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(8);
-    this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 1000, ease: 'Cubic.out', onComplete: () => t.destroy() });
+    this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 1000, ease: 'Stepped', easeParams: [5], onComplete: () => t.destroy() });
   }
 
   // ---------- animations ----------
@@ -427,7 +438,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: user.sprite, x: user.x + 4, duration: 40, yoyo: true, repeat: 7, onComplete: () => user.sprite.setX(user.x) });
     this.pose(user, 'wind');
     target.marker.setVisible(true);
-    this.tweens.add({ targets: target.marker, scale: 4, yoyo: true, repeat: 3, duration: 150 });
+    this.tweens.add({ targets: target.marker, scale: 4, yoyo: true, repeat: 3, duration: 150, ease: 'Stepped', easeParams: [1] });
     this.time.delayedCall(400, onDone);
   }
 
@@ -435,8 +446,8 @@ export class BattleScene extends Phaser.Scene {
   animAttack(user, target, kind, onHit) {
     if (kind === 'shield') {
       play('ward');
-      const glow = this.add.circle(target.x, target.y, 50, 0xffd860, 0.5).setDepth(3);
-      this.tweens.add({ targets: glow, scale: 1.6, alpha: 0, duration: 500, onComplete: () => glow.destroy() });
+      const glow = this.add.image(target.x, target.y, 'px_disc').setScale(6).setTint(0xffd860).setAlpha(0.5).setDepth(3);
+      this.tweens.add({ targets: glow, scale: 9, alpha: 0, duration: 500, ease: 'Stepped', easeParams: [3], onComplete: () => glow.destroy() });
       return this.time.delayedCall(200, onHit);
     }
     if (kind === 'spit') return this.animSpit(user, target, onHit);
@@ -454,7 +465,7 @@ export class BattleScene extends Phaser.Scene {
         // 2) dash: stretched along the move, leaving after-images
         const trail = this.time.addEvent({ delay: 25, repeat: 4, callback: () => {
           const ghost = this.add.image(sp.x, sp.y, sp.texture.key).setScale(sx).setAlpha(0.35).setTint(enemy ? 0xff6080 : 0xffe08a).setDepth(sp.depth - 0.1);
-          this.tweens.add({ targets: ghost, alpha: 0, duration: 200, onComplete: () => ghost.destroy() });
+          this.tweens.add({ targets: ghost, alpha: 0, duration: 200, ease: 'Stepped', easeParams: [2], onComplete: () => ghost.destroy() });
         } });
         const style = MOTION[user.id] || 'dash';
         const to = { x: user.x + dx, y: user.y + dy };
@@ -502,22 +513,22 @@ export class BattleScene extends Phaser.Scene {
   fxSlash(t) {
     play('hit');
     const fx = this.add.image(t.x, t.y, 'fx_slash').setScale(3).setDepth(5);
-    this.tweens.add({ targets: fx, scale: 5, alpha: 0, duration: 260, onComplete: () => fx.destroy() });
+    this.tweens.add({ targets: fx, scale: 5, alpha: 0, duration: 260, ease: 'Stepped', easeParams: [2], onComplete: () => fx.destroy() });
     this.tweens.add({ targets: t.sprite, x: t.x + 8, duration: 60, yoyo: true });
   }
 
   fxClaw(t) {
     play('scratch');
     const fx = this.add.image(t.x, t.y, 'fx_claw').setScale(3).setDepth(5);
-    this.tweens.add({ targets: fx, alpha: 0, duration: 450, delay: 120, onComplete: () => fx.destroy() });
+    this.tweens.add({ targets: fx, alpha: 0, duration: 450, delay: 120, ease: 'Stepped', easeParams: [3], onComplete: () => fx.destroy() });
   }
 
   // Three quick rakes from alternating angles; damage lands on the last one.
   fxFrenzy(t, onHit) {
-    [-35, 35, 0].forEach((ang, i) => this.time.delayedCall(i * 140, () => {
+    [false, true, false].forEach((flip, i) => this.time.delayedCall(i * 140, () => {
       play('scratch');
-      const fx = this.add.image(t.x + (i - 1) * 10, t.y, 'fx_claw').setScale(i === 2 ? 4 : 3).setAngle(ang).setDepth(5);
-      this.tweens.add({ targets: fx, alpha: 0, duration: 350, delay: 80, onComplete: () => fx.destroy() });
+      const fx = this.add.image(t.x + (i - 1) * 10, t.y, 'fx_claw').setScale(i === 2 ? 4 : 3).setFlipX(flip).setDepth(5);
+      this.tweens.add({ targets: fx, alpha: 0, duration: 350, delay: 80, ease: 'Stepped', easeParams: [2], onComplete: () => fx.destroy() });
       this.tweens.add({ targets: t.sprite, x: t.x + (i % 2 ? -6 : 6), duration: 50, yoyo: true });
       if (i === 2) { if (t.side === 'ally') play('hurt'); onHit(); }
     }));
@@ -532,16 +543,16 @@ export class BattleScene extends Phaser.Scene {
         play('rush');
         // dust trail
         for (let i = 0; i < 4; i++) this.time.delayedCall(i * 35, () => {
-          const d = this.add.circle(s.x, s.y + 30, 6, 0x8a8070, 0.6).setDepth(2);
-          this.tweens.add({ targets: d, scale: 2.2, alpha: 0, duration: 400, onComplete: () => d.destroy() });
+          const d = this.add.image(s.x, s.y + 30, 'px_disc').setScale(1).setTint(0x8a8070).setAlpha(0.6).setDepth(2);
+          this.tweens.add({ targets: d, scale: 2, alpha: 0, duration: 400, ease: 'Stepped', easeParams: [2], onComplete: () => d.destroy() });
         });
         this.tweens.add({
           targets: s, x: target.x, y: target.y + 40, duration: 170, ease: 'Cubic.in', onStart: () => this.pose(user, 'atk'),
           onComplete: () => {
             play('thud');
-            this.cameras.main.shake(160, 0.012);
-            const ring = this.add.circle(target.x, target.y + 20, 20, 0xffffff, 0).setStrokeStyle(4, 0xffe9a0).setDepth(5);
-            this.tweens.add({ targets: ring, scale: 2.5, alpha: 0, duration: 300, onComplete: () => ring.destroy() });
+            this.pixelShake(160, 6);
+            const ring = this.add.image(target.x, target.y + 20, 'px_ring').setScale(3).setTint(0xffe9a0).setDepth(5);
+            this.tweens.add({ targets: ring, scale: 7, alpha: 0, duration: 300, ease: 'Stepped', easeParams: [4], onComplete: () => ring.destroy() });
             this.tweens.add({ targets: target.sprite, y: target.y - 18, duration: 90, yoyo: true });
             onHit();
             this.tweens.add({ targets: s, x: user.x, y: user.y, duration: 260, ease: 'Back.out', onComplete: () => this.pose(user, 'idle') });
@@ -558,7 +569,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: top, y: t.y - 14, duration: 90, ease: 'Cubic.in' });
     this.tweens.add({
       targets: bot, y: t.y + 14, duration: 90, ease: 'Cubic.in',
-      onComplete: () => this.tweens.add({ targets: [top, bot], alpha: 0, duration: 300, delay: 120, onComplete: () => { top.destroy(); bot.destroy(); } }),
+      onComplete: () => this.tweens.add({ targets: [top, bot], alpha: 0, duration: 300, delay: 120, ease: 'Stepped', easeParams: [2], onComplete: () => { top.destroy(); bot.destroy(); } }),
     });
   }
 
@@ -574,7 +585,7 @@ export class BattleScene extends Phaser.Scene {
           const gut = this.add.image(user.x, user.y + 30, 'fx_gut').setScale(3).setDepth(5);
           this.tweens.add({
             targets: gut, x: target.x + Phaser.Math.Between(-40, 40), y: target.y + Phaser.Math.Between(-40, 40), scale: Phaser.Math.Between(4, 7),
-            duration: 260, delay: i * 12, ease: 'Quad.in', onComplete: () => gut.destroy(),
+            duration: 260, delay: i * 12, ease: 'Stepped', easeParams: [5], onComplete: () => gut.destroy(),
           });
         }
         this.time.delayedCall(280, () => {
@@ -583,7 +594,7 @@ export class BattleScene extends Phaser.Scene {
           for (let i = 0; i < 4; i++) {
             const sp = this.add.image(target.x + Phaser.Math.Between(-45, 45), target.y + Phaser.Math.Between(-45, 30), 'fx_splat')
               .setScale(Phaser.Math.Between(4, 6)).setDepth(5).setAlpha(0.9);
-            this.tweens.add({ targets: sp, y: sp.y + 30, alpha: 0, duration: 1200, delay: 200, onComplete: () => sp.destroy() });
+            this.tweens.add({ targets: sp, y: sp.y + 30, alpha: 0, duration: 1200, delay: 200, ease: 'Stepped', easeParams: [5], onComplete: () => sp.destroy() });
           }
         });
       },
@@ -602,19 +613,16 @@ export class BattleScene extends Phaser.Scene {
       this.time.removeAllEvents();
       this.tweens.killTweensOf([veil, this.banner, this.bannerSub].filter(Boolean));
       raised.forEach(o => o.setDepth(0).setAlpha(1));
-      this.enemies.forEach(e => e.sprite.setScale(e.scale));
-      this.banner?.destroy(); this.bannerSub?.destroy();
+            this.banner?.destroy(); this.bannerSub?.destroy();
       this.banner = this.bannerSub = null;
-      this.tweens.add({ targets: veil, alpha: 0, duration: 350, onComplete: () => veil.destroy() });
+      this.tweens.add({ targets: veil, alpha: 0, duration: 350, ease: 'Stepped', easeParams: [3], onComplete: () => veil.destroy() });
       this.startRound();
     };
     if (short) return this.time.delayedCall(10, finish);
 
     raised.forEach(o => o.setDepth(21).setAlpha(0));
     this.enemies.forEach(e => {
-      e.sprite.setScale(e.scale * 0.5);
-      this.tweens.add({ targets: [e.sprite, e.glow], alpha: 1, duration: 900, ease: 'Sine.in' });
-      this.tweens.add({ targets: e.sprite, scale: e.scale, duration: 1100, ease: 'Back.out' });
+      this.tweens.add({ targets: [e.sprite, e.glow], alpha: 1, duration: 900, ease: 'Stepped', easeParams: [4] });
     });
     this.time.delayedCall(350, () => play('laugh'));
     this.time.delayedCall(700, () => {
@@ -623,7 +631,7 @@ export class BattleScene extends Phaser.Scene {
       const title = Object.entries(counts).map(([n, c]) => (c > 1 ? `${n} ×${c}` : n)).join(' · ');
       this.banner = this.add.text(180, 300, `— ${title} —`, { ...FONT, fontSize: '28px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(22).setAlpha(0);
       this.bannerSub = this.add.text(180, 335, this.enemies[0].def.lore || '', { ...FONT, fontSize: '14px', color: '#ccccee', align: 'center', wordWrap: { width: 300 } }).setOrigin(0.5, 0).setDepth(22).setAlpha(0);
-      this.tweens.add({ targets: [this.banner, this.bannerSub], alpha: 1, duration: 400 });
+      this.tweens.add({ targets: [this.banner, this.bannerSub], alpha: 1, duration: 400, ease: 'Stepped', easeParams: [3] });
       play('growl');
     });
     this.time.delayedCall(2600, finish);

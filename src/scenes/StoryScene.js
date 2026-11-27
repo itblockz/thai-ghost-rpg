@@ -25,7 +25,7 @@ export class StoryScene extends Phaser.Scene {
     this.text = this.add.text(180, 470, '', { ...FONT, fontSize: '19px', align: 'center', lineSpacing: 6, wordWrap: { width: 310 } }).setOrigin(0.5, 0);
     this.gift = this.add.text(180, 430, '', { ...FONT, fontSize: '15px', color: '#ffe066' }).setOrigin(0.5);
     this.more = this.add.text(330, 610, '▼', { ...FONT, fontSize: '16px', color: '#9999bb' }).setOrigin(0.5);
-    this.tweens.add({ targets: this.more, y: 616, yoyo: true, repeat: -1, duration: 400 });
+    this.tweens.add({ targets: this.more, y: 616, yoyo: true, repeat: -1, duration: 400, ease: 'Stepped', easeParams: [1] });
 
     this.input.on('pointerdown', () => this.tap());
     this.showPage(0);
@@ -50,10 +50,10 @@ export class StoryScene extends Phaser.Scene {
       const scale = wide ? 340 / tex.width : Math.min(14, 200 / tex.height);
       this.tweens.killTweensOf(this.art);
       this.art.setTexture(page.art).setScale(scale).setVisible(true).setAlpha(0).setY(210);
-      this.tweens.add({ targets: this.art, alpha: 1, duration: 400, onComplete: () => {
+      this.tweens.add({ targets: this.art, alpha: 1, duration: 400, ease: 'Stepped', easeParams: [3], onComplete: () => {
         // gentle life: figures float, scenes flicker like lamplight
-        if (wide) this.tweens.add({ targets: this.art, alpha: 0.82, yoyo: true, repeat: -1, duration: 1300, ease: 'Sine.inOut' });
-        else this.tweens.add({ targets: this.art, y: 200, yoyo: true, repeat: -1, duration: 1100, ease: 'Sine.inOut' });
+        if (wide) this.tweens.add({ targets: this.art, alpha: 0.82, yoyo: true, repeat: -1, duration: 1300, ease: 'Stepped', easeParams: [2] });
+        else this.tweens.add({ targets: this.art, y: 200, yoyo: true, repeat: -1, duration: 1100, ease: 'Stepped', easeParams: [2] });
       } });
       if (wide) {
         const h = tex.height * scale;

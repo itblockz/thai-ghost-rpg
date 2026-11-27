@@ -1388,7 +1388,8 @@ export function registerSprites(scene) {
     SPRITES[`${key}_ko`] = rows[0].split('').map((_, x) => Array.from({ length: n }, (_, y) => rows[n - 1 - y][x]).join(''));
   }
   for (const key of Object.keys(SPRITES)) {
-    if (key.startsWith('fx_') && !SPRITES[`${key}@2`]) SPRITES[`${key}@2`] = scale2x(SPRITES[key]);
+    // never upscale an upscale: '@2' keys used to be doubled again on every scene, exhausting phone memory
+    if (key.startsWith('fx_') && !key.includes('@') && !SPRITES[`${key}@2`]) SPRITES[`${key}@2`] = scale2x(SPRITES[key]);
   }
   for (const [key, rows] of Object.entries(SPRITES)) {
     if (scene.textures.exists(key)) continue;

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
-import { SKILLS, skillDamage } from '../data/skills.js';
+import { SKILLS, skillDamage, skillFacts } from '../data/skills.js';
 import { registerSprites, pixelDisc, pixelRing } from '../art/sprites.js';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, pixelBob } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
@@ -60,7 +60,7 @@ export class BattleScene extends Phaser.Scene {
     const mute = this.add.image(334, 26, muteKey()).setScale(PX).setInteractive({ useHandCursor: true });
     mute.on('pointerdown', () => { toggleMute(); mute.setTexture(muteKey()); });
 
-    this.turnText = this.add.text(180, 606, '', { ...FONT, fontSize: '14px', color: '#ccccee', align: 'center' }).setOrigin(0.5);
+    this.turnText = this.add.text(180, 606, '', { ...FONT, fontSize: '13px', color: '#ccccee', align: 'center', wordWrap: { width: 340 } }).setOrigin(0.5);
     this.btns = [];
     this.card = this.add.container(0, 0).setDepth(10).setVisible(false);
     this.input.on('pointerdown', (_p, over) => { if (!over.length) this.hideCard(); });
@@ -196,7 +196,6 @@ export class BattleScene extends Phaser.Scene {
     this.selected = skillId;
     this.buildButtons();
     this.refresh();
-    this.showSkillInfo(SKILLS[skillId], `ฤทธิ์ของ${this.active.name}`, SKILLS[skillId].target === 'ally' ? 'top' : 'bottom');
   }
 
   useSelectedOn(target) {
@@ -326,13 +325,14 @@ export class BattleScene extends Phaser.Scene {
       const parts = [g, icon, name, cdText];
       if (cd) [icon, name].forEach(p => p.setAlpha(0.25));
       const zone = this.add.zone(x, y, w, 120).setInteractive({ useHandCursor: true });
-      zone.on('pointerdown', () => { if (this.busy) return; if (cd) this.showSkillInfo(s, `ฤทธิ์ของ${u.name}`); else this.select(id); });
+      zone.on('pointerdown', () => { if (this.busy) return; if (cd) this.turnText.setText(`${s.name} · อีก ${cd} ตาจึงใช้ได้`); else this.select(id); });
       parts.push(zone);
       this.btns.push({ id, parts });
     });
     const s = SKILLS[this.selected];
     // only a first-time hint; the gold glow shows whose turn it is
-    this.turnText.setText(storageGet('seenTapTarget') ? '' : (s.target === 'ally' ? 'แตะบริวารเพื่อใช้' : 'แตะศัตรูเพื่อใช้'));
+    // one line under the buttons: what the chosen skill does, and whom to tap
+    this.turnText.setText(`${s.name} · ${skillFacts(s).join(' · ')} — ${s.target === 'ally' ? 'แตะบริวาร' : 'แตะศัตรู'}`);
   }
 
   // Panel with notched (pixel-style) corners.

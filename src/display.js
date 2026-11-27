@@ -43,3 +43,6 @@ export function idleFrames(scene, img, key) {
     img.setTexture(alt ? `${key}_idle2` : key);
   } });
 }
+
+// One art pixel = PX screen points, for every sprite, background and effect.
+export const PX = 3;

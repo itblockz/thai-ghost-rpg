@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillDamage } from '../data/skills.js';
-import { registerSprites } from '../art/sprites.js';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS } from '../display.js';
+import { registerSprites, pixelDisc } from '../art/sprites.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, currentTeam } from '../flow.js';
 
@@ -105,15 +105,16 @@ export class BattleScene extends Phaser.Scene {
       side, id, def, name, x, y, scale,
       hp: def.hp, maxHp: def.hp, skills: def.skills, cd: {}, block: false, pending: null, takenMult: 1, alive: true,
     };
-    u.glow = this.add.image(x, y, 'px_disc').setScale(scale).setTint(side === 'enemy' ? 0xff3060 : 0xffd860).setAlpha(side === 'enemy' ? 0.12 : 0);
-    // sprites may be 16 or 32 px wide; keep the same on-screen size either way
-    u.sprite = this.add.image(x, y, def.sprite);
-    // 32px art fills less of its grid, so show it a touch larger (2.5x -> 3x for retainers)
-    u.sprite.setScale(scale * 16 / u.sprite.width * (u.sprite.width > 16 ? 1.2 : 1));
+    // every unit is drawn at the same pixel size; bigger creatures simply have bigger grids
+    const grid = this.textures.get(def.sprite).getSourceImage().width;
+    u.glow = this.add.image(x, y, pixelDisc(this, grid + 6)).setScale(PX).setTint(side === 'enemy' ? 0xff3060 : 0xffd860).setAlpha(side === 'enemy' ? 0.12 : 0);
+    u.sprite = this.add.image(x, y, def.sprite).setScale(PX);
+    u.scale = PX;
+    u.half = grid * PX / 2;
     u.pose = 'idle';
 
     // HP bar under the sprite (no name label: the art identifies the unit)
-    const by = y + scale * 8 + 10, bw = side === 'enemy' && scale >= 10 ? 220 : 92;
+    const by = y + u.half + 6, bw = grid >= 48 ? 180 : 92;
     this.add.rectangle(x, by + 7, bw + 4, 10, 0x000000);
     this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x333344).setOrigin(0, 0.5);
     u.bar = this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x55cc66).setOrigin(0, 0.5);
@@ -131,11 +132,11 @@ export class BattleScene extends Phaser.Scene {
         return { sid, g, icon, cdText, x: tx, y: ty };
       });
     }
-    u.marker = this.add.image(x, y - scale * 8 - 14, 'icon_target').setScale(3).setVisible(false).setDepth(6);
-    u.shieldIcon = this.add.image(x + scale * 6, y - scale * 6, 'icon_shield').setScale(3).setVisible(false).setDepth(6);
+    u.marker = this.add.image(x, y - u.half - 10, 'icon_target').setScale(3).setVisible(false).setDepth(6);
+    u.shieldIcon = this.add.image(x + u.half * 0.7, y - u.half * 0.7, 'icon_shield').setScale(3).setVisible(false).setDepth(6);
 
     // tap the unit = use the selected skill on it
-    this.add.zone(x, y, Math.max(80, scale * 16), Math.max(90, scale * 16)).setInteractive({ useHandCursor: true })
+    this.add.zone(x, y, Math.max(80, u.half * 2), Math.max(90, u.half * 2)).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.useSelectedOn(u));
     return u;
   }
@@ -376,7 +377,7 @@ export class BattleScene extends Phaser.Scene {
     const list = SKILLS[this.selected].target === 'ally' ? this.allies : this.enemies;
     g.fillStyle(0xffdd55);
     for (const u of this.alive(list)) {
-      const h = Math.max(36, u.scale * 9), k = 12;
+      const h = Math.max(36, u.half + 6), k = 12;
       const l = u.x - h, r = u.x + h, t = u.y - h, b = u.y + h;
       [[l, t, 1, 1], [r, t, -1, 1], [l, b, 1, -1], [r, b, -1, -1]].forEach(([x, y, sx, sy]) => {
         g.fillRect(Math.min(x, x + sx * k), y - (sy < 0 ? 3 : 0), k, 3);

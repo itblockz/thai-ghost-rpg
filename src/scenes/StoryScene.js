@@ -50,10 +50,10 @@ export class StoryScene extends Phaser.Scene {
       const scale = wide ? 340 / tex.width : Math.min(14, 200 / tex.height);
       this.tweens.killTweensOf(this.art);
       this.art.setTexture(page.art).setScale(scale).setVisible(true).setAlpha(0).setY(210);
-      this.tweens.add({ targets: this.art, alpha: 1, duration: 400, ease: 'Stepped', easeParams: [3], onComplete: () => {
+      this.tweens.add({ targets: this.art, alpha: 1, duration: 400, onComplete: () => {
         // gentle life: figures float, scenes flicker like lamplight
-        if (wide) this.tweens.add({ targets: this.art, alpha: 0.82, yoyo: true, repeat: -1, duration: 1300, ease: 'Stepped', easeParams: [2] });
-        else this.tweens.add({ targets: this.art, y: 200, yoyo: true, repeat: -1, duration: 1100, ease: 'Stepped', easeParams: [2] });
+        if (wide) this.tweens.add({ targets: this.art, alpha: 0.82, yoyo: true, repeat: -1, duration: 1300, ease: 'Sine.inOut' });
+        else this.tweens.add({ targets: this.art, y: 200, yoyo: true, repeat: -1, duration: 1100, ease: 'Sine.inOut' });
       } });
       if (wide) {
         const h = tex.height * scale;

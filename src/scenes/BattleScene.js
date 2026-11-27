@@ -100,7 +100,6 @@ export class BattleScene extends Phaser.Scene {
     u.glow = this.add.image(x, y, 'px_disc').setScale(scale).setTint(side === 'enemy' ? 0xff3060 : 0xffd860).setAlpha(side === 'enemy' ? 0.12 : 0);
     u.sprite = this.add.image(x, y, def.sprite).setScale(scale);
     u.pose = 'idle';
-    this.tweens.add({ targets: [u.sprite, u.glow], y: y - (side === 'enemy' ? 7 : 3), yoyo: true, repeat: -1, duration: side === 'enemy' ? 900 : 700, ease: 'Sine.inOut', delay: x * 3 });
 
     // HP bar under the sprite (no name label: the art identifies the unit)
     const by = y + scale * 8 + 10, bw = side === 'enemy' && scale >= 10 ? 220 : 92;
@@ -264,14 +263,14 @@ export class BattleScene extends Phaser.Scene {
     if (u.side === 'enemy') {
       for (let i = 0; i < 24; i++) {
         const px = this.add.rectangle(u.x + Phaser.Math.Between(-40, 40), u.y + Phaser.Math.Between(-50, 50), 6, 6, Phaser.Math.RND.pick([0x5d4d6e, 0xffffff, 0xd01030]));
-        this.tweens.add({ targets: px, y: px.y - Phaser.Math.Between(40, 120), alpha: 0, duration: Phaser.Math.Between(400, 900), ease: 'Stepped', easeParams: [4], onComplete: () => px.destroy() });
+        this.tweens.add({ targets: px, y: px.y - Phaser.Math.Between(40, 120), alpha: 0, duration: Phaser.Math.Between(400, 900), onComplete: () => px.destroy() });
       }
-      this.tweens.add({ targets: [u.sprite, u.glow], alpha: 0, duration: 400, ease: 'Stepped', easeParams: [3] });
+      this.tweens.add({ targets: [u.sprite, u.glow], alpha: 0, duration: 400 });
       (u.tiles || []).forEach(t => { t.icon.setVisible(false); t.cdText.setVisible(false); t.g.clear(); });
     } else {
       u.sprite.setTint(0x444455);
       u.sprite.setTexture(`${u.def.sprite}_ko`);
-      this.tweens.add({ targets: u.sprite, alpha: 0.45, duration: 300, ease: 'Stepped', easeParams: [2] });
+      this.tweens.add({ targets: u.sprite, alpha: 0.45, duration: 300 });
     }
   }
 
@@ -428,7 +427,7 @@ export class BattleScene extends Phaser.Scene {
 
   popup(x, y, text, color = '#fff', size = 26) {
     const t = this.add.text(x, y, text, { ...FONT, fontSize: `${size}px`, fontStyle: 'bold', color, stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(8);
-    this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 1000, ease: 'Stepped', easeParams: [5], onComplete: () => t.destroy() });
+    this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 1000, onComplete: () => t.destroy() });
   }
 
   // ---------- animations ----------
@@ -465,7 +464,7 @@ export class BattleScene extends Phaser.Scene {
         // 2) dash: stretched along the move, leaving after-images
         const trail = this.time.addEvent({ delay: 25, repeat: 4, callback: () => {
           const ghost = this.add.image(sp.x, sp.y, sp.texture.key).setScale(sx).setAlpha(0.35).setTint(enemy ? 0xff6080 : 0xffe08a).setDepth(sp.depth - 0.1);
-          this.tweens.add({ targets: ghost, alpha: 0, duration: 200, ease: 'Stepped', easeParams: [2], onComplete: () => ghost.destroy() });
+          this.tweens.add({ targets: ghost, alpha: 0, duration: 200, onComplete: () => ghost.destroy() });
         } });
         const style = MOTION[user.id] || 'dash';
         const to = { x: user.x + dx, y: user.y + dy };
@@ -520,7 +519,7 @@ export class BattleScene extends Phaser.Scene {
   fxClaw(t) {
     play('scratch');
     const fx = this.add.image(t.x, t.y, 'fx_claw').setScale(3).setDepth(5);
-    this.tweens.add({ targets: fx, alpha: 0, duration: 450, delay: 120, ease: 'Stepped', easeParams: [3], onComplete: () => fx.destroy() });
+    this.tweens.add({ targets: fx, alpha: 0, duration: 450, delay: 120, onComplete: () => fx.destroy() });
   }
 
   // Three quick rakes from alternating angles; damage lands on the last one.
@@ -528,7 +527,7 @@ export class BattleScene extends Phaser.Scene {
     [false, true, false].forEach((flip, i) => this.time.delayedCall(i * 140, () => {
       play('scratch');
       const fx = this.add.image(t.x + (i - 1) * 10, t.y, 'fx_claw').setScale(i === 2 ? 4 : 3).setFlipX(flip).setDepth(5);
-      this.tweens.add({ targets: fx, alpha: 0, duration: 350, delay: 80, ease: 'Stepped', easeParams: [2], onComplete: () => fx.destroy() });
+      this.tweens.add({ targets: fx, alpha: 0, duration: 350, delay: 80, onComplete: () => fx.destroy() });
       this.tweens.add({ targets: t.sprite, x: t.x + (i % 2 ? -6 : 6), duration: 50, yoyo: true });
       if (i === 2) { if (t.side === 'ally') play('hurt'); onHit(); }
     }));
@@ -569,7 +568,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: top, y: t.y - 14, duration: 90, ease: 'Cubic.in' });
     this.tweens.add({
       targets: bot, y: t.y + 14, duration: 90, ease: 'Cubic.in',
-      onComplete: () => this.tweens.add({ targets: [top, bot], alpha: 0, duration: 300, delay: 120, ease: 'Stepped', easeParams: [2], onComplete: () => { top.destroy(); bot.destroy(); } }),
+      onComplete: () => this.tweens.add({ targets: [top, bot], alpha: 0, duration: 300, delay: 120, onComplete: () => { top.destroy(); bot.destroy(); } }),
     });
   }
 
@@ -585,7 +584,7 @@ export class BattleScene extends Phaser.Scene {
           const gut = this.add.image(user.x, user.y + 30, 'fx_gut').setScale(3).setDepth(5);
           this.tweens.add({
             targets: gut, x: target.x + Phaser.Math.Between(-40, 40), y: target.y + Phaser.Math.Between(-40, 40), scale: Phaser.Math.Between(4, 7),
-            duration: 260, delay: i * 12, ease: 'Stepped', easeParams: [5], onComplete: () => gut.destroy(),
+            duration: 260, delay: i * 12, ease: 'Quad.in', onComplete: () => gut.destroy(),
           });
         }
         this.time.delayedCall(280, () => {
@@ -594,7 +593,7 @@ export class BattleScene extends Phaser.Scene {
           for (let i = 0; i < 4; i++) {
             const sp = this.add.image(target.x + Phaser.Math.Between(-45, 45), target.y + Phaser.Math.Between(-45, 30), 'fx_splat')
               .setScale(Phaser.Math.Between(4, 6)).setDepth(5).setAlpha(0.9);
-            this.tweens.add({ targets: sp, y: sp.y + 30, alpha: 0, duration: 1200, delay: 200, ease: 'Stepped', easeParams: [5], onComplete: () => sp.destroy() });
+            this.tweens.add({ targets: sp, y: sp.y + 30, alpha: 0, duration: 1200, delay: 200, onComplete: () => sp.destroy() });
           }
         });
       },
@@ -615,14 +614,14 @@ export class BattleScene extends Phaser.Scene {
       raised.forEach(o => o.setDepth(0).setAlpha(1));
             this.banner?.destroy(); this.bannerSub?.destroy();
       this.banner = this.bannerSub = null;
-      this.tweens.add({ targets: veil, alpha: 0, duration: 350, ease: 'Stepped', easeParams: [3], onComplete: () => veil.destroy() });
+      this.tweens.add({ targets: veil, alpha: 0, duration: 350, onComplete: () => veil.destroy() });
       this.startRound();
     };
     if (short) return this.time.delayedCall(10, finish);
 
     raised.forEach(o => o.setDepth(21).setAlpha(0));
     this.enemies.forEach(e => {
-      this.tweens.add({ targets: [e.sprite, e.glow], alpha: 1, duration: 900, ease: 'Stepped', easeParams: [4] });
+      this.tweens.add({ targets: [e.sprite, e.glow], alpha: 1, duration: 900 });
     });
     this.time.delayedCall(350, () => play('laugh'));
     this.time.delayedCall(700, () => {
@@ -631,7 +630,7 @@ export class BattleScene extends Phaser.Scene {
       const title = Object.entries(counts).map(([n, c]) => (c > 1 ? `${n} ×${c}` : n)).join(' · ');
       this.banner = this.add.text(180, 300, `— ${title} —`, { ...FONT, fontSize: '28px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(22).setAlpha(0);
       this.bannerSub = this.add.text(180, 335, this.enemies[0].def.lore || '', { ...FONT, fontSize: '14px', color: '#ccccee', align: 'center', wordWrap: { width: 300 } }).setOrigin(0.5, 0).setDepth(22).setAlpha(0);
-      this.tweens.add({ targets: [this.banner, this.bannerSub], alpha: 1, duration: 400, ease: 'Stepped', easeParams: [3] });
+      this.tweens.add({ targets: [this.banner, this.bannerSub], alpha: 1, duration: 400 });
       play('growl');
     });
     this.time.delayedCall(2600, finish);

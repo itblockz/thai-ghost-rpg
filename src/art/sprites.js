@@ -645,6 +645,287 @@ export const SPRITES = {
     '................',
     '................',
   ],
+  // chapter 3: ผีปอบ, ผีเปรต, map stops and skill icons
+  pop: [
+    '................................',
+    '................................',
+    '................................',
+    '................................',
+    '..............kkkkk.............',
+    '.........aaaaaaaaaaaaaa.........',
+    '.........aaaaaaaaaaaaaa.........',
+    '.........aaaaaaaaaaaaaa.........',
+    '........aaaaaaaaaaaaaaaa........',
+    '........aaaSSSSSSSSSSaaa........',
+    '........aaaSSSSSSSSSSaaa........',
+    '........aaaSSeeSSSeeSaaa........',
+    '........aaaSSSSSSSSSSaaa........',
+    '........aaaSSSSSSSSSSaaa........',
+    '........aaaSSSSSSSSSSaaa........',
+    '........aaaSSSkkkkSSSaaa........',
+    '........aaanSSSppSSSSaaak.......',
+    '.....kkkknnnnnSppSSnnnnnkkkk....',
+    '....kSSSnnnnnnnppnnnnnnnnSSSk...',
+    '...kSSSSSnnnnnNppNNnnnnnSSSSSk..',
+    '...kSSSSSnnnnNNNNNNNnnnnSSSSSk..',
+    '...kSSSSSnnnNNNNNNNNNnnnSSSSSk..',
+    '....kSSSnnnNNNNNNNNNNNnnnSSSk...',
+    '.....wkwnnnNNNNNNNNNNNnnnwkw....',
+    '......knnnnNNNNNNNNNNNnnnnk.....',
+    '.......knnnNNNNNNNNNNNnnnk......',
+    '.......knnnNNNNNNNNNNNnnnk......',
+    '........knnnNNNNNNNNNnnnk.......',
+    '........kknnnNNNNNNNnnnkk.......',
+    '.........kknnnNNNNNnnnkk........',
+    '........n..nknnnnnnnnk.n........',
+    '.........k..kkkkkkkk.k..k.......',
+  ],
+  pop_idle2: [
+    '................................',
+    '................................',
+    '................................',
+    '................................',
+    '................................',
+    '..............kkkkk.............',
+    '.........aaaaaaaaaaaaaa.........',
+    '.........aaaaaaaaaaaaaa.........',
+    '.........aaaaaaaaaaaaaa.........',
+    '........aaaaaaaaaaaaaaaa........',
+    '........aaaSSSSSSSSSSaaa........',
+    '........aaaSSSSSSSSSSaaa........',
+    '........aaaSSeeSSSeeSaaa........',
+    '........aaaSSSSSSSSSSaaa........',
+    '........aaaSSSSSSSSSSaaa........',
+    '........aaaSSSSSSSSSSaaa........',
+    '........aaaSSSkkkkSSSaaa........',
+    '........aaanSSSppSSSSaaak.......',
+    '.....kkkknnnnnSppSSnnnnnkkkk....',
+    '....kSSSnnnnnnnppnnnnnnnnSSSk...',
+    '...kSSSSSnnnnnNppNNnnnnnSSSSSk..',
+    '...kSSSSSnnnnNNppNNNnnnnSSSSSk..',
+    '...kSSSSSnnnNNNNNNNNNnnnSSSSSk..',
+    '....kSSSnnnNNNNNNNNNNNnnnSSSk...',
+    '.....wkwnnnNNNNNNNNNNNnnnwkw....',
+    '......knnnnNNNNNNNNNNNnnnnk.....',
+    '.......knnnNNNNNNNNNNNnnnk......',
+    '.......knnnNNNNNNNNNNNnnnk......',
+    '........knnnNNNNNNNNNnnnk.......',
+    '........kknnnNNNNNNNnnnkk.......',
+    '........nkknnnNNNNNnnnkn........',
+    '.........k.kknnknnknkk..k.......',
+  ],
+  pret: [
+    '................................',
+    '..............kkkkk.............',
+    '............kkLLLLLkk...........',
+    '............kLLLLLLLk...........',
+    '...........kLLLLLLLLLk..........',
+    '...........kLLeLLLeLLk..........',
+    '...........kLLLLLLLLLk..........',
+    '............kLLLkLLLk...........',
+    '............kkLLLLLkk...........',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '.............kkLLLkk............',
+    '....kkk.LLLLLLLLLLLLLLLLL.kkk...',
+    '...kLLLkLLLLLLLLLLLLLLLLLkLLLk..',
+    '..kLLLLLkLLLLLLLLLLLLLLLkLLLLLk.',
+    '..kLLLLLkLLLLLLLLLLLLLLLkLLLLLk.',
+    '..kLLLLLLLLLLLLLLLLLLLLLLLLLLLk.',
+    '..kLLLLLLNNNNNNNNNNNNNNNLLLLLLk.',
+    '..kLLLLLLNNNNNNNNNNNNNNNLLLLLLk.',
+    '...kLLLkkNNNNNNNNNNNNNNNkkLLLk..',
+    '...wkwkwkNNNNNNNNNNNNNNNkwkwkw..',
+    '.........NNNNNNNNNNNNNNN........',
+    '.........kkkkkLkLkLkkkkk........',
+  ],
+  pret_idle2: [
+    '................................',
+    '................................',
+    '..............kkkkk.............',
+    '............kkLLLLLkk...........',
+    '............kLLLLLLLk...........',
+    '...........kLLLLLLLLLk..........',
+    '...........kLLeLLLeLLk..........',
+    '...........kLLLLLLLLLk..........',
+    '............kLLLkLLLk...........',
+    '............kkLLLLLkk...........',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '..............kLLLk.............',
+    '....kkk......kkLLLkk......kkk...',
+    '...kLLLkLLLLLLLLLLLLLLLLLkLLLk..',
+    '..kLLLLLLLLLLLLLLLLLLLLLLLLLLLk.',
+    '..kLLLLLkLLLLLLLLLLLLLLLkLLLLLk.',
+    '..kLLLLLkLLLLLLLLLLLLLLLkLLLLLk.',
+    '..kLLLLLLLLLLLLLLLLLLLLLLLLLLLk.',
+    '..kLLLLLLNNNNNNNNNNNNNNNLLLLLLk.',
+    '...kLLLkLNNNNNNNNNNNNNNNLkLLLk..',
+    '...wkwkwkNNNNNNNNNNNNNNNkwkwkw..',
+    '........kNNNNNNNNNNNNNNNk.......',
+    '.........NNNNNNNNNNNNNNN........',
+    '.........kkkkkLkLkLkkkkk........',
+  ],
+  node_gate: [
+    '................',
+    '................',
+    '................',
+    '.kkkkkkkkkkkkkk.',
+    '..oooooooooooo..',
+    '..oooooooooooo..',
+    '...ll......ll...',
+    '...llkkkkkkll...',
+    '...llkkkkkkll...',
+    '...llkkkkkkll...',
+    '...llkkkakkll...',
+    '...llkkkkkkll...',
+    '...llkkkkkkll...',
+    '...llkkkkkkll...',
+    '...llkkkkkkll...',
+    '................',
+  ],
+  node_yard: [
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '........kk......',
+    '........aa......',
+    '...kk..aaaa.....',
+    '...aa...aa..kk..',
+    '..aaaa..aa..aa..',
+    '...aa...aa.aaaa.',
+    '...aa...aa..aa..',
+    '.GGGGGGGGGGGGGG.',
+    '................',
+  ],
+  node_hall: [
+    '................',
+    '................',
+    '.....nnnnnn.....',
+    '....nnnnnnnn....',
+    '...nnnnnnnnnn...',
+    '..nnnnnnnnnnnn..',
+    '.nnnnnnnnnnnnnn.',
+    '...NNNNNNNNNN...',
+    '...NNNNNNNNNN...',
+    '...NNNkkkkNNN...',
+    '...NNNkPPkNNN...',
+    '...NNNkkkkNNN...',
+    '...NNNkkkkNNN...',
+    '...NNNkkkkNNN...',
+    '................',
+    '................',
+  ],
+  node_temple: [
+    '.......TT.......',
+    '.......TT.......',
+    '.......TT.......',
+    '......nnnn......',
+    '.....nnnnnn.....',
+    '....nnnnnnnn....',
+    '....nnnnnnnn....',
+    '...nnnnnnnnnn...',
+    '..nnnnnnnnnnnn..',
+    '..nnnnnnnnnnnn..',
+    '.nnnnnnnnnnnnnn.',
+    'nnnnnnnnnnnnnnnn',
+    '...NNNNkkNNNN...',
+    '...NNNNkkNNNN...',
+    '...NNNNkkNNNN...',
+    '................',
+  ],
+  icon_devour: [
+    '................',
+    '................',
+    '................',
+    '......kkkkk.....',
+    '....kkkkkkkkk...',
+    '...kkkkkkkkkkk..',
+    '..kwwwwwwwwwwkk.',
+    '..kkwkwkwkwkwkk.',
+    '..kkeeeeeeeekkk.',
+    '..kwwwwwwwwwwkk.',
+    '..kwkwkwkwkwkkk.',
+    '...kkkkkkkkkkk..',
+    '....kkkkkkkkk...',
+    '......kkkkk..e..',
+    '..............e.',
+    '................',
+  ],
+  icon_smash: [
+    '................',
+    '......kkkkk.....',
+    '....kkLLLLLkk...',
+    '...kkLLLLLLLkk..',
+    '...kLLLLLLLLLk..',
+    '..kLLLLLLLLLLLk.',
+    '..kLLLLLLLLLLLk.',
+    '..kLLLLLLLLLLLk.',
+    '..kLLLLLLLLLLLk.',
+    '..kLLLLLLLLLLLk.',
+    '...kLLLLLLLLLk..',
+    '...kkLLLLLLLkk..',
+    '....LLLLLLLLk...',
+    '....LLLLLLLL....',
+    '.y............y.',
+    '...y....y....y..',
+  ],
+  icon_hunger: [
+    '................',
+    '.T....kkkkk...T.',
+    '....kknnnnnkk...',
+    '...knnnnnnnnnk..',
+    '..knnnnnnnnnnnk.',
+    '..knnnnkkknnnnk.',
+    '.knnnnkkkkknnnnk',
+    '.knnnkkkkkkknnnk',
+    '.knnnkkkekkknnnk',
+    '.knnnkkkkkkknnnk',
+    '.knnnnkkkkknnnnk',
+    '..knnnnkkknnnnk.',
+    '..knnnnnnnnnnnk.',
+    '...knnnnnnnnnk..',
+    '.T..kknnnnnkk.T.',
+    '......kkkkk.....',
+  ],
+  icon_seal: [
+    '................',
+    '................',
+    '....kkkkkkkk....',
+    '...kddddddddk...',
+    '...keddddddek...',
+    '...kdeddddedk...',
+    '...kddeddeddk...',
+    '...kdddeedddk...',
+    '...kdddeedddk...',
+    '...kddeddeddk...',
+    '...kdeddddedk...',
+    '...keddddddek...',
+    '...kddddddddk...',
+    '....kkkkkkkk....',
+    '................',
+    '................',
+  ],
   kongkoi: [
     '................................',
     '................................',
@@ -2325,6 +2606,87 @@ function drawMapArt(scene) {
   });
 }
 
+
+/** Chapter 3 — the abandoned temple and its cremation ground (180x320 on the 2pt grid). */
+function drawTempleBackdrops(scene) {
+  const night = (px, W, until) => sky(px, W, ['#07060f', '#0c0a18', '#120e20', '#181228', '#1e1630'], until);
+  const ground = (px, W, H, top, a, b, c) => { for (let y = top; y < H; y++) for (let x = 0; x < W; x++) px(x, y, (x * 7 + y * 3) % 17 === 0 ? a : (x * 5 + y * 11) % 29 === 0 ? b : c); };
+  const tree = (rect, cx, top, w, bottom, col) => { for (let y = top; y < bottom; y++) { const h = Math.min(w, Math.floor((y - top) / 2) + 1); rect(cx - h, y, 2 * h + 1, 1, (y - top) % 9 === 8 ? '#0a0812' : col); } };
+  const fog = (px, W, y0, y1, col) => { for (let y = y0; y < y1; y++) for (let x = 0; x < W; x++) if (Math.sin(x / 11 + y * 0.45) + Math.sin(x / 23) > 0.8 && (x + y) % 2 === 0) px(x, y, col); };
+  // ประตูวัด: a crumbling temple gate in the forest, a pale moon behind
+  canvasArt(scene, 'bg_gate3', BG_W, BG_H, (px, rect, W, H) => {
+    night(px, W, HORIZON);
+    STARS.forEach((s, i) => star(px, s, '#6a6690', i));
+    disc(px, 40, 52, 13, '#d8d0b0', '#a8a088');
+    [12, 46, 150, 172].forEach((x, i) => tree(rect, x, 60 + (i % 2) * 14, 14, HORIZON, '#05040a'));
+    // gate: roof, two pillars, dark doorway, cracks
+    for (let y = 0; y < 14; y++) rect(90 - 30 - y, 88 + y, 60 + 2 * y, 1, y === 13 ? '#2a1e28' : '#140e18');
+    rect(66, 102, 8, 58, '#1c1420'); rect(106, 102, 8, 58, '#1c1420'); rect(67, 102, 1, 58, '#2a2030'); rect(107, 102, 1, 58, '#2a2030');
+    rect(74, 108, 32, 52, '#040306');
+    [[70, 120], [70, 136], [110, 116]].forEach(([x, y]) => { px(x, y, '#3a2e40'); px(x + 1, y + 1, '#3a2e40'); });
+    ground(px, W, H, HORIZON, '#1c1c24', '#24242e', '#101016');
+    for (let y = HORIZON; y < HORIZON + 40; y++) { const h = 16 + (y - HORIZON); rect(90 - h, y, 2 * h, 1, (y % 5) ? '#1a1820' : '#222030'); }
+    fog(px, W, 148, 176, '#2e2c44');
+  });
+  // ลานป่าช้า: bone stupas, dead trees, will-o'-wisps
+  canvasArt(scene, 'bg_yard', BG_W, BG_H, (px, rect, W, H) => {
+    night(px, W, HORIZON);
+    STARS.slice(0, 9).forEach((s, i) => star(px, s, '#6a6690', i));
+    // bare dead trees
+    [[20, 70], [160, 80]].forEach(([x, top]) => { rect(x, top, 3, HORIZON - top, '#08060c'); for (let i = 0; i < 4; i++) { const y = top + 6 + i * 9, d = i % 2 ? 1 : -1; for (let k = 0; k < 10; k++) px(x + 1 + d * k, y - Math.floor(k / 2), '#08060c'); } });
+    // stupas (เจดีย์) of different heights
+    const stupa = (cx, base, h) => { for (let y = 0; y < h; y++) { const w = Math.max(1, Math.round((y / h) * 7)); rect(cx - w, base - h + y, 2 * w + 1, 1, y % 6 === 5 ? '#4a4858' : '#3a3846'); } rect(cx - 9, base, 19, 4, '#2e2c38'); };
+    stupa(52, 150, 40); stupa(92, 146, 52); stupa(132, 152, 34); stupa(70, 158, 22);
+    // wisps
+    [[40, 100], [118, 92], [150, 120]].forEach(([x, y]) => { rect(x - 1, y - 1, 3, 3, '#3a6ab0'); px(x, y, '#c8e0ff'); });
+    ground(px, W, H, HORIZON, '#1e2a1e', '#26341f', '#0e140e');
+    fog(px, W, 140, 178, '#2a3a3a');
+  });
+  // ศาลาสวดศพ: an open funeral pavilion lit by a candle, a coffin on trestles
+  canvasArt(scene, 'bg_hall', BG_W, BG_H, (px, rect, W, H) => {
+    rect(0, 0, W, H, '#09070e');
+    for (let y = 0; y < 90; y++) for (let x = 0; x < W; x++) if ((x * 13 + y * 7) % 71 === 0) px(x, y, '#3a3660');
+    glow(px, 90, 120, 60, 22, ['#3a2a18', '#2e2216', '#1a120c']);
+    for (let y = 0; y < 22; y++) rect(10 - y + 10, 40 + y, W - 40 + 2 * y, 1, y % 6 === 5 ? '#22142a' : '#170e1e');
+    rect(0, 62, W, 7, '#2a1a24'); rect(0, 62, W, 1, '#3a2632');
+    rect(16, 69, 10, 92, '#2a1a24'); rect(W - 26, 69, 10, 92, '#2a1a24');
+    // coffin
+    rect(56, 128, 68, 18, '#3a2416'); rect(56, 128, 68, 2, '#5a3a20'); rect(60, 146, 4, 14, '#2a1a10'); rect(116, 146, 4, 14, '#2a1a10');
+    // candles
+    [[44, 132], [136, 132]].forEach(([x, y]) => { rect(x, y, 3, 10, '#e8e0d0'); rect(x, y - 3, 3, 3, '#ff8a30'); px(x + 1, y - 4, '#ffe066'); });
+    ground(px, W, H, HORIZON, '#1c1418', '#241a1e', '#140e12');
+    for (let x = 0; x < W; x += 12) rect(x, HORIZON, 1, H - HORIZON, '#0e0a0e');
+  });
+  // โบสถ์ร้าง: the ruined ordination hall, a tall shape in the dark doorway
+  canvasArt(scene, 'bg_temple', BG_W, BG_H, (px, rect, W, H) => {
+    night(px, W, HORIZON);
+    STARS.slice(0, 7).forEach((s, i) => star(px, s, '#5a5680', i));
+    const C = 90;
+    for (let t = 0; t < 3; t++) { const top = 36 + t * 20, half = 18 + t * 16; for (let y = 0; y < 20; y++) rect(C - half - Math.floor(y / 2), top + y, 2 * (half + Math.floor(y / 2)), 1, '#100c16'); rect(C - half - 12, top + 19, 2 * half + 24, 1, '#5a4a30'); }
+    rect(C - 1, 24, 3, 12, '#5a4a30');
+    rect(C - 52, 96, 104, 64, '#0c0a10');
+    for (let x = C - 46; x < C + 46; x += 15) rect(x, 100, 4, 60, '#16121c');
+    rect(C - 14, 112, 28, 48, '#020203');
+    // eyes in the doorway
+    px(C - 4, 120, '#d01030'); px(C + 4, 120, '#d01030');
+    ground(px, W, H, HORIZON, '#1a1820', '#22202a', '#0e0c12');
+    fog(px, W, 150, 176, '#24223a');
+  });
+  // chapter 3 map: forest round the temple grounds, a path of old flagstones
+  canvasArt(scene, 'art_map3', BG_W, BG_H, (px, rect, W, H) => {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const n = Math.sin(x / 13 + y / 19) + Math.sin(x / 7 - y / 10) * 0.5;
+      px(x, y, n > 0.9 ? '#16141e' : n > 0.2 ? '#121018' : (x + y) % 2 ? '#0e0c14' : '#100e16');
+    }
+    // temple wall (a broken rectangle)
+    for (let x = 30; x < 150; x++) { if (x % 23 > 2) { px(x, 100, '#2e2a3a'); px(x, 260, '#2e2a3a'); } }
+    for (let y = 100; y < 260; y++) { if (y % 29 > 2) { px(30, y, '#2e2a3a'); px(150, y, '#2e2a3a'); } }
+    // dead trees
+    [[10, 30], [160, 60], [20, 200], [165, 210], [80, 290], [140, 300], [60, 40]].forEach(([x, y]) => { rect(x, y, 1, 10, '#2a2234'); px(x - 1, y + 2, '#2a2234'); px(x + 1, y + 4, '#2a2234'); });
+  });
+  for (const [key, src, top] of [['art_gate3', 'bg_gate3', 40], ['art_yard', 'bg_yard', 50], ['art_hall', 'bg_hall', 40], ['art_temple', 'bg_temple', 20]]) storyCrop(scene, key, src, top);
+}
+
 function drawTitleArt(scene) {
   canvasArt(scene, 'art_gate', BG_W, BG_H, (px, rect, W, H) => {
     const C = 90, GROUND = 260;
@@ -2409,6 +2771,38 @@ function drawPortraits(scene) {
     rect(28, 23, 9, 2, K); px(29, 23, '#ffffff'); px(35, 23, '#ffffff');
     // wind under the wings
     [[4, 44], [10, 48], [50, 46], [56, 50]].forEach(([x, y]) => rect(x, y + f, 6, 1, '#c8d8e8'));
+  });
+
+  // ผีปอบ — wild-haired hag, hungry red eyes, long tongue, clawed hands.
+  for (const [key, f] of [['p_pop', 0], ['p_pop_idle2', 1]]) canvasArt(scene, key, 64, 64, (px, rect) => {
+    const K = '#141018', skin = '#b8a898', skinS = '#8a7a70', hair = '#888899', hairD = '#5a5a6a';
+    outlined(px, 32, 54, 20, 12, '#3a2e48'); for (let x = 14; x < 52; x += 5) rect(x, 60, 3, 4, '#2e2440');
+    // hair mass
+    outlined(px, 32, 24, 18, 18, hair); for (let i = 0; i < 9; i++) rect(14 + i * 4, 30, 3, 14 + (i * 5) % 9, i % 2 ? hair : hairD);
+    // face
+    outlined(px, 32, 26, 10, 12, skin); ell(px, 37, 28, 4, 8, skinS);
+    rect(24, 14, 17, 5, hair);
+    eyes(px, rect, 25, 35, 23, '#d01030'); rect(24, 21, 7, 1, hairD); rect(34, 21, 7, 1, hairD);
+    rect(28, 33, 9, 3, K); rect(31, 35, 3, 10 + f * 2, '#ff6688'); rect(31, 44 + f * 2, 3, 1, '#c0283a');
+    // claws reaching
+    [[10, 46], [54, 46]].forEach(([x, y]) => { outlined(px, x, y - f, 4, 4, skin); [-3, 0, 3].forEach(d => rect(x + d, y + 4 - f, 1, 4, '#e8e0d0')); });
+  });
+
+  // ผีเปรต — towering, gaunt, a tiny mouth on a long neck, enormous hands.
+  for (const [key, f] of [['p_pret', 0], ['p_pret_idle2', 1]]) canvasArt(scene, key, 64, 64, (px, rect) => {
+    const K = '#141018', s = '#8a7aa0', sD = '#5d4d6e', sH = '#b0a0c8';
+    glowAt(px, 32, 30, 30, ['#24182e', '#1a1224', '#120c1a']);
+    // swollen belly, ragged robe
+    outlined(px, 32, 54, 16, 10, s); rect(18, 54, 29, 10, '#2e2440'); for (let x = 18; x < 47; x += 4) rect(x, 62, 2, 2, K);
+    // long thin neck
+    rect(29, 12 + f, 7, 36, K); rect(30, 12 + f, 5, 36, s); rect(30, 12 + f, 1, 36, sH);
+    // small head
+    outlined(px, 32, 9 + f, 7, 6, s); ell(px, 35, 10 + f, 3, 4, sD);
+    rect(27, 7 + f, 3, 3, K); px(28, 8 + f, '#d01030'); rect(35, 7 + f, 3, 3, K); px(36, 8 + f, '#d01030');
+    px(32, 13 + f, K);
+    // huge hands hanging low
+    [[9, 50], [55, 50]].forEach(([x, y]) => { outlined(px, x, y - f, 6, 8, s); ell(px, x + 2, y + 2 - f, 2, 4, sD); [-4, -1, 2, 5].forEach(d => rect(x + d, y + 8 - f, 1, 5, '#e8e0d0')); });
+    rect(16, 40, 13, 3, s); rect(36, 40, 13, 3, s);
   });
 
   // กุมารทอง — golden child spirit: topknot (จุก) with a gold ring, round face, red cloth, sitting cross-legged.
@@ -2767,9 +3161,10 @@ export function registerSprites(scene) {
   drawTitleArt(scene);
   drawMapArt(scene);
   drawRiverBackdrops(scene);
+  drawTempleBackdrops(scene);
   drawPixelShapes(scene);
   // knocked-out (lying) frames for every unit, including chapter 2's
-  for (const key of ['kumarn', 'kongkoi', 'krasue', 'phrai', 'khamot', 'naga', 'krahang']) {
+  for (const key of ['kumarn', 'kongkoi', 'krasue', 'phrai', 'khamot', 'naga', 'krahang', 'pop', 'pret']) {
     if (SPRITES[`${key}_ko`]) continue;
     const rows = SPRITES[key], n = rows.length;
     SPRITES[`${key}_ko`] = rows[0].split('').map((_, x) => Array.from({ length: n }, (_, y) => rows[n - 1 - y][x]).join(''));

@@ -36,7 +36,8 @@ export class MapScene extends Phaser.Scene {
     if (ch < reached) flip('›', 338, ch + 1);
 
     // the path, as dotted pixel steps between stops
-    const stops = [START, ...idx.map(i => STAGES[i].map), NEXT_CHAPTER];
+    const NEXT = chapter.next || NEXT_CHAPTER; // a chapter may set where its way onward lies
+    const stops = [START, ...idx.map(i => STAGES[i].map), NEXT];
     const path = this.add.graphics();
     for (let k0 = 0; k0 < stops.length - 1; k0++) {
       const [x1, y1] = stops[k0], [x2, y2] = stops[k0 + 1];
@@ -56,8 +57,8 @@ export class MapScene extends Phaser.Scene {
     });
     const chapterDone = idx.every(i => i < done);
     const nextCh = CHAPTERS[ch + 1];
-    if (nextCh && chapterDone) this.node(NEXT_CHAPTER, CHAPTERS[ch + 1].start.node, `ไป${nextCh.title.split(' — ')[0]}`, 'next', () => { play('click'); this.scene.restart({ chapter: ch + 1 }); });
-    else this.node(NEXT_CHAPTER, 'node_lock', chapterDone ? 'บรรพถัดไปเร็ว ๆ นี้' : '', 'locked');
+    if (nextCh && chapterDone) this.node(NEXT, CHAPTERS[ch + 1].start.node, `ไป${nextCh.title.split(' — ')[0]}`, 'next', () => { play('click'); this.scene.restart({ chapter: ch + 1 }); });
+    else this.node(NEXT, 'node_lock', chapterDone ? 'บรรพถัดไปเร็ว ๆ นี้' : '', 'locked');
 
     // only the heir travels the map (retainers are seen on the prep screen); stands where the journey has reached
     const last = idx.filter(i => i < done).pop();

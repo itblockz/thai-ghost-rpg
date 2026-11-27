@@ -26,8 +26,16 @@ export const ENEMIES = {
     lore: 'ผีป่าตัวเล็ก ขาเดียว ชอบแกล้งคนหลงป่า',
   },
   krahang: {
-    name: 'ผีกระหัง', sprite: 'krahang', hp: 12, spd: 12, skills: ['swoop'],
+    name: 'ผีกระหัง', sprite: 'krahang', hp: 20, spd: 12, skills: ['swoop'],
     lore: 'ผีบินกระพือกระด้งโฉบลงจากฟ้า',
+  },
+  pop: {
+    name: 'ผีปอบ', sprite: 'pop', hp: 26, spd: 10, skills: ['devour'],
+    lore: 'ผีสิงกินของดิบ ยิ่งกินยิ่งมีแรง',
+  },
+  pret: {
+    name: 'ผีเปรต', sprite: 'pret', hp: 250, spd: 7, boss: true, skills: ['smash', 'hunger'],
+    lore: 'เปรตสูงเท่าต้นตาล ปากเท่ารูเข็ม หิวโหยชั่วกัปชั่วกัลป์',
   },
   phrai: {
     name: 'ผีพราย', sprite: 'phrai', hp: 26, spd: 10, skills: ['grab', 'drag'],
@@ -51,6 +59,7 @@ export const ENEMIES = {
 export const CHAPTERS = [
   { title: 'บรรพที่ ๑ — คืนเดือนดับ', start: { name: 'ศาลาอาจารย์', node: 'node_shrine' }, map: 'art_map' },
   { title: 'บรรพที่ ๒ — ลำน้ำมืด', start: { name: 'ปลายหมู่บ้าน', node: 'node_village' }, map: 'art_map2' },
+  { title: 'บรรพที่ ๓ — ป่าช้าวัดร้าง', start: { name: 'ริมป่า', node: 'node_forest' }, map: 'art_map3', next: [110, 500] },
 ];
 export const chapterOf = i => STAGES[i]?.chapter ?? 0;
 
@@ -64,4 +73,9 @@ export const STAGES = [
   { chapter: 1, name: 'ท่าน้ำ', node: 'node_pier', map: [112, 250], before: 'pier', bg: 'bg_pier', enemies: ['phrai', 'phrai'], after: 'afterPier', drop: 'yant' },
   { chapter: 1, name: 'กลางน้ำ', node: 'node_river', map: [246, 360], before: 'river', bg: 'bg_river', enemies: ['khamot', 'phrai', 'khamot'], after: 'afterRiver', drop: 'prakam' },
   { chapter: 1, name: 'วังนาค', node: 'node_naga', map: [130, 440], before: 'nagaGate', bg: 'bg_naga', enemies: ['naga'], after: 'ending2', drop: 'feather', richDrop: true },
+  // บทที่ ๓ — ป่าช้าวัดร้าง
+  { chapter: 2, name: 'ประตูวัด', node: 'node_gate', map: [112, 236], before: 'gate3', bg: 'bg_gate3', enemies: ['krahang', 'krahang'], after: 'afterGate3', drop: 'feather' },
+  { chapter: 2, name: 'ลานป่าช้า', node: 'node_yard', map: [252, 318], before: 'yard', bg: 'bg_yard', enemies: ['krahang', 'kongkoi', 'krahang'], after: 'afterYard', drop: 'lucky' },
+  { chapter: 2, name: 'ศาลาสวดศพ', node: 'node_hall', map: [104, 400], before: 'hall', bg: 'bg_hall', enemies: ['pop', 'krahang', 'pop'], after: 'afterHall', drop: 'bia' },
+  { chapter: 2, name: 'โบสถ์ร้าง', node: 'node_temple', map: [250, 440], before: 'temple', bg: 'bg_temple', enemies: ['pret'], after: 'ending3', richDrop: true },
 ];

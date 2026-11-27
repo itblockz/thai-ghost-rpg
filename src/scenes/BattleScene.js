@@ -433,7 +433,9 @@ export class BattleScene extends Phaser.Scene {
       if (e.damage != null) {
         if (blindNow) missed = true;
         else if (target.block) blocked = true;
-        else { mult = target.takenMult; const d = Math.round(amount(e, 'damage', user) * mult * (user.dmgMult || 1)); target.hp -= d; dealt += d; }
+        else { mult = target.takenMult; const d = Math.round(amount(e, 'damage', user) * mult * (user.dmgMult || 1)); target.hp -= d; dealt += d;
+          // ผีปอบ: what it bites off, it takes back as its own life
+          if (e.drain) { const h = Math.min(d, user.maxHp - user.hp); user.hp += h; if (h) this.popup(user.x, user.y - 20, `+${h}`, '#66ee88', 22); } }
       }
       if (e.block) { target.block = true; target.blockBy = user; target.shieldIcon.setVisible(true); }
       const warded = k => target.wards?.has(k);
@@ -442,6 +444,14 @@ export class BattleScene extends Phaser.Scene {
       if (e.blind && !missed && !blocked && !warded('blind')) target.blind = true;
       // poison lingers: it bites at the start of each of the next rounds
       if (e.poison && !missed && !blocked) target.poison = { turns: e.poison.turns, damage: e.poison.damage };
+      // ผีเปรต: swallows the power of a retainer's charms for the rest of the fight
+      if (e.seal && !missed && !blocked && target.side === 'ally' && !target.sealed) {
+        const d = target.def;
+        target.sealed = true; target.atk = d.atk || 0; target.spd = d.spd || 10;
+        target.maxHp = d.hp; target.hp = Math.min(target.hp, target.maxHp);
+        target.wards = null; target.openBlock = target.openBlock0 = 0; target.luck = 0; target.extraFind = 0;
+        this.iconPop(target.x, target.y + 10, 'icon_seal');
+      }
       if (e.heal) { const h = Math.min(amount(e, 'heal', user), target.maxHp - target.hp); target.hp += h; healed += h; target.poison = null; }
     }
     // show the real rest count right away; the end-of-round tick skips skills used this round
@@ -658,7 +668,7 @@ export class BattleScene extends Phaser.Scene {
     for (const u of [...this.allies, ...this.enemies]) {
       this.setBar(u);
       // lingering conditions show as a small icon on the unit's upper left
-      const st = !u.alive ? null : u.stunned ? 'icon_drag' : u.blind ? 'icon_blind' : u.poison ? 'icon_poison' : null;
+      const st = !u.alive ? null : u.stunned ? 'icon_drag' : u.blind ? 'icon_blind' : u.poison ? 'icon_poison' : u.sealed ? 'icon_seal' : null;
       u.statusIcon.setVisible(!!st);
       if (st) u.statusIcon.setTexture(st);
       if (u.side === 'enemy' && u.alive) {

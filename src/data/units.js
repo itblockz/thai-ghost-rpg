@@ -29,7 +29,7 @@ export const ENEMIES = {
     lore: 'ดวงไฟวับแวมเหนือน้ำ หลอกให้หลงทาง',
   },
   naga: {
-    name: 'นาค', sprite: 'naga', hp: 130, boss: true, skills: ['strike', 'venom'],
+    name: 'นาค', sprite: 'naga', hp: 110, boss: true, skills: ['strike', 'venom'],
     lore: 'พญางูใหญ่เฝ้าวังใต้น้ำ เกล็ดเขียวแวววาว',
   },
   krasue: {

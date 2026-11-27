@@ -22,7 +22,7 @@ export const SKILLS = {
   frenzy: { name: 'ตะกุยรัว', desc: 'ข่วนรัวใส่ศัตรูหนึ่งตนอย่างแรง ยิ่งมีกำลังยิ่งรุนแรงทวีคูณ', icon: 'icon_frenzy', anim: 'frenzy', cooldown: 2, effects: [{ damage: 2, scale: 2 }] },
   khamotEmber: { name: 'ไฟลวก', desc: 'ปล่อยไฟลวกศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งร้อน', icon: 'icon_heal', anim: 'wisp', cooldown: 0, effects: [{ damage: 1, scale: 1 }] },
   khamotBlind: { name: 'ไฟหลอกตา', desc: 'ล่อไฟวูบวาบใส่ศัตรูหนึ่งตนจนตาพร่า การโจมตีครั้งถัดไปของมันจะพลาด', icon: 'icon_blind', anim: 'wisp', cooldown: 3, effects: [{ damage: 2 }, { blind: true }] },
-  khamotHeal: { name: 'ไฟอุ่นใจ', desc: 'ส่องไฟอุ่นปลอบขวัญบริวารหนึ่งตน ผีโขมดยิ่งมีขวัญมาก ยิ่งปลอบขวัญได้มาก', icon: 'icon_heal', anim: 'heal', cooldown: 2, target: 'ally', effects: [{ heal: 2, scale: 0.4, stat: 'hp' }] },
+  khamotHeal: { name: 'ไฟอุ่นใจ', desc: 'ส่องไฟอุ่นปลอบขวัญและถอนพิษบริวารหนึ่งตน ผีโขมดยิ่งมีขวัญมาก ยิ่งปลอบขวัญได้มาก', icon: 'icon_heal', anim: 'heal', cooldown: 2, target: 'ally', effects: [{ heal: 2, scale: 0.4, stat: 'hp' }] },
   // enemies
   scratch: { name: 'ตะกุย', desc: 'ข่วนบริวารหนึ่งตน', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 3 }] },
   bite: { name: 'กัด', desc: 'งับบริวารหนึ่งตนจนเจ็บ', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 10 }] },
@@ -30,8 +30,8 @@ export const SKILLS = {
   drag: { name: 'ดึงลงน้ำ', desc: 'ฉุดบริวารหนึ่งตนลงน้ำ ผู้ที่ถูกฉุดจะจมน้ำเสียตาถัดไป', icon: 'icon_drag', anim: 'water', cooldown: 3, useChance: 0.45, effects: [{ damage: 5 }, { stun: 1 }] },
   lure: { name: 'ไฟหลอกทาง', desc: 'ล่อไฟใส่บริวารหนึ่งตนจนตาพร่า การโจมตีครั้งถัดไปจะพลาด', icon: 'icon_blind', anim: 'wisp', cooldown: 2, useChance: 0.6, effects: [{ damage: 2 }, { blind: true }] },
   ember: { name: 'ไฟลวก', desc: 'ปล่อยไฟลวกบริวารหนึ่งตน', icon: 'icon_heal', anim: 'wisp', cooldown: 0, effects: [{ damage: 4 }] },
-  strike: { name: 'ฉก', desc: 'ฉกบริวารหนึ่งตนอย่างแรง', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 9 }] },
-  venom: { name: 'พ่นพิษ', desc: 'ขดตัวสูดพิษหนึ่งตา แล้วพ่นใส่บริวารทุกตนอย่างแรง ระหว่างสูดพิษจะถูกตีเจ็บกว่าปกติ', icon: 'icon_venom', anim: 'venom', cooldown: 3, useChance: 0.55, area: true, effects: [{ wait: 1, takenMult: 2 }, { damage: 12 }] },
+  strike: { name: 'ฉก', desc: 'ฉกบริวารหนึ่งตนอย่างแรง', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 8 }] },
+  venom: { name: 'พ่นพิษ', desc: 'พ่นพิษใส่บริวารทุกตน ผู้ที่ถูกพิษจะเจ็บต่อไปอีกหลายตา', icon: 'icon_venom', anim: 'venom', cooldown: 3, useChance: 0.55, area: true, effects: [{ damage: 4 }, { poison: { turns: 3, damage: 2 } }] },
   spit: { name: 'พ่นไส้', desc: 'สูดลมหนึ่งตา แล้วพ่นไส้ใส่บริวารที่จ้องไว้อย่างแรง ระหว่างสูดลมจะถูกตีเจ็บกว่าปกติ', icon: 'icon_spit', anim: 'spit', cooldown: 3, useChance: 0.5, effects: [{ wait: 1, takenMult: 2 }, { damage: 22 }] },
 };
 

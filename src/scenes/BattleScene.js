@@ -151,6 +151,25 @@ export class BattleScene extends Phaser.Scene {
   // ---------- turn flow ----------
   // A round: every living retainer acts (player chooses), then every living enemy acts.
   startRound() {
+    // พิษ: each poisoned unit loses a little at the start of the round
+    const sick = this.alive([...this.allies, ...this.enemies]).filter(u => u.poison);
+    if (sick.length) {
+      sick.forEach(u => {
+        u.hp -= u.poison.damage;
+        this.popup(u.x, u.y - 20, `-${u.poison.damage}`, '#88dd55', 22);
+        if (--u.poison.turns <= 0) u.poison = null;
+        if (u.hp <= 0) { u.poison = null; this.knockOut(u); }
+      });
+      play('splash');
+      this.refresh();
+      this.time.delayedCall(600, () => this.startRoundAfterPoison());
+      return;
+    }
+    this.startRoundAfterPoison();
+  }
+
+  startRoundAfterPoison() {
+    if (this.checkEnd()) return;
     // ประคำ: shielded for the opening rounds
     for (const u of this.alive(this.allies)) if (u.openBlock > 0) { u.openBlock--; u.block = true; u.shieldIcon.setVisible(true); }
     this.queue = this.alive(this.allies);
@@ -248,7 +267,9 @@ export class BattleScene extends Phaser.Scene {
       if ((e.stun && warded('stun')) || (e.blind && warded('blind'))) this.iconPop(target.x, target.y + 10, 'charm_yant');
       if (e.stun && !missed && !blocked && !warded('stun')) target.stunned = (target.stunned || 0) + e.stun;
       if (e.blind && !missed && !blocked && !warded('blind')) target.blind = true;
-      if (e.heal) { const h = Math.min(amount(e, 'heal', user), target.maxHp - target.hp); target.hp += h; healed += h; }
+      // poison lingers: it bites at the start of each of the next rounds
+      if (e.poison && !missed && !blocked) target.poison = { turns: e.poison.turns, damage: e.poison.damage };
+      if (e.heal) { const h = Math.min(amount(e, 'heal', user), target.maxHp - target.hp); target.hp += h; healed += h; target.poison = null; }
     }
     // show the real rest count right away; the end-of-round tick skips skills used this round
     if (skill.cooldown) { user.cd[skillId] = skill.cooldown; (user.fresh ||= new Set()).add(skillId); }
@@ -453,7 +474,7 @@ export class BattleScene extends Phaser.Scene {
     for (const u of [...this.allies, ...this.enemies]) {
       this.setBar(u);
       // lingering conditions show as a small icon on the unit's upper left
-      const st = !u.alive ? null : u.stunned ? 'icon_drag' : u.blind ? 'icon_blind' : null;
+      const st = !u.alive ? null : u.stunned ? 'icon_drag' : u.blind ? 'icon_blind' : u.poison ? 'icon_poison' : null;
       u.statusIcon.setVisible(!!st);
       if (st) u.statusIcon.setTexture(st);
       if (u.side === 'enemy' && u.alive) {

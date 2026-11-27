@@ -1863,7 +1863,8 @@ function canvasArt(scene, key, W, H, draw, outW = W) {
   if (scene.textures.exists(key)) return;
   // draw at the design size; if outW differs, re-grid with nearest sampling so the
   // result still sits on whole art pixels at the shared pixel size
-  const src = document.createElement('canvas');
+  // one shared scratch canvas for all art (iOS Safari caps total canvas memory)
+  const src = canvasArt.scratch ||= document.createElement('canvas');
   src.width = W; src.height = H;
   const c = src.getContext('2d');
   const px = (x, y, col) => { c.fillStyle = col; c.fillRect(x, y, 1, 1); };
@@ -2034,7 +2035,9 @@ export function registerSprites(scene) {
   drawMapArt(scene);
   drawRiverBackdrops(scene);
   drawPixelShapes(scene);
-  for (const key of ['kumarn', 'kongkoi', 'krasue']) {
+  // knocked-out (lying) frames for every unit, including chapter 2's
+  for (const key of ['kumarn', 'kongkoi', 'krasue', 'phrai', 'khamot', 'naga']) {
+    if (SPRITES[`${key}_ko`]) continue;
     const rows = SPRITES[key], n = rows.length;
     SPRITES[`${key}_ko`] = rows[0].split('').map((_, x) => Array.from({ length: n }, (_, y) => rows[n - 1 - y][x]).join(''));
   }

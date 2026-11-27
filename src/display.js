@@ -3,7 +3,8 @@
 // and every scene's camera zooms by ZOOM, so scenes keep using 360x640 coordinates.
 export const W = 360, H = 640;
 const fit = Math.min(window.innerWidth / W, window.innerHeight / H);
-export const ZOOM = Math.min(4, Math.max(1, Math.ceil(fit * (window.devicePixelRatio || 1))));
+// capped at 3: a 4x canvas (1440x2560) is heavy for phone browsers; 3x is still sharp
+export const ZOOM = Math.min(3, Math.max(1, Math.ceil(fit * (window.devicePixelRatio || 1))));
 
 export function setupCamera(scene) {
   scene.cameras.main.setZoom(ZOOM).centerOn(W / 2, H / 2);

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillDamage } from '../data/skills.js';
-import { registerSprites, pixelDisc } from '../art/sprites.js';
+import { registerSprites, pixelDisc, pixelRing } from '../art/sprites.js';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, currentTeam } from '../flow.js';
@@ -34,7 +34,7 @@ export class BattleScene extends Phaser.Scene {
     this.ended = false;
     this.active = null;
 
-    this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(4);
+    this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(PX);
     this.add.rectangle(180, 540, 360, 200, 0x0b0b1a);
     this.reticle = this.add.graphics().setDepth(4);
     this.tweens.add({ targets: this.reticle, alpha: 0.35, yoyo: true, repeat: -1, duration: 500, ease: 'Sine.inOut' });
@@ -126,14 +126,14 @@ export class BattleScene extends Phaser.Scene {
       u.tiles = u.skills.map((sid, i) => {
         const tx = x + (i - (u.skills.length - 1) / 2) * 30, ty = by + 50;
         const g = this.add.graphics();
-        const icon = this.add.image(tx, ty, SKILLS[sid].icon).setScale(2.5);
+        const icon = this.add.image(tx, ty, SKILLS[sid].icon).setScale(PX);
         const cdText = this.add.text(tx, ty, '', { ...FONT, fontSize: '15px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
         this.add.zone(tx, ty, 30, 30).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(SKILLS[sid], `ฤทธิ์ของ${def.name}`));
         return { sid, g, icon, cdText, x: tx, y: ty };
       });
     }
-    u.marker = this.add.image(x, y - u.half - 10, 'icon_target').setScale(3).setVisible(false).setDepth(6);
-    u.shieldIcon = this.add.image(x + u.half * 0.7, y - u.half * 0.7, 'icon_shield').setScale(3).setVisible(false).setDepth(6);
+    u.marker = this.add.image(x, y - u.half - 10, 'icon_target').setScale(PX).setVisible(false).setDepth(6);
+    u.shieldIcon = this.add.image(x + u.half * 0.7, y - u.half * 0.7, 'icon_shield').setScale(PX).setVisible(false).setDepth(6);
 
     // tap the unit = use the selected skill on it
     this.add.zone(x, y, Math.max(80, u.half * 2), Math.max(90, u.half * 2)).setInteractive({ useHandCursor: true })
@@ -318,7 +318,7 @@ export class BattleScene extends Phaser.Scene {
       const cd = u.cd[id] || 0, sel = this.selected === id && !cd;
       const g = this.add.graphics();
       this.pixelPanel(g, x, y, w, 120, cd ? 0x1e1e2a : sel ? 0x3d3d5e : 0x33334d, cd ? 0x444455 : sel ? 0xffdd55 : 0x8888cc);
-      const icon = this.add.image(x, y - 14, s.icon).setScale(6);
+      const icon = this.add.image(x, y - 14, `${s.icon}@2`).setScale(PX);
       const name = this.add.text(x, y + 36, s.name, { ...FONT, fontSize: '20px' }).setOrigin(0.5);
       const cdText = this.add.text(x, y, cd ? String(cd) : '', { ...FONT, fontSize: '52px', fontStyle: 'bold' }).setOrigin(0.5);
       const parts = [g, icon, name, cdText];
@@ -334,7 +334,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // Panel with notched (pixel-style) corners.
-  pixelPanel(g, x, y, w, h, fill, border, u = 4) {
+  pixelPanel(g, x, y, w, h, fill, border, u = PX) {
     const l = x - w / 2, t = y - h / 2;
     g.fillStyle(0x000000).fillRect(l + u, t, w - 2 * u, h).fillRect(l, t + u, w, h - 2 * u);
     g.fillStyle(border).fillRect(l + 2 * u, t + u, w - 4 * u, h - 2 * u).fillRect(l + u, t + 2 * u, w - 2 * u, h - 4 * u);
@@ -403,7 +403,7 @@ export class BattleScene extends Phaser.Scene {
 
   cardHeader(top, iconKey, iconScale, title, type) {
     this.card.add([
-      this.add.image(70, top + 34, iconKey).setScale(iconScale),
+      this.add.image(70, top + 34, `${iconKey}@2`).setScale(PX),
       this.add.text(108, top + 24, title, { ...FONT, fontSize: '21px', fontStyle: 'bold' }).setOrigin(0, 0.5),
       this.add.text(108, top + 47, type, { ...FONT, fontSize: '13px', color: '#9999bb' }).setOrigin(0, 0.5),
       this.add.rectangle(180, top + 66, 260, 2, 0x55557a),
@@ -413,7 +413,7 @@ export class BattleScene extends Phaser.Scene {
 
   cardRow(y, icon, label, value, valueColor = '#ffffff') {
     this.card.add([
-      this.add.image(62, y + 11, icon).setScale(2.5),
+      this.add.image(62, y + 11, icon).setScale(PX),
       this.add.text(80, y + 11, label, { ...FONT, fontSize: '16px', color: '#ccccee' }).setOrigin(0, 0.5),
       this.add.text(306, y + 11, value, { ...FONT, fontSize: '18px', fontStyle: 'bold', color: valueColor }).setOrigin(1, 0.5),
     ]);
@@ -449,7 +449,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: user.sprite, x: user.x + 4, duration: 40, yoyo: true, repeat: 7, onComplete: () => user.sprite.setX(user.x) });
     this.pose(user, 'wind');
     target.marker.setVisible(true);
-    this.tweens.add({ targets: target.marker, scale: 4, yoyo: true, repeat: 3, duration: 150, ease: 'Stepped', easeParams: [1] });
+    this.tweens.add({ targets: target.marker, alpha: 0.2, yoyo: true, repeat: 3, duration: 150, ease: 'Stepped', easeParams: [1], onComplete: () => target.marker.setAlpha(1) });
     this.time.delayedCall(400, onDone);
   }
 
@@ -457,8 +457,7 @@ export class BattleScene extends Phaser.Scene {
   animAttack(user, target, kind, onHit) {
     if (kind === 'shield') {
       play('ward');
-      const glow = this.add.image(target.x, target.y, 'px_disc').setScale(6).setTint(0xffd860).setAlpha(0.5).setDepth(3);
-      this.tweens.add({ targets: glow, scale: 9, alpha: 0, duration: 500, ease: 'Stepped', easeParams: [3], onComplete: () => glow.destroy() });
+      this.growFx(target.x, target.y, [30, 38, 46, 54], 0xffd860, 0.5, 500, pixelDisc);
       return this.time.delayedCall(200, onHit);
     }
     if (kind === 'spit') return this.animSpit(user, target, onHit);
@@ -521,16 +520,23 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  // An effect that grows by swapping between pre-drawn sizes (pixel size never changes), fading out.
+  growFx(x, y, sizes, tint, alpha, duration, make, depth = 5) {
+    const img = this.add.image(x, y, make(this, sizes[0])).setScale(PX).setTint(tint).setAlpha(alpha).setDepth(depth);
+    sizes.forEach((n, i) => this.time.delayedCall(duration * i / sizes.length, () => img.setTexture(make(this, n)).setAlpha(alpha * (1 - i / sizes.length))));
+    this.time.delayedCall(duration, () => img.destroy());
+  }
+
   fxSlash(t) {
     play('hit');
-    const fx = this.add.image(t.x, t.y, 'fx_slash').setScale(3).setDepth(5);
-    this.tweens.add({ targets: fx, scale: 5, alpha: 0, duration: 260, ease: 'Stepped', easeParams: [2], onComplete: () => fx.destroy() });
+    const fx = this.add.image(t.x, t.y, 'fx_slash@2').setScale(PX).setDepth(5);
+    this.tweens.add({ targets: fx, alpha: 0, duration: 260, ease: 'Stepped', easeParams: [3], onComplete: () => fx.destroy() });
     this.tweens.add({ targets: t.sprite, x: t.x + 8, duration: 60, yoyo: true });
   }
 
   fxClaw(t) {
     play('scratch');
-    const fx = this.add.image(t.x, t.y, 'fx_claw').setScale(3).setDepth(5);
+    const fx = this.add.image(t.x, t.y, 'fx_claw').setScale(PX).setDepth(5);
     this.tweens.add({ targets: fx, alpha: 0, duration: 450, delay: 120, onComplete: () => fx.destroy() });
   }
 
@@ -538,7 +544,7 @@ export class BattleScene extends Phaser.Scene {
   fxFrenzy(t, onHit) {
     [false, true, false].forEach((flip, i) => this.time.delayedCall(i * 140, () => {
       play('scratch');
-      const fx = this.add.image(t.x + (i - 1) * 10, t.y, 'fx_claw').setScale(i === 2 ? 4 : 3).setFlipX(flip).setDepth(5);
+      const fx = this.add.image(t.x + (i - 1) * 10, t.y, 'fx_claw').setScale(PX).setFlipX(flip).setDepth(5);
       this.tweens.add({ targets: fx, alpha: 0, duration: 350, delay: 80, onComplete: () => fx.destroy() });
       this.tweens.add({ targets: t.sprite, x: t.x + (i % 2 ? -6 : 6), duration: 50, yoyo: true });
       if (i === 2) { if (t.side === 'ally') play('hurt'); onHit(); }
@@ -554,16 +560,14 @@ export class BattleScene extends Phaser.Scene {
         play('rush');
         // dust trail
         for (let i = 0; i < 4; i++) this.time.delayedCall(i * 35, () => {
-          const d = this.add.image(s.x, s.y + 30, 'px_disc').setScale(1).setTint(0x8a8070).setAlpha(0.6).setDepth(2);
-          this.tweens.add({ targets: d, scale: 2, alpha: 0, duration: 400, ease: 'Stepped', easeParams: [2], onComplete: () => d.destroy() });
+          this.growFx(s.x, s.y + 30, [4, 6, 8], 0x8a8070, 0.6, 400, pixelDisc, 2);
         });
         this.tweens.add({
           targets: s, x: target.x, y: target.y + 40, duration: 170, ease: 'Cubic.in', onStart: () => this.pose(user, 'atk'),
           onComplete: () => {
             play('thud');
             this.pixelShake(160, 6);
-            const ring = this.add.image(target.x, target.y + 20, 'px_ring').setScale(3).setTint(0xffe9a0).setDepth(5);
-            this.tweens.add({ targets: ring, scale: 7, alpha: 0, duration: 300, ease: 'Stepped', easeParams: [4], onComplete: () => ring.destroy() });
+            this.growFx(target.x, target.y + 20, [14, 20, 26, 32, 38], 0xffe9a0, 1, 300, pixelRing);
             this.tweens.add({ targets: target.sprite, y: target.y - 18, duration: 90, yoyo: true });
             onHit();
             this.tweens.add({ targets: s, x: user.x, y: user.y, duration: 260, ease: 'Back.out', onComplete: () => this.pose(user, 'idle') });
@@ -575,8 +579,8 @@ export class BattleScene extends Phaser.Scene {
 
   fxBite(t) {
     play('chomp');
-    const top = this.add.image(t.x, t.y - 60, 'fx_jaw_top').setScale(5).setDepth(5);
-    const bot = this.add.image(t.x, t.y + 60, 'fx_jaw_bottom').setScale(5).setDepth(5);
+    const top = this.add.image(t.x, t.y - 60, 'fx_jaw_top@2').setScale(PX).setDepth(5);
+    const bot = this.add.image(t.x, t.y + 60, 'fx_jaw_bottom@2').setScale(PX).setDepth(5);
     this.tweens.add({ targets: top, y: t.y - 14, duration: 90, ease: 'Cubic.in' });
     this.tweens.add({
       targets: bot, y: t.y + 14, duration: 90, ease: 'Cubic.in',
@@ -593,9 +597,9 @@ export class BattleScene extends Phaser.Scene {
         this.pose(user, 'atk');
         this.tweens.add({ targets: user.sprite, y: user.y + 20, duration: 120, yoyo: true, onComplete: () => { user.sprite.setY(user.y); this.time.delayedCall(250, () => user.alive && this.pose(user, 'idle')); } });
         for (let i = 0; i < 12; i++) {
-          const gut = this.add.image(user.x, user.y + 30, 'fx_gut').setScale(3).setDepth(5);
+          const gut = this.add.image(user.x, user.y + 30, 'fx_gut').setScale(PX).setDepth(5);
           this.tweens.add({
-            targets: gut, x: target.x + Phaser.Math.Between(-40, 40), y: target.y + Phaser.Math.Between(-40, 40), scale: Phaser.Math.Between(4, 7),
+            targets: gut, x: target.x + Phaser.Math.Between(-40, 40), y: target.y + Phaser.Math.Between(-40, 40), 
             duration: 260, delay: i * 12, ease: 'Quad.in', onComplete: () => gut.destroy(),
           });
         }
@@ -603,8 +607,8 @@ export class BattleScene extends Phaser.Scene {
           play('hurt');
           onHit();
           for (let i = 0; i < 4; i++) {
-            const sp = this.add.image(target.x + Phaser.Math.Between(-45, 45), target.y + Phaser.Math.Between(-45, 30), 'fx_splat')
-              .setScale(Phaser.Math.Between(4, 6)).setDepth(5).setAlpha(0.9);
+            const sp = this.add.image(target.x + Phaser.Math.Between(-45, 45), target.y + Phaser.Math.Between(-45, 30), Phaser.Math.RND.pick(['fx_splat', 'fx_splat@2']))
+              .setScale(PX).setDepth(5).setAlpha(0.9);
             this.tweens.add({ targets: sp, y: sp.y + 30, alpha: 0, duration: 1200, delay: 200, onComplete: () => sp.destroy() });
           }
         });
@@ -666,12 +670,12 @@ export class BattleScene extends Phaser.Scene {
       const red = this.add.rectangle(180, 320, 360, 640, 0x660011, 0).setDepth(7);
       this.tweens.add({ targets: red, fillAlpha: 0.5, duration: 900 });
     }
-    this.add.image(180, 230, won ? 'icon_star' : 'icon_danger').setScale(7).setDepth(9);
+    this.add.image(180, 230, won ? 'icon_star@2' : 'icon_danger@2').setScale(PX).setDepth(9);
     this.add.text(180, 290, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
     const next = won ? () => afterVictory(this, this.stage) : () => this.scene.restart({ stage: this.stage, retry: true });
     this.pixelPanel(this.add.graphics().setDepth(9), 180, BTN_Y, 240, 90, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
-    this.add.image(100, BTN_Y, 'icon_retry').setScale(4).setDepth(9);
+    this.add.image(100, BTN_Y, 'icon_retry').setScale(PX).setDepth(9);
     this.add.text(125, BTN_Y, label, { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5).setDepth(9);
     this.add.zone(180, BTN_Y, 240, 90).setInteractive({ useHandCursor: true }).setDepth(9)
       .on('pointerdown', () => { play('click'); next(); });

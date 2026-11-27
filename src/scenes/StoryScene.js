@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, pixelBob, stepped, idleFrames } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, pixelBob, stepped, idleFrames, PX } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { STORY } from '../data/story.js';
 import { ALLIES } from '../data/units.js';
@@ -47,18 +47,20 @@ export class StoryScene extends Phaser.Scene {
     if (page.art) {
       const tex = this.textures.get(page.art).getSourceImage();
       const wide = tex.width >= 60;
-      const scale = wide ? 340 / tex.width : Math.min(14, 200 / tex.height);
+      // scenes at the shared pixel size; single figures shown at double size so they read as portraits
+      const scale = wide ? PX : PX * 2;
       this.tweens.killTweensOf(this.art);
       this.bob?.remove();
       this.art.setTexture(page.art).setScale(scale).setVisible(true).setAlpha(0).setY(210);
       this.tweens.add({ targets: this.art, alpha: 1, duration: 400, ...stepped(4), onComplete: () => {
         // gentle life: figures float, scenes flicker like lamplight
         if (wide) this.tweens.add({ targets: this.art, alpha: 0.82, yoyo: true, repeat: -1, duration: 1300, ...stepped(3) });
-        else this.bob = idleFrames(this, this.art, page.art) || pixelBob(this, this.art, Math.round(scale), 1, 500);
+        else this.bob = idleFrames(this, this.art, page.art) || pixelBob(this, this.art, scale, 1, 500);
       } });
       if (wide) {
         const h = tex.height * scale;
-        this.frame.lineStyle(4, 0x55557a).strokeRect(180 - 172, 210 - h / 2 - 2, 344, h + 4);
+        const w = tex.width * scale;
+        this.frame.lineStyle(PX, 0x55557a).strokeRect(180 - w / 2 - 2, 210 - h / 2 - 2, w + 4, h + 4);
       }
     } else {
       this.art.setVisible(false);

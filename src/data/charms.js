@@ -37,7 +37,7 @@ export function charmText(c) {
     case 'takrut': return `ขวัญ +${c.value}`;
     case 'fang': return `กำลัง +${c.value}`;
     case 'prakam': return `กันภัยตนเอง ${c.value} ตาแรก`;
-    case 'yant': return c.wards.map(w => (w === 'stun' ? 'กันจมน้ำ' : 'กันตาพร่า')).join(' · ');
+    case 'yant': return c.wards.map(w => (w === 'stun' ? 'กันจมน้ำ' : 'กันตาพร่า')).join(' และ').replace('และกันตาพร่า', 'และตาพร่า');
     default: return '';
   }
 }

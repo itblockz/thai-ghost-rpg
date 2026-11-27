@@ -421,7 +421,7 @@ export class BattleScene extends Phaser.Scene {
       const parts = [g, icon, name, cdText];
       if (cd) [icon, name].forEach(p => p.setAlpha(0.25));
       const zone = this.add.zone(x, y, w, 120).setInteractive({ useHandCursor: true });
-      zone.on('pointerdown', () => { if (this.busy) return; if (cd) this.turnText.setText(`${s.name} · ต้องพักฤทธิ์อีก ${cd} ตา`); else this.select(id); });
+      zone.on('pointerdown', () => { if (this.busy) return; if (cd) this.turnText.setText(`${s.name} ต้องพักฤทธิ์อีก ${cd} ตา`); else this.select(id); });
       parts.push(zone);
       this.btns.push({ id, parts });
     });

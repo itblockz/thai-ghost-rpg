@@ -57,7 +57,7 @@ export class MapScene extends Phaser.Scene {
     const chapterDone = idx.every(i => i < done);
     const nextCh = CHAPTERS[ch + 1];
     if (nextCh && chapterDone) this.node(NEXT_CHAPTER, CHAPTERS[ch + 1].start.node, `ไป${nextCh.title.split(' — ')[0]}`, 'next', () => { play('click'); this.scene.restart({ chapter: ch + 1 }); });
-    else this.node(NEXT_CHAPTER, 'node_lock', chapterDone ? 'บรรพถัดไป · เร็ว ๆ นี้' : '', 'locked');
+    else this.node(NEXT_CHAPTER, 'node_lock', chapterDone ? 'บรรพถัดไปเร็ว ๆ นี้' : '', 'locked');
 
     // only the heir travels the map (retainers are seen on the prep screen); stands where the journey has reached
     const last = idx.filter(i => i < done).pop();
@@ -70,7 +70,7 @@ export class MapScene extends Phaser.Scene {
     });
     this.walker = this.party[0];
 
-    this.add.text(180, 610, chapterDone ? 'ผ่านบรรพนี้แล้ว · แตะศึกเพื่อประลองซ้ำ' : 'แตะจุดหมายเพื่อออกเดินทาง', { ...FONT, fontSize: '13px', color: '#bbbbdd', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+    this.add.text(180, 610, chapterDone ? 'ผ่านบรรพนี้แล้ว แตะศึกเพื่อประลองซ้ำ' : 'แตะจุดหมายเพื่อออกเดินทาง', { ...FONT, fontSize: '13px', color: '#bbbbdd', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
     this.busy = false;
   }
 

@@ -86,7 +86,7 @@ export class PrepScene extends Phaser.Scene {
     // the unit as it will fight: base stats plus any worn charm
     const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0 };
     if (allyId) { const bag = this.registry.get('bag') || []; applyCharm(u, bag.find(c => c.id === (this.registry.get('gear') || {})[allyId])); }
-    add(this.add.text(330, PANEL_TOP + 20, def.atk ? `ขวัญ ${u.maxHp} · กำลัง ${u.atk}` : `ขวัญ ${u.maxHp}`, { ...FONT, fontSize: '15px', color: '#88dd99' }).setOrigin(1, 0.5));
+    add(this.add.text(330, PANEL_TOP + 20, def.atk ? `ขวัญ ${u.maxHp}  กำลัง ${u.atk}` : `ขวัญ ${u.maxHp}`, { ...FONT, fontSize: '15px', color: '#88dd99' }).setOrigin(1, 0.5));
     add(this.add.rectangle(180, PANEL_TOP + 62, 300, 2, 0x44445e));
     if (allyId) {
       // retainers: two tabs — their skills, or the charm they wear
@@ -127,7 +127,7 @@ export class PrepScene extends Phaser.Scene {
       add(this.add.text(84, top + 6, charmName(worn), { ...FONT, fontSize: '15px', fontStyle: 'bold', color: RARITIES[worn.rarity].color }).setOrigin(0, 0.5));
       add(this.add.text(84, top + 28, charmText(worn), { ...FONT, fontSize: '13px', color: '#ffffff' }).setOrigin(0, 0.5));
     } else {
-      add(this.add.text(30, top + 16, bag.length ? 'ยังไม่สวมของขลัง · แตะของในย่ามเพื่อสวม' : 'ย่ามยังว่าง · ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#a8a8c8' }).setOrigin(0, 0.5));
+      add(this.add.text(30, top + 16, bag.length ? 'ยังไม่สวมของขลัง แตะของในย่ามเพื่อสวม' : 'ย่ามยังว่าง ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#a8a8c8' }).setOrigin(0, 0.5));
     }
     // the bag: best first; charms worn by someone else are dimmed (tapping moves them here)
     const order = { mythic: 0, rare: 1, common: 2 };

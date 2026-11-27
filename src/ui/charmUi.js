@@ -1,6 +1,5 @@
 import { ZOOM, FONT_FAMILY, TEXT_METRICS, PX, numFont } from '../display.js';
 import { RARITIES, CHARM_TYPES, charmStatIcon } from '../data/charms.js';
-import { SPRITES } from '../art/sprites.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const GEMS = { common: 1, rare: 2, mythic: 3 };
@@ -32,13 +31,4 @@ export function charmDesc(c) {
   if (c.type === 'prakam') return c.value > 1 ? `กางกันภัยตนเองใน ${c.value} ตาแรกของศึก` : 'กางกันภัยตนเองในตาแรกของศึก';
   if (c.type === 'yant') return 'ผู้สวม' + c.wards.map(w => (w === 'stun' ? 'ไม่จมน้ำ' : 'ไม่ตาพร่า')).join('และ');
   return '';
-}
-
-// The head of a retainer's sprite, cropped, at the shared pixel size — "who wears this".
-export function headOf(scene, x, y, key, rows = 12) {
-  const grid = SPRITES[key];
-  const top = grid.findIndex(r => /[^.]/.test(r));
-  const img = scene.add.image(x, y, key).setScale(PX).setOrigin(0.5, (top + rows / 2) / grid.length);
-  img.setCrop(0, top * (img.width / grid[0].length), img.width, rows * (img.height / grid.length));
-  return img;
 }

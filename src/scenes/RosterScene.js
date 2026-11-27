@@ -4,7 +4,7 @@ import { registerSprites } from '../art/sprites.js';
 import { ALLIES } from '../data/units.js';
 import { SKILLS } from '../data/skills.js';
 import { RARITIES, CHARM_TYPES, applyCharm } from '../data/charms.js';
-import { charmTitle, charmEffect, headOf } from '../ui/charmUi.js';
+import { charmTitle, charmEffect } from '../ui/charmUi.js';
 import { currentTeam } from '../flow.js';
 import { saveFrom } from '../save.js';
 import { play } from '../audio/sfx.js';
@@ -123,9 +123,7 @@ export class RosterScene extends Phaser.Scene {
       add(this.panel(this.add.graphics(), 180, 556, 332, 82, 0x1a1626, RARITIES[c.rarity].hex));
       charmTitle(this, 30, 540, c).forEach(add);
       charmEffect(this, 30, 574, c).forEach(add);
-      // who wears it, as their face (nobody: nothing)
       const owner = wornBy[c.id];
-      if (owner) add(headOf(this, 210, 556, ALLIES[owner].sprite));
       if (owner === id) this.button(add, 290, 540, 80, 26, 'ถอด', 0x2a2a3a, 0x8888aa, () => { const g = this.gear(); delete g[id]; this.setGear(g); this.redraw(); });
       if (owner !== id) this.button(add, 290, 540, 80, 26, 'สวม', 0x3d3d5e, 0xffdd55, () => {
         const g = this.gear(); for (const k in g) if (g[k] === c.id) delete g[k]; g[id] = c.id; this.setGear(g); this.redraw();

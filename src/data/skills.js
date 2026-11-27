@@ -5,6 +5,8 @@
 //   { wait: n, takenMult?: x } – wind up: stop here and finish the remaining effects next turn.
 //                    takenMult (optional, per skill) multiplies damage the user takes while winding up.
 //   weakMult: x on a damage effect – × x when the target is below half its ขวัญ (ผีพราย's ฉุดจม)
+//   { burn: { turns, damage, scale? } } – fire: burns at the start of each of the target's next turns (healing does not put it out)
+//   { slow: n }    – the target runs at reduced speed for its next n turns
 //   { stun: n }    – the target loses its next n turns (dragged under water)
 //   { blind: true } – the target's next damaging skill misses
 //   { heal: n, scale?: k, stat?: 'atk'|'hp' } – restore n + k × stat ขวัญ (never above max)
@@ -65,6 +67,9 @@ export function skillFacts(skill, u) {
     if (e.blind) out.push('เป้าตาพร่า ตีครั้งหน้าพลาด');
     if (e.weakMult) out.push(`แรงขึ้น ${e.weakMult} เท่าเมื่อเป้าเหลือขวัญไม่ถึงครึ่ง`);
     if (e.drain) out.push('ฟื้นขวัญตนเองเท่าที่ทำได้');
+    if (e.poison) out.push(`พิษ ${e.poison.damage} ทุกตา ${e.poison.turns} ตา`);
+    if (e.burn) out.push(`ไฟไหม้ ${amount(e.burn, 'damage', u)} ทุกตา ${e.burn.turns} ตา`);
+    if (e.slow) out.push(`เป้าช้าลง ${e.slow} ตา`);
     if (e.heal) out.push(`ฟื้นขวัญ ${amount(e, 'heal', u)}${formula(e, 'heal')}`);
   }
   if (skill.area) out.push('ใส่ทุกตน');

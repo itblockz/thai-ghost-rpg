@@ -39,6 +39,20 @@ function huntWaves(i, fighters = 3) {
   return [{ ids: stage.enemies }, { ids: mixed }, { ids: [...base], elite: 0, small }];
 }
 
+// Every lingering condition on a unit, as [icon, turns left] (0 = until it is used up / the fight ends).
+// One place for all of them, so new ones (ไฟ, ช้า, …) show up the same way.
+export function statusList(u) {
+  const out = [];
+  if (u.stunned) out.push(['icon_drag', u.stunned]);
+  if (u.blind) out.push(['icon_blind', 0]);
+  if (u.poison) out.push(['icon_poison', u.poison.turns]);
+  if (u.burn) out.push(['icon_fire', u.burn.turns]);
+  if (u.slow) out.push(['icon_slow', u.slow]);
+  if (u.sealed) out.push(['icon_seal', 0]);
+  return out;
+}
+export const SLOW = 0.6; // a slowed unit runs at 60% speed
+
 export class BattleScene extends Phaser.Scene {
   constructor() { super('Battle'); }
 
@@ -197,7 +211,7 @@ export class BattleScene extends Phaser.Scene {
       for (const u of this.alive(this.allies)) {
         const h = Math.min(Math.round(u.maxHp * (this.alliesGoing < 3 ? 0.5 : 0.25)), u.maxHp - u.hp);
         u.hp += h; if (h) this.popup(u.x, u.y - 20, `+${h}`, '#66ee88', 22);
-        u.poison = null; u.stunned = 0; u.blind = false;
+        u.poison = null; u.burn = null; u.slow = 0; u.stunned = 0; u.blind = false;
         if (u.openBlock0) { u.openBlock = u.openBlock0; u.block = true; u.blockBy = u; u.shieldIcon.setVisible(true); }
       }
       this.enemies.forEach(e => e.objs.forEach(o => o.destroy()));
@@ -274,7 +288,12 @@ export class BattleScene extends Phaser.Scene {
     // enemy skills are studied on the prep screen; the field shows only the fight itself
     u.tiles = [];
     u.marker = this.add.image(x, y - u.half - 10, 'icon_target').setScale(PX).setVisible(false).setDepth(6);
-    u.statusIcon = this.add.image(x - u.half * 0.7, y - u.half * 0.7, 'icon_drag').setScale(PX).setVisible(false).setDepth(6);
+    // conditions (สถานะ): a row of small icons under the unit's numbers, each with the turns it has left
+    u.statusY = by + 50;
+    u.statusIcons = [0, 1, 2, 3].map(() => ({
+      img: this.add.image(x, u.statusY, 'icon_drag').setScale(PX).setVisible(false).setDepth(6),
+      num: this.add.text(x, u.statusY + 10, '', numFont(13, '#ffffff')).setOrigin(0.5).setStroke('#000', 4).setDepth(7),
+    }));
     u.shieldIcon = this.add.image(x + u.half * 0.7, y - u.half * 0.7, 'icon_shield').setScale(PX).setVisible(false).setDepth(6);
 
     // tap the unit = use the selected skill on it
@@ -288,7 +307,7 @@ export class BattleScene extends Phaser.Scene {
   // ---------- turn flow ----------
   // A timeline, not rounds: each unit's next turn comes 100/spd after its last one, so faster
   // units act sooner and more often. Ties go to the retainers, then left to right.
-  stepOf(u) { return 100 / (u.spd || 10); }
+  stepOf(u) { return 100 / ((u.spd || 10) * (u.slow ? SLOW : 1)); }
   initTimeline() {
     [...this.allies, ...this.enemies].forEach(u => { u.next = this.stepOf(u); });
   }
@@ -321,12 +340,16 @@ export class BattleScene extends Phaser.Scene {
     for (const t of [...this.allies, ...this.enemies]) if (t.blockBy === u) { t.block = false; t.blockBy = null; t.shieldIcon.setVisible(false); }
     if (u.openBlock > 0) { u.openBlock--; u.block = true; u.blockBy = u; u.shieldIcon.setVisible(true); }
     this.drawOrder();
-    if (u.poison) {
-      u.hp -= u.poison.damage;
-      this.popup(u.x, u.y - 20, `-${u.poison.damage}`, '#88dd55', 22);
+    if (u.poison || u.burn) {
+      // poison (green) and fire (orange) both bite at the start of the unit's own turn
+      [['poison', '#88dd55'], ['burn', '#ff9944']].forEach(([k, col], i) => {
+        if (!u[k]) return;
+        u.hp -= u[k].damage;
+        this.popup(u.x + (i ? 18 : -18), u.y - 20, `-${u[k].damage}`, col, 22);
+        if (--u[k].turns <= 0) u[k] = null;
+      });
       play('splash');
-      if (--u.poison.turns <= 0) u.poison = null;
-      if (u.hp <= 0) { u.poison = null; this.knockOut(u); }
+      if (u.hp <= 0) { u.poison = null; u.burn = null; this.knockOut(u); }
       this.refresh();
       return this.time.delayedCall(600, () => (u.alive ? this.takeTurn(u) : this.advance()));
     }
@@ -395,6 +418,7 @@ export class BattleScene extends Phaser.Scene {
 
   // end of a unit's own turn: its cooldowns tick (not the one it just started)
   endTurn(u) {
+    if (u.slow) u.slow--;
     for (const k in u.cd) if (u.cd[k] > 0 && !u.fresh?.has(k)) u.cd[k]--;
     u.fresh?.clear();
     this.active = null;
@@ -475,6 +499,13 @@ export class BattleScene extends Phaser.Scene {
       if (e.blind && !missed && !blocked && !warded('blind')) target.blind = true;
       // poison lingers: it bites at the start of each of the next rounds
       if (e.poison && !missed && !blocked) target.poison = { turns: e.poison.turns, damage: e.poison.damage };
+      // fire burns on like poison, but no healing puts it out; a new flame replaces the old
+      if (e.burn && !missed && !blocked) target.burn = { turns: e.burn.turns, damage: amount(e.burn, 'damage', user) };
+      // slowed: the wait to its next turn stretches at once, and it stays slow for its next turns
+      if (e.slow && !missed && !blocked && target.alive) {
+        if (!target.slow && target.next != null) target.next = this.now + (target.next - this.now) / SLOW;
+        target.slow = Math.max(target.slow || 0, e.slow);
+      }
       // ผีเปรต: swallows the power of a retainer's charms for the rest of the fight
       if (e.seal && !missed && !blocked && target.side === 'ally' && !target.sealed) {
         const d = target.def;
@@ -716,9 +747,16 @@ export class BattleScene extends Phaser.Scene {
     for (const u of [...this.allies, ...this.enemies]) {
       this.setBar(u);
       // lingering conditions show as a small icon on the unit's upper left
-      const st = !u.alive ? null : u.stunned ? 'icon_drag' : u.blind ? 'icon_blind' : u.poison ? 'icon_poison' : u.sealed ? 'icon_seal' : null;
-      u.statusIcon.setVisible(!!st);
-      if (st) u.statusIcon.setTexture(st);
+      const list = u.alive ? statusList(u) : [];
+      u.statusIcons.forEach((s, i) => {
+        const st = list[i];
+        s.img.setVisible(!!st); s.num.setVisible(!!st && st[1] > 0);
+        if (!st) return;
+        // centred under the unit's numbers, 34pt apart; turns left at the icon's lower right
+        const cx = u.x + (i - (list.length - 1) / 2) * 34;
+        s.img.setTexture(st[0]).setPosition(cx, u.statusY);
+        s.num.setText(String(st[1])).setPosition(cx + 12, u.statusY + 10);
+      });
       if (u.side === 'enemy' && u.alive) {
         // a wind-up burns red; an elite (หัวหน้า) keeps a strong gold aura
         u.glow.setTint(u.pending ? 0xff1030 : u.elite ? 0xffc030 : 0xff3060).setAlpha(u.pending ? 0.45 : u.elite ? 0.5 : u.def.boss ? 0.28 : 0.12);

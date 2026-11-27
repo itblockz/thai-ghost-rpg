@@ -671,8 +671,17 @@ export class BattleScene extends Phaser.Scene {
       const red = this.add.rectangle(180, 320, 360, 640, 0x660011, 0).setDepth(7);
       this.tweens.add({ targets: red, fillAlpha: 0.5, duration: 900 });
     }
-    this.add.image(180, 230, won ? 'icon_star@2' : 'icon_danger@2').setScale(PX).setDepth(9);
-    this.add.text(180, 290, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
+    // no badge: the retainers tell it — survivors leap for joy (the fallen already lie still)
+    if (won) this.alive(this.allies).forEach((u, i) => {
+      let up = false;
+      this.time.addEvent({ delay: 260, loop: true, startAt: i * 130, callback: () => {
+        up = !up;
+        this.pose(u, up ? 'cheer' : 'idle');
+        u.pose = 'cheer'; // keep the idle beat from taking over
+        u.sprite.y = u.y - (up ? PX * 4 : 0);
+      } });
+    });
+    this.add.text(180, 250, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
     const next = won ? () => afterVictory(this, this.stage) : () => this.scene.restart({ stage: this.stage, retry: true });
     this.pixelPanel(this.add.graphics().setDepth(9), 180, BTN_Y, 332, 120, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);

@@ -317,8 +317,9 @@ export class BattleScene extends Phaser.Scene {
     }
     this.active = u;
     if (u.stunned) return this.loseTurn(u, done);
+    // start on a skill with no rest (the everyday one); strong skills are chosen on purpose
     const ready = u.skills.filter(id => !u.cd[id]);
-    this.selected = ready[0] ?? u.skills[0];
+    this.selected = ready.find(id => !SKILLS[id].cooldown) ?? ready[0] ?? u.skills[0];
     this.buildButtons();
     this.busy = false;
     this.refresh();

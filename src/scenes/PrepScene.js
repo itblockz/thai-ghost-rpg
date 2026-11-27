@@ -45,7 +45,8 @@ export class PrepScene extends Phaser.Scene {
     const tx = slots(team.length);
     this.teamIds = team;
     this.teamImgs = {};
-    team.forEach((id, i) => { this.figure(tx[i], TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id)); this.teamImgs[id] = this.lastFigure; });
+    const allyPicks = {};
+    team.forEach((id, i) => { allyPicks[id] = this.figure(tx[i], TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id)); this.teamImgs[id] = this.lastFigure; });
     this.benchMarks = team.map((id, i) => this.add.text(tx[i], TEAM_Y + 44, '✓', { ...FONT, fontSize: '16px', fontStyle: 'bold', color: '#88dd99', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5));
     this.showBench();
 
@@ -66,7 +67,19 @@ export class PrepScene extends Phaser.Scene {
     this.add.zone(332, 30, 52, 52).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => { play('click'); this.scene.start('Guide', { back: { scene: 'Prep', data: this.startData } }); });
 
-    picks[0]();
+    // reopen on the retainer just moved (see swap)
+    if (data?.sel && allyPicks[data.sel]) allyPicks[data.sel](); else picks[0]();
+  }
+
+  // move a retainer one place left/right in the team (also sets who acts first on a speed tie)
+  swap(id, d) {
+    const team = [...currentTeam(this)];
+    const i = team.indexOf(id), j = i + d;
+    if (j < 0 || j >= Math.min(team.length, TEAM_SLOTS)) return;
+    [team[i], team[j]] = [team[j], team[i]];
+    this.registry.set('team', team);
+    saveFrom(this);
+    this.scene.restart({ ...this.startData, sel: id });
   }
 
   // chosen retainers carry a ✓; the rest stand faded (they sit this one out)
@@ -111,6 +124,13 @@ export class PrepScene extends Phaser.Scene {
       // charms are managed on the roster screen
       add(this.add.text(30, PANEL_TOP + 44, 'จัดบริวารและของขลัง ›', { ...FONT, fontSize: '13px', color: '#ffe08a' }).setOrigin(0, 0.5).setPadding(4, 6, 4, 6)
         .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Roster', { sel: allyId, back: { scene: 'Prep', data: this.startData } }); }));
+      // arrows beside the chosen retainer: move it left/right in the line-up
+      const i = this.teamIds.indexOf(allyId);
+      [[-1, x - 58], [1, x + 58]].forEach(([d, ax]) => {
+        if (i + d < 0 || i + d >= this.teamIds.length) return;
+        add(this.add.text(ax, y, d < 0 ? '‹' : '›', { ...FONT, fontSize: '30px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setPadding(10, 8, 10, 8)
+          .setDepth(6).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.swap(allyId, d); }));
+      });
       // choose who goes in (fewer fighters = quicker rounds); anyone not chosen rests. At least one must go.
       const bench = new Set(this.registry.get('bench') || []);
       const resting = bench.has(allyId);

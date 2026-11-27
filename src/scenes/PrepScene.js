@@ -108,7 +108,7 @@ export class PrepScene extends Phaser.Scene {
       const facts = add(this.add.text(84, ry + 23, known ? s.desc : '', { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 236 }, lineSpacing: 0 }).setOrigin(0, 0).setDepth(1));
       const rowH = Math.max(52, 28 + facts.height);
       add(this.panel(this.add.graphics(), 180, ry + rowH / 2, 312, rowH - 4, 0x201c30, 0x2e2a40));
-      if (known && s.cooldown) { add(this.add.image(302, ry + 15, 'mini_cd').setScale(PX).setDepth(1)); add(this.add.text(316, ry + 15, String(s.cooldown), numFont(15)).setOrigin(0, 0.5).setDepth(1)); }
+      if (known && s.cooldown) { add(this.add.image(298, ry + 20, 'mini_cd').setScale(PX).setDepth(1)); add(this.add.text(312, ry + 20, String(s.cooldown), numFont(15)).setOrigin(0, 0.5).setDepth(1)); }
       const icon = add(this.add.image(52, ry + rowH / 2, s.icon).setScale(PX).setDepth(1));
       if (!known) icon.setTintFill(0x2a2a3a);
       ry += rowH;

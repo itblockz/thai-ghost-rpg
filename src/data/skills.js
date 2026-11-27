@@ -17,7 +17,7 @@
 export const SKILLS = {
   // retainers
   ram: { name: 'วิ่งชน', desc: 'พุ่งตัวชนศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งชนแรง', icon: 'icon_ram', anim: 'ram', cooldown: 0, effects: [{ damage: 2, scale: 1 }] },
-  guard: { name: 'กางกันภัย', desc: 'กางอาคมคุ้มบริวารหนึ่งตน ไม่ให้ถูกทำร้ายตลอดตานั้น', icon: 'icon_shield', cooldown: 3, target: 'ally', anim: 'shield', effects: [{ block: true }] },
+  guard: { name: 'กางกันภัย', desc: 'กางอาคมคุ้มบริวารหนึ่งตน ไม่ให้ถูกทำร้ายจนถึงตาถัดไปของผู้กาง', icon: 'icon_shield', cooldown: 3, target: 'ally', anim: 'shield', effects: [{ block: true }] },
   rake: { name: 'ตะกุย', desc: 'ข่วนศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งข่วนลึก', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 0, scale: 1 }] },
   frenzy: { name: 'ตะกุยรัว', desc: 'ข่วนรัวใส่ศัตรูหนึ่งตนอย่างแรง ยิ่งมีกำลังยิ่งรุนแรงทวีคูณ', icon: 'icon_frenzy', anim: 'frenzy', cooldown: 2, effects: [{ damage: 2, scale: 2 }] },
   khamotEmber: { name: 'ไฟลวก', desc: 'ปล่อยไฟลวกศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งร้อน', icon: 'icon_heal', anim: 'wisp', cooldown: 0, effects: [{ damage: 1, scale: 1 }] },

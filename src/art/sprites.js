@@ -1435,6 +1435,25 @@ export const SPRITES = {
     '.UUUIIIIIIIIIUU.',
     '...UUUUUUUUUU...',
   ],
+  // speed: a swift feather
+  icon_spd: [
+    '................',
+    '...........kkk..',
+    '.........kkZZZk.',
+    '........kZZJZZk.',
+    '.......kZZJZZk..',
+    '......kZZJZZZk..',
+    '.....kZZJZZZk...',
+    '....kZZJZZZk....',
+    '....kZJZZZk.....',
+    '...kZJZZZk......',
+    '...kJZZkk.......',
+    '..kJkkk.........',
+    '.kJk............',
+    'kJk..k.k.k......',
+    'kk..k.k.k.......',
+    '................',
+  ],
   icon_poison: [
     '................',
     '.......kk.......',
@@ -2232,6 +2251,17 @@ export function registerSprites(scene) {
   // story portraits (p_<unit>): 64x64 on the shared grid, smoothed up from the 32x32 sprite and its idle frame
   for (const key of ['heir', 'kumarn', 'kongkoi', 'krasue', 'phrai', 'khamot', 'naga']) {
     for (const k of [key, `${key}_idle2`]) if (SPRITES[k] && !SPRITES[`p_${k}`]) SPRITES[`p_${k}`] = scale2x(SPRITES[k]);
+  }
+  // turn-order tokens (tok_<unit>): the 32x32 sprite halved to 16x16, sampling each 2x2 block's most common colour
+  for (const key of ['kumarn', 'kongkoi', 'krasue', 'phrai', 'khamot', 'naga']) {
+    if (SPRITES[`tok_${key}`] || !SPRITES[key]) continue;
+    const g = SPRITES[key], n = g.length / 2;
+    SPRITES[`tok_${key}`] = Array.from({ length: n }, (_, y) => Array.from({ length: n }, (_, x) => {
+      const c = [g[2 * y][2 * x], g[2 * y][2 * x + 1], g[2 * y + 1][2 * x], g[2 * y + 1][2 * x + 1]].filter(ch => ch !== '.');
+      if (c.length < 2) return '.';
+      const count = {}; c.forEach(ch => { count[ch] = (count[ch] || 0) + 1; });
+      return Object.keys(count).sort((a, b) => count[b] - count[a])[0];
+    }).join(''));
   }
   for (const key of Object.keys(SPRITES)) {
     // never upscale an upscale: '@2' keys used to be doubled again on every scene, exhausting phone memory

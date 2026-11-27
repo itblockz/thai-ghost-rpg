@@ -105,7 +105,7 @@ export class PrepScene extends Phaser.Scene {
     const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0 };
     if (allyId) { const bag = this.registry.get('bag') || []; applyCharm(u, bag.find(c => c.id === (this.registry.get('gear') || {})[allyId])); }
     // stats as small pictures: heart = ขวัญ, fist = กำลัง (right-aligned)
-    this.iconNums(330, PANEL_TOP + 20, def.atk ? [['icon_hp', u.maxHp], ['icon_atk', u.atk]] : [['icon_hp', u.maxHp]], add);
+    this.iconNums(330, PANEL_TOP + 20, [['icon_hp', u.maxHp], ...(def.atk ? [['icon_atk', u.atk]] : []), ['icon_spd', def.spd || 10]], add);
     add(this.add.rectangle(180, PANEL_TOP + 62, 300, 2, 0x44445e));
     if (allyId) {
       // charms are managed on the roster screen

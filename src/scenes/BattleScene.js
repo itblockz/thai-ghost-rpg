@@ -63,6 +63,10 @@ export class BattleScene extends Phaser.Scene {
     // worn charms
     const bag = this.registry.get('bag') || [], gear = this.registry.get('gear') || {};
     this.allies.forEach(u => applyCharm(u, bag.find(c => c.id === gear[u.id])));
+    // ประคำ: warded from the very start, renewed on the wearer's first turns
+    this.allies.forEach(u => { if (u.openBlock > 0) { u.block = true; u.blockBy = u; u.shieldIcon.setVisible(true); } });
+    this.initTimeline();
+    this.drawOrder();
 
     const muteKey = () => (isMuted() ? 'icon_sound_off' : 'icon_sound_on');
     const mute = this.add.image(334, 26, muteKey()).setScale(PX).setInteractive({ useHandCursor: true });
@@ -72,7 +76,7 @@ export class BattleScene extends Phaser.Scene {
     const speedOf = () => { try { return localStorage.getItem('himmapan-speed') === '2' ? 2 : 1; } catch { return 1; } };
     const applySpeed = v => { this.time.timeScale = v; this.tweens.timeScale = v; };
     applySpeed(speedOf());
-    const spd = this.add.text(290, 26, `×${speedOf()}`, numFont(16, '#ffe08a')).setOrigin(0.5).setPadding(8, 6, 8, 6).setDepth(10)
+    const spd = this.add.text(302, 26, `×${speedOf()}`, numFont(16, '#ffe08a')).setOrigin(0.5).setPadding(8, 6, 8, 6).setDepth(10)
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => {
         const v = speedOf() === 2 ? 1 : 2;
         try { localStorage.setItem('himmapan-speed', String(v)); } catch { /* ignore */ }
@@ -85,7 +89,7 @@ export class BattleScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => {
         if (this.ended) return;
         play('click');
-        if (!sure) { sure = true; flee.setText('‹ ถอยแน่?').setColor('#ff7790'); this.time.delayedCall(2500, () => { sure = false; flee.setText('‹ ถอย').setColor('#ccccee'); }); return; }
+        if (!sure) { sure = true; flee.setText('‹ ถอย?').setColor('#ff7790'); this.time.delayedCall(2500, () => { sure = false; flee.setText('‹ ถอย').setColor('#ccccee'); }); return; }
         this.ended = true;
         this.scene.start('Prep', { stage: this.stage, first: this.first, retry: true });
       });
@@ -134,7 +138,7 @@ export class BattleScene extends Phaser.Scene {
   makeUnit(side, id, def, name, x, y, scale) {
     const u = {
       side, id, def, name, x, y, scale,
-      hp: def.hp, maxHp: def.hp, atk: def.atk || 0, skills: def.skills, cd: {}, block: false, pending: null, takenMult: 1, alive: true,
+      hp: def.hp, maxHp: def.hp, atk: def.atk || 0, spd: def.spd || 10, skills: def.skills, cd: {}, block: false, pending: null, takenMult: 1, alive: true,
     };
     // every unit is drawn at the same pixel size; bigger creatures simply have bigger grids
     const grid = this.textures.get(def.sprite).getSourceImage().width;
@@ -171,71 +175,93 @@ export class BattleScene extends Phaser.Scene {
   alive(list) { return list.filter(u => u.alive); }
 
   // ---------- turn flow ----------
-  // A round: every living retainer acts (player chooses), then every living enemy acts.
-  startRound() {
-    // พิษ: each poisoned unit loses a little at the start of the round
-    const sick = this.alive([...this.allies, ...this.enemies]).filter(u => u.poison);
-    if (sick.length) {
-      sick.forEach(u => {
-        u.hp -= u.poison.damage;
-        this.popup(u.x, u.y - 20, `-${u.poison.damage}`, '#88dd55', 22);
-        if (--u.poison.turns <= 0) u.poison = null;
-        if (u.hp <= 0) { u.poison = null; this.knockOut(u); }
-      });
-      play('splash');
-      this.refresh();
-      this.time.delayedCall(600, () => this.startRoundAfterPoison());
-      return;
+  // A timeline, not rounds: each unit's next turn comes 100/spd after its last one, so faster
+  // units act sooner and more often. Ties go to the retainers, then left to right.
+  stepOf(u) { return 100 / (u.spd || 10); }
+  initTimeline() {
+    [...this.allies, ...this.enemies].forEach(u => { u.next = this.stepOf(u); });
+  }
+  // the next n turns, as the order bar shows them (simulated forward, nobody changes)
+  upcoming(n) {
+    const units = this.alive([...this.allies, ...this.enemies]).map((u, i) => ({ u, t: u.next, i }));
+    const out = [];
+    while (out.length < n && units.length) {
+      units.sort((a, b) => a.t - b.t || (a.u.side === b.u.side ? a.i - b.i : a.u.side === 'ally' ? -1 : 1));
+      out.push(units[0].u);
+      units[0].t += this.stepOf(units[0].u);
     }
-    this.startRoundAfterPoison();
+    return out;
   }
 
-  startRoundAfterPoison() {
+  startRound() { this.advance(); } // first turn after the intro
+
+  advance() {
     if (this.checkEnd()) return;
-    // ประคำ: shielded for the opening rounds
-    for (const u of this.alive(this.allies)) if (u.openBlock > 0) { u.openBlock--; u.block = true; u.shieldIcon.setVisible(true); }
-    this.queue = this.alive(this.allies);
-    this.nextAllyTurn();
+    const u = this.upcoming(1)[0];
+    if (!u) return;
+    u.next += this.stepOf(u);
+    this.beginTurn(u);
   }
 
-  nextAllyTurn() {
+  // start of a unit's own turn: its guard on others ends, its own ward renews, poison bites
+  beginTurn(u) {
+    this.turnOf = u;
+    for (const t of [...this.allies, ...this.enemies]) if (t.blockBy === u) { t.block = false; t.blockBy = null; t.shieldIcon.setVisible(false); }
+    if (u.openBlock > 0) { u.openBlock--; u.block = true; u.blockBy = u; u.shieldIcon.setVisible(true); }
+    this.drawOrder();
+    if (u.poison) {
+      u.hp -= u.poison.damage;
+      this.popup(u.x, u.y - 20, `-${u.poison.damage}`, '#88dd55', 22);
+      play('splash');
+      if (--u.poison.turns <= 0) u.poison = null;
+      if (u.hp <= 0) { u.poison = null; this.knockOut(u); }
+      this.refresh();
+      return this.time.delayedCall(600, () => (u.alive ? this.takeTurn(u) : this.advance()));
+    }
+    this.takeTurn(u);
+  }
+
+  takeTurn(u) {
     if (this.checkEnd()) return;
-    this.active = this.queue.shift();
-    while (this.active && !this.active.alive) this.active = this.queue.shift();
-    if (!this.active) return this.enemyPhase();
-    if (this.active.stunned) return this.loseTurn(this.active, () => this.nextAllyTurn());
-    const ready = this.active.skills.filter(id => !this.active.cd[id]);
-    this.selected = ready[0] ?? this.active.skills[0];
+    const done = () => this.endTurn(u);
+    if (u.side === 'enemy') {
+      this.active = null;
+      this.buildButtons();
+      this.busy = true;
+      this.refresh();
+      return this.time.delayedCall(350, () => this.enemyAct(u, () => this.time.delayedCall(300, done)));
+    }
+    this.active = u;
+    if (u.stunned) return this.loseTurn(u, done);
+    const ready = u.skills.filter(id => !u.cd[id]);
+    this.selected = ready[0] ?? u.skills[0];
     this.buildButtons();
     this.busy = false;
     this.refresh();
   }
 
-  enemyPhase() {
+  // end of a unit's own turn: its cooldowns tick (not the one it just started)
+  endTurn(u) {
+    for (const k in u.cd) if (u.cd[k] > 0 && !u.fresh?.has(k)) u.cd[k]--;
+    u.fresh?.clear();
     this.active = null;
-    this.buildButtons();
-    this.busy = true;
     this.refresh();
-    const order = this.alive(this.enemies);
-    const step = () => {
-      if (this.checkEnd()) return;
-      const e = order.shift();
-      if (!e) return this.endRound();
-      if (!e.alive) return step();
-      this.enemyAct(e, () => this.time.delayedCall(350, step));
-    };
-    this.time.delayedCall(400, step);
+    this.advance();
   }
 
-  endRound() {
-    for (const u of [...this.allies, ...this.enemies]) {
-      u.block = false;
-      u.shieldIcon.setVisible(false);
-      for (const k in u.cd) if (u.cd[k] > 0 && !u.fresh?.has(k)) u.cd[k]--;
-      u.fresh?.clear();
-    }
-    this.refresh();
-    this.startRound();
+  // the order bar: the next turns as small faces, the one acting now framed
+  drawOrder() {
+    (this.orderObjs || []).forEach(o => o.destroy());
+    if (this.ended || !this.enemies || !this.allies || this.allies.some(u => u.next == null)) return;
+    const list = [this.turnOf, ...this.upcoming(6)].filter(u => u && u.alive).slice(0, 6);
+    this.orderObjs = list.map((u, i) => {
+      const x = 100 + i * 34 + (i ? 4 : 0), y = 26;
+      const g = this.add.graphics().setDepth(10);
+      // the unit acting now: bright frame; then the queue
+      this.pixelPanel(g, x, y, 32, 32, i ? 0x14121e : 0x2a2440, i ? (u.side === 'ally' ? 0x8a7040 : 0x883344) : (u.side === 'ally' ? 0xffdd55 : 0xff5577), PX);
+      const img = this.add.image(x, y, `tok_${u.def.sprite}`).setScale(PX).setDepth(10);
+      return [g, img];
+    }).flat();
   }
 
   checkEnd() {
@@ -260,7 +286,8 @@ export class BattleScene extends Phaser.Scene {
     if (!storageGet('seenTapTarget')) storageSet('seenTapTarget', '1');
     this.busy = true;
     this.drawReticle(false);
-    this.perform(this.active, target, this.selected, 0, () => this.time.delayedCall(250, () => this.nextAllyTurn()));
+    const u = this.active;
+    this.perform(u, target, this.selected, 0, () => this.time.delayedCall(250, () => this.endTurn(u)));
   }
 
   // ---------- skills (shared by every unit) ----------
@@ -284,7 +311,7 @@ export class BattleScene extends Phaser.Scene {
         else if (target.block) blocked = true;
         else { mult = target.takenMult; const d = amount(e, 'damage', user) * mult; target.hp -= d; dealt += d; }
       }
-      if (e.block) { target.block = true; target.shieldIcon.setVisible(true); }
+      if (e.block) { target.block = true; target.blockBy = user; target.shieldIcon.setVisible(true); }
       const warded = k => target.wards?.has(k);
       if ((e.stun && warded('stun')) || (e.blind && warded('blind'))) this.iconPop(target.x, target.y + 10, 'charm_yant');
       if (e.stun && !missed && !blocked && !warded('stun')) target.stunned = (target.stunned || 0) + e.stun;
@@ -493,6 +520,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   refresh() {
+    this.drawOrder?.();
     for (const u of [...this.allies, ...this.enemies]) {
       this.setBar(u);
       // lingering conditions show as a small icon on the unit's upper left

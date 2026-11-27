@@ -75,7 +75,7 @@ export class RosterScene extends Phaser.Scene {
     applyCharm(u, worn);
     add(this.panel(this.add.graphics(), 180, 252, 332, 160, 0x161424, 0xb89a50));
     add(this.add.text(30, 190, def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
-    this.iconNums(330, 190, [['icon_hp', u.maxHp], ['icon_atk', u.atk]], add);
+    this.iconNums(330, 190, [['icon_hp', u.maxHp], ['icon_atk', u.atk], ['icon_spd', def.spd || 10]], add);
     add(this.add.text(30, 213, def.lore, { ...FONT, fontSize: '12px', color: '#a8a8c8', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
     def.skills.forEach((sid, i) => {
       const x = 58 + i * 66;

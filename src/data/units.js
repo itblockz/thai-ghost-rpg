@@ -1,15 +1,16 @@
+// spd = speed: the turn timeline gives faster units earlier and more frequent turns (8 slow … 14 quick).
 // Retainers (บริวาร) — the player's units. Each retainer is unique (no duplicates in the team).
 export const ALLIES = {
   kumarn: {
-    name: 'กุมารทอง', sprite: 'kumarn', hp: 28, atk: 4, skills: ['ram', 'guard'],
+    name: 'กุมารทอง', sprite: 'kumarn', hp: 28, atk: 4, spd: 10, skills: ['ram', 'guard'],
     lore: 'เด็กน้อยผิวทอง ผมจุก ภักดีต่อผู้เลี้ยง',
   },
   kongkoi: {
-    name: 'ผีกองกอย', sprite: 'kongkoi', hp: 20, atk: 4, skills: ['rake', 'frenzy'],
+    name: 'ผีกองกอย', sprite: 'kongkoi', hp: 20, atk: 4, spd: 13, skills: ['rake', 'frenzy'],
     lore: 'ผีป่าขาเดียว ว่องไว ขี้แกล้ง',
   },
   khamot: {
-    name: 'ผีโขมด', sprite: 'khamot', hp: 18, atk: 2, skills: ['khamotEmber', 'khamotHeal', 'khamotBlind'],
+    name: 'ผีโขมด', sprite: 'khamot', hp: 18, atk: 2, spd: 12, skills: ['khamotEmber', 'khamotHeal', 'khamotBlind'],
     lore: 'ดวงไฟลอยกลางน้ำ เคยหลอกคนหลงทาง บัดนี้ส่องทางให้',
   },
 };
@@ -17,23 +18,23 @@ export const ALLIES = {
 // Enemies — may appear several times in one fight.
 export const ENEMIES = {
   kongkoi: {
-    name: 'ผีกองกอย', sprite: 'kongkoi', hp: 14, skills: ['scratch'],
+    name: 'ผีกองกอย', sprite: 'kongkoi', hp: 14, spd: 11, skills: ['scratch'],
     lore: 'ผีป่าตัวเล็ก ขาเดียว ชอบแกล้งคนหลงป่า',
   },
   phrai: {
-    name: 'ผีพราย', sprite: 'phrai', hp: 26, skills: ['grab', 'drag'],
+    name: 'ผีพราย', sprite: 'phrai', hp: 26, spd: 10, skills: ['grab', 'drag'],
     lore: 'ผีหญิงผมเปียก ซุ่มใต้ท่าน้ำ ดึงคนลงไปอยู่ด้วย',
   },
   khamot: {
-    name: 'ผีโขมด', sprite: 'khamot', hp: 16, skills: ['ember', 'lure'],
+    name: 'ผีโขมด', sprite: 'khamot', hp: 16, spd: 10, skills: ['ember', 'lure'],
     lore: 'ดวงไฟวับแวมเหนือน้ำ หลอกให้หลงทาง',
   },
   naga: {
-    name: 'นาค', sprite: 'naga', hp: 110, boss: true, skills: ['strike', 'venom'],
+    name: 'นาค', sprite: 'naga', hp: 130, spd: 9, boss: true, skills: ['strike', 'venom'],
     lore: 'พญางูใหญ่เฝ้าวังใต้น้ำ เกล็ดเขียวแวววาว',
   },
   krasue: {
-    name: 'กระสือ', sprite: 'krasue', hp: 68, boss: true, skills: ['bite', 'spit'],
+    name: 'กระสือ', sprite: 'krasue', hp: 68, spd: 9, boss: true, skills: ['bite', 'spit'],
     lore: 'หัวหญิงสาวลอยได้ มีไส้ห้อยระย้า ออกหากินยามดึก',
   },
 };

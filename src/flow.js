@@ -1,4 +1,4 @@
-import { STAGES, STARTING_TEAM } from './data/units.js';
+import { STAGES, STARTING_TEAM, ENEMIES } from './data/units.js';
 import { loadProgress, clearProgress } from './save.js';
 
 // Journey flow: Title → intro story → Map. From the map:
@@ -11,6 +11,7 @@ export function startNewGame(scene) {
   scene.registry.set('cleared', 0);
   scene.registry.set('bag', []);
   scene.registry.set('gear', {});
+  scene.registry.set('seen', []);
   scene.scene.start('Story', { keys: ['intro'], next: { scene: 'Map' } });
 }
 
@@ -21,6 +22,10 @@ export function continueGame(scene) {
   scene.registry.set('cleared', Math.min(p.cleared, STAGES.length));
   scene.registry.set('bag', p.bag);
   scene.registry.set('gear', p.gear);
+  // saves from before the ??? system: foes of stages already cleared count as known
+  const known = new Set(p.seen);
+  STAGES.slice(0, p.cleared).forEach(s => s.enemies.forEach(id => ENEMIES[id].skills.forEach(k => known.add(k))));
+  scene.registry.set('seen', [...known]);
   scene.scene.start('Map');
 }
 

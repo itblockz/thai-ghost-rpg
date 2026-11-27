@@ -101,12 +101,18 @@ export class PrepScene extends Phaser.Scene {
     }
 
     let ry = PANEL_TOP + 72;
+    const seen = new Set(this.registry.get('seen') || []);
     for (const sid of def.skills) {
       const s = SKILLS[sid];
-      add(this.add.text(84, ry, s.name, { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0));
-      const facts = add(this.add.text(84, ry + 22, skillFacts(s, u).join(' · '), { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 236 }, lineSpacing: 2 }).setOrigin(0, 0));
+      // enemy skills stay unknown (???) until witnessed in a fight
+      const known = !!allyId || seen.has(sid);
+      add(this.add.text(84, ry, known ? s.name : '???', { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0));
+      if (known && s.cooldown) add(this.add.text(330, ry + 2, `พักฤทธิ์ ${s.cooldown} ตา`, { ...FONT, fontSize: '12px', color: '#9999bb' }).setOrigin(1, 0));
+      const text = known ? s.desc : 'ยังไม่เคยเห็นฤทธิ์นี้';
+      const facts = add(this.add.text(84, ry + 22, text, { ...FONT, fontSize: '12px', color: known ? '#ccccee' : '#7777aa', wordWrap: { width: 240 }, lineSpacing: 2 }).setOrigin(0, 0));
       const rowH = Math.max(54, 26 + facts.height);
-      add(this.add.image(50, ry + 26, s.icon).setScale(PX));
+      const icon = add(this.add.image(50, ry + 26, s.icon).setScale(PX));
+      if (!known) icon.setTintFill(0x2a2a3a);
       ry += rowH;
     }
   }

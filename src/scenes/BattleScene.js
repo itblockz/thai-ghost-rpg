@@ -256,6 +256,7 @@ export class BattleScene extends Phaser.Scene {
   // Animate + apply + feedback, then call done().
   perform(user, target, skillId, from, done) {
     const skill = SKILLS[skillId];
+    if (user.side === 'enemy') this.see([skillId]); // an enemy skill, once witnessed, is known
     if (skill.area && !skill.effects[from]?.wait) return this.performArea(user, target, skillId, from, done);
     if (skill.effects[from]?.wait) {
       return this.animWindup(user, skill.area ? this.alive(target.side === 'ally' ? this.allies : this.enemies) : [target], () => {
@@ -315,6 +316,14 @@ export class BattleScene extends Phaser.Scene {
         this.time.delayedCall(90, () => target.alive && target.sprite.clearTint());
       }
     }
+  }
+
+  // Remember enemy skills the player has now seen (shown on the prep screen instead of ???).
+  see(ids) {
+    const seen = new Set(this.registry.get('seen') || []);
+    const before = seen.size;
+    ids.forEach(id => seen.add(id));
+    if (seen.size !== before) this.registry.set('seen', [...seen]);
   }
 
   // A win yields one random charm, shown where the enemies stood, and saved right away.
@@ -419,7 +428,7 @@ export class BattleScene extends Phaser.Scene {
     const s = SKILLS[this.selected];
     // only a first-time hint; the gold glow shows whose turn it is
     // one line under the buttons: what the chosen skill does, and whom to tap
-    this.turnText.setText(`${s.name} · ${skillFacts(s, u).join(' · ')} — ${s.target === 'ally' ? 'แตะบริวาร' : 'แตะศัตรู'}`);
+    this.turnText.setText(`${s.desc} — ${s.target === 'ally' ? 'แตะบริวาร' : 'แตะศัตรู'}`);
   }
 
   // Panel with notched (pixel-style) corners.
@@ -797,7 +806,9 @@ export class BattleScene extends Phaser.Scene {
         u.sprite.y = u.y - (up ? PX * 4 : 0);
       } });
     });
-    if (won) this.dropCharm();
+    // a vanquished foe holds no more secrets
+    if (won) this.see(this.enemies.flatMap(e => e.skills));
+    if (won) this.dropCharm(); else saveFrom(this);
     this.add.text(180, 250, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
     const next = won ? () => afterVictory(this, this.stage, this.first) : () => this.scene.start('Prep', { stage: this.stage, first: this.first, retry: true });

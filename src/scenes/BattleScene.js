@@ -581,21 +581,25 @@ export class BattleScene extends Phaser.Scene {
     // one panel for everything found: the charm on top, the offerings (ของเซ่น) in a row below
     const off = this.lastOfferings || [];
     this.lastOfferings = null;
-    const H = off.length ? 172 : 112, top = 84;
+    // two rows with their heading on the left: ของขลัง (picture, name, effect), then ของเซ่น (pictures, names)
+    const H = off.length ? 152 : 84, top = 84, row1 = top + 40;
     this.pixelPanel(g, 180, top + H / 2, 300, H, 0x1a1626, r.hex);
+    const head = (y, text) => this.add.text(52, y, text, { ...FONT, fontSize: '13px', color: '#bbbbdd' }).setOrigin(0, 0.5).setDepth(9);
     const objs = [g,
-      this.add.text(180, 102, 'ได้ของขลัง', { ...FONT, fontSize: '13px', color: '#bbbbdd' }).setOrigin(0.5).setDepth(9),
-      this.add.image(70, 148, CHARM_TYPES[c.type].icon).setScale(PX).setDepth(9),
-      ...charmTitle(this, 106, 132, c, 17).map(o => o.setDepth(9)),
-      ...charmEffect(this, 106, 160, c).map(o => o.setDepth(9)),
+      head(row1, 'ของขลัง'),
+      this.add.image(132, row1, CHARM_TYPES[c.type].icon).setScale(PX).setDepth(9),
+      ...charmTitle(this, 160, row1 - 13, c, 15).map(o => o.setDepth(9)),
+      // a sentence effect wraps inside the panel
+      ...charmEffect(this, 160, row1 + 15, c).map(o => (o.setWordWrapWidth ? o.setStyle({ fontSize: '12px', wordWrap: { width: 160 } }) : o).setDepth(9)),
     ];
     if (off.length) {
-      objs.push(this.add.rectangle(180, 188, 260, 2, 0x44445e).setDepth(9));
-      objs.push(this.add.text(52, 216, 'ของเซ่น', { ...FONT, fontSize: '13px', color: '#bbbbdd' }).setOrigin(0, 0.5).setDepth(9));
+      const row2 = row1 + 70;
+      objs.push(this.add.rectangle(180, row1 + 36, 260, 2, 0x44445e).setDepth(9));
+      objs.push(head(row2 - 8, 'ของเซ่น'));
       off.forEach((k, i) => {
-        const x = 150 + i * 64;
-        objs.push(this.add.image(x, 208, OFFERINGS[k].icon).setScale(PX).setDepth(9));
-        objs.push(this.add.text(x, 234, OFFERINGS[k].name, { ...FONT, fontSize: '11px', color: '#ffe08a' }).setOrigin(0.5).setDepth(9));
+        const x = 132 + i * 64;
+        objs.push(this.add.image(x, row2 - 12, OFFERINGS[k].icon).setScale(PX).setDepth(9));
+        objs.push(this.add.text(x, row2 + 14, OFFERINGS[k].name, { ...FONT, fontSize: '11px', color: '#ffe08a' }).setOrigin(0.5).setDepth(9));
       });
     }
     objs.forEach(o => o.setAlpha(0));

@@ -35,7 +35,8 @@ export class BattleScene extends Phaser.Scene {
     this.active = null;
 
     this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(PX);
-    this.add.rectangle(180, 540, 360, 200, 0x0b0b1a);
+    // the backdrop runs the full screen; a dark veil keeps the button area readable
+    this.add.rectangle(180, 540, 360, 200, 0x0b0b1a, 0.72);
     this.reticle = this.add.graphics().setDepth(4);
     this.tweens.add({ targets: this.reticle, alpha: 0.35, yoyo: true, repeat: -1, duration: 500, ease: 'Sine.inOut' });
 
@@ -346,7 +347,7 @@ export class BattleScene extends Phaser.Scene {
     const ratio = Math.max(0, u.hp) / u.maxHp;
     this.tweens.add({ targets: u.bar, width: Math.round(u.barW * ratio / 4) * 4, duration: 250, ease: 'Stepped', easeParams: [3] });
     u.bar.setFillStyle(ratio > 0.5 ? 0x55cc66 : ratio > 0.25 ? 0xddbb33 : 0xdd4444);
-    u.hpText.setText(`ขวัญ ${Math.max(0, u.hp)}/${u.maxHp}`);
+    u.hpText.setText(`${Math.max(0, u.hp)}/${u.maxHp}`);
   }
 
   refresh() {
@@ -674,10 +675,10 @@ export class BattleScene extends Phaser.Scene {
     this.add.text(180, 290, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
     const next = won ? () => afterVictory(this, this.stage) : () => this.scene.restart({ stage: this.stage, retry: true });
-    this.pixelPanel(this.add.graphics().setDepth(9), 180, BTN_Y, 240, 90, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
-    this.add.image(100, BTN_Y, 'icon_retry').setScale(PX).setDepth(9);
-    this.add.text(125, BTN_Y, label, { ...FONT, fontSize: '24px' }).setOrigin(0, 0.5).setDepth(9);
-    this.add.zone(180, BTN_Y, 240, 90).setInteractive({ useHandCursor: true }).setDepth(9)
+    this.pixelPanel(this.add.graphics().setDepth(9), 180, BTN_Y, 332, 120, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
+    this.add.image(84, BTN_Y, won ? 'icon_next@2' : 'icon_retry@2').setScale(PX).setDepth(9);
+    this.add.text(124, BTN_Y, label, { ...FONT, fontSize: '28px' }).setOrigin(0, 0.5).setDepth(9);
+    this.add.zone(180, BTN_Y, 332, 120).setInteractive({ useHandCursor: true }).setDepth(9)
       .on('pointerdown', () => { play('click'); next(); });
   }
 }

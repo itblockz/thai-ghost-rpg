@@ -678,6 +678,16 @@ export const SPRITES = {
     '...w....',
     '........',
   ],
+  icon_next: [
+    '........',
+    '....w...',
+    '....ww..',
+    'wwwwwww.',
+    'wwwwwwww',
+    'wwwwwww.',
+    '....ww..',
+    '....w...',
+  ],
   icon_retry: [
     '..www.w.',
     '.w...ww.',
@@ -818,8 +828,8 @@ export const SPRITES = {
   ],
 };
 
-/** Battle backdrops on the shared grid: 120x147 art px, shown at PX (3) = full 360 width. */
-const BG_W = 120, BG_H = 147, HORIZON = 107;
+/** Battle backdrops on the shared grid: 120x214 art px, shown at PX (3) = full 360 width. */
+const BG_W = 120, BG_H = 214, HORIZON = 107; // full screen height; ground runs under the buttons
 function sky(px, W, bands, until) {
   for (let y = 0; y < until; y++) for (let x = 0; x < W; x++) {
     const f = y / until * (bands.length - 1), i = Math.floor(f);
@@ -1094,6 +1104,13 @@ function scale2x(rows) {
 /** Register every sprite as a Phaser texture (1px per cell; scale when displaying). */
 export function registerSprites(scene) {
   drawBackdrop(scene);
+  // story's forest page: the sky-and-treeline part of the battle backdrop
+  if (!scene.textures.exists('art_forest')) {
+    const src = scene.textures.get('bg_night').getSourceImage();
+    const t = scene.textures.createCanvas('art_forest', BG_W, 118);
+    t.getContext().drawImage(src, 0, 0, BG_W, 118, 0, 0, BG_W, 118);
+    t.refresh(); t.setFilter(1);
+  }
   drawStoryArt(scene);
   drawVillageBackdrop(scene);
   drawTitleArt(scene);

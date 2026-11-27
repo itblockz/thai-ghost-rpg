@@ -10,7 +10,7 @@ export const STORY = {
     { art: 'kumarn', text: 'กุมารทองมายืนข้างกาย', recruit: 'kumarn' },
   ],
   forest: [
-    { art: 'bg_night', text: 'เสียงกระโดดตุบ ๆ…\nไม่ใช่ตัวเดียว' },
+    { art: 'art_forest', text: 'เสียงกระโดดตุบ ๆ…\nไม่ใช่ตัวเดียว' },
   ],
   afterKongkoi: [
     { art: 'kongkoi', text: 'ผีกองกอยตัวหนึ่งหมอบลง ยอมสยบ' },

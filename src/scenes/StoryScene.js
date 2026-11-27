@@ -60,7 +60,7 @@ export class StoryScene extends Phaser.Scene {
       if (wide) {
         const h = tex.height * scale;
         const w = tex.width * scale;
-        this.frame.lineStyle(PX, 0x55557a).strokeRect(180 - w / 2 - 2, 210 - h / 2 - 2, w + 4, h + 4);
+        if (w < 350) this.frame.lineStyle(PX, 0x55557a).strokeRect(180 - w / 2 - 2, 210 - h / 2 - 2, w + 4, h + 4);
       }
     } else {
       this.art.setVisible(false);

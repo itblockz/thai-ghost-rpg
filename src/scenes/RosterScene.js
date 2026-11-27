@@ -84,19 +84,19 @@ export class RosterScene extends Phaser.Scene {
     applyWorn(u, bag, gear, id);
     add(this.panel(this.add.graphics(), 180, 252, 332, 160, 0x161424, 0xb89a50));
     const nameT = add(this.add.text(30, 190, def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
-    // ขั้น and a thin บารมี bar toward the next step
-    const lx = 38 + nameT.width;
-    add(this.add.text(lx, 186, lvl.lv >= MAX_LEVEL ? `ขั้น ${shownLevel(lvl.lv)} สูงสุด` : `ขั้น ${shownLevel(lvl.lv)}`, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0, 0.5));
-    add(this.add.rectangle(lx, 199, 56, 4, 0x2a2440).setOrigin(0, 0.5));
-    add(this.add.rectangle(lx, 199, lvl.need ? Math.round(56 * lvl.into / lvl.need / 2) * 2 : 56, 4, 0xffe08a).setOrigin(0, 0.5));
+    // ขั้น and a บารมี bar toward the next step, on their own line under the name
+    const lvT = add(this.add.text(30, 212, lvl.lv >= MAX_LEVEL ? `ขั้น ${shownLevel(lvl.lv)} สูงสุด` : `ขั้น ${shownLevel(lvl.lv)}`, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0, 0.5));
+    const bx = 38 + lvT.width;
+    add(this.add.rectangle(bx, 213, 90, 6, 0x2a2440).setOrigin(0, 0.5));
+    add(this.add.rectangle(bx, 213, lvl.need ? Math.round(90 * lvl.into / lvl.need / 2) * 2 : 90, 6, 0xffe08a).setOrigin(0, 0.5));
     this.iconNums(330, 190, [['icon_hp', u.maxHp], ['icon_atk', u.atk], ['icon_spd', u.spd]], add);
-    add(this.add.text(30, 213, def.lore, { ...FONT, fontSize: '12px', color: '#a8a8c8', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
+    add(this.add.text(30, 232, def.lore, { ...FONT, fontSize: '12px', color: '#a8a8c8', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
     def.skills.forEach((sid, i) => {
       const x = 58 + i * 66;
       add(this.add.image(x, 262, SKILLS[sid].icon).setScale(PX));
       add(this.add.text(x, 300, SKILLS[sid].name, { ...FONT, fontSize: '11px', color: this.pickedSkill === sid ? '#ffe08a' : '#ccccee' }).setOrigin(0.5));
       // tap a skill to read it in the panel below
-      add(this.add.zone(x, 272, 62, 76).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.pickedSkill = sid; this.picked = null; this.redraw(); }));
+      add(this.add.zone(x, 272, 62, 76).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.pickedSkill = sid; this.picked = null; this.pickedOffer = null; this.redraw(); }));
     });
     // charm slots: one at first, the second opens in chapter 2 (a lock until then). The chosen slot is
     // outlined; 'สวม' puts the inspected charm there. Tap a worn charm to inspect it.
@@ -125,20 +125,10 @@ export class RosterScene extends Phaser.Scene {
       const ox = 122 + i * 42, n = offer[k] || 0;
       add(this.add.image(ox, 352, o.icon).setScale(PX).setAlpha(n ? 1 : 0.3));
       add(this.add.text(ox + 12, 362, String(n), numFont(11, n ? '#ffffff' : '#666688')).setOrigin(0, 0.5));
-      if (n) add(this.add.zone(ox, 352, 40, 40).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-        const all = { ...(this.registry.get('exp') || {}) };
-        if ((all[id] || 0) >= MAX_EXP) return;
-        play('ward');
-        const before = levelOf(all[id] || 0).lv;
-        all[id] = Math.min(MAX_EXP, (all[id] || 0) + o.exp);
-        this.registry.set('exp', all);
-        this.registry.set('offer', { ...offer, [k]: n - 1 });
-        saveFrom(this);
-        this.redraw();
-        const up = levelOf(all[id]).lv - before;
-        const t = this.add.text(this.xs[this.ids.indexOf(id)], 160, up ? `ขึ้นขั้น! +${up}` : `บารมี +${o.exp}`, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(9);
-        this.tweens.add({ targets: t, y: 140, alpha: 0, duration: 1000, onComplete: () => t.destroy() });
+      add(this.add.zone(ox, 352, 40, 40).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+        play('click'); this.pickedOffer = k; this.picked = null; this.pickedSkill = null; this.enchanting = null; this.redraw();
       }));
+      if (this.pickedOffer === k) add(this.add.graphics().lineStyle(PX, 0xffffff).strokeRect(ox - 20, 332, 40, 40));
     });
     if (pages > 1) {
       add(this.add.text(330, 352, `${this.page + 1}/${pages}`, { ...FONT, fontSize: '13px', color: '#aaaacc' }).setOrigin(1, 0.5));
@@ -167,7 +157,27 @@ export class RosterScene extends Phaser.Scene {
     // ---- the charm under inspection: look first, then wear or throw away ----
     const c = bag.find(b => b.id === this.picked);
     if (this.enchanting && !c) this.enchanting = null;
-    if (c) {
+    if (c) this.pickedOffer = null;
+    if (this.pickedOffer && !c) {
+      // ของเซ่น: what it is, and feed it to the retainer chosen above
+      const o = OFFERINGS[this.pickedOffer], n = offer[this.pickedOffer] || 0, full = myExp >= MAX_EXP;
+      add(this.panel(this.add.graphics(), 180, 556, 332, 82, 0x1a1626, 0xc8a050));
+      add(this.add.image(46, 548, o.icon).setScale(PX));
+      add(this.add.text(70, 534, `${o.name}  (มี ${n})`, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5));
+      add(this.add.text(70, 558, `ของเซ่น ป้อนให้${def.name}`, { ...FONT, fontSize: '12px', color: '#ccccee' }).setOrigin(0, 0.5));
+      add(this.add.text(70, 578, `ได้บารมี +${o.exp}`, { ...FONT, fontSize: '12px', color: '#ccccee' }).setOrigin(0, 0.5));
+      if (n && !full) this.button(add, 290, 556, 80, 30, 'ป้อน', 0x3d3d5e, 0xffdd55, () => {
+        const all = { ...(this.registry.get('exp') || {}) };
+        const before = levelOf(all[id] || 0).lv;
+        all[id] = Math.min(MAX_EXP, (all[id] || 0) + o.exp);
+        this.registry.set('exp', all);
+        this.registry.set('offer', { ...offer, [this.pickedOffer]: n - 1 });
+        saveFrom(this); play('ward'); this.redraw();
+        const up = levelOf(all[id]).lv - before;
+        this.flash(up ? `ขึ้นขั้น! +${up}` : `บารมี +${o.exp}`);
+      });
+      else add(this.add.text(290, 556, full ? 'ขั้นสูงสุดแล้ว' : 'ไม่มีแล้ว', { ...FONT, fontSize: '12px', color: '#77779a' }).setOrigin(0.5));
+    } else if (c) {
       // the charm panel is a little taller: title, effect, เสก progress, and three buttons
       add(this.panel(this.add.graphics(), 180, 547, 332, 104, 0x1a1626, this.enchanting ? 0xffffff : RARITIES[c.rarity].hex));
       charmTitle(this, 30, 514, c).forEach(add);

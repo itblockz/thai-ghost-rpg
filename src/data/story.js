@@ -6,6 +6,7 @@ export const STORY = {
   intro: [
     { art: 'art_shrine', text: 'คืนเดือนดับ…\nประตูสู่แดนลี้ลับแตกออก' },
     { art: 'art_shrine', text: 'อาจารย์หายไป\nเหลือเพียงตะเกียงที่ยังอุ่น' },
+    { art: 'heir', text: 'ศิษย์ผู้สืบทอดวิชา\nยกตะเกียงของอาจารย์ขึ้น' },
     { art: 'art_note', text: '"จงพากุมารทองไปด้วย"' },
     { art: 'kumarn', text: 'กุมารทองมายืนข้างกาย', recruit: 'kumarn' },
   ],
@@ -14,7 +15,8 @@ export const STORY = {
   ],
   afterKongkoi: [
     { art: 'kongkoi', text: 'ผีกองกอยตัวหนึ่งหมอบลง ยอมสยบ' },
-    { art: 'kongkoi', text: 'เสกคาถาสะกดไว้เป็นบริวาร', recruit: 'kongkoi' },
+    { art: 'heir', text: 'ผู้สืบทอดวิชาเสกคาถา…' },
+    { art: 'kongkoi', text: 'สะกดผีกองกอยไว้เป็นบริวาร', recruit: 'kongkoi' },
     { art: 'art_note', text: 'บันทึกอาจารย์:\n"หัวลอยจะสูดลมก่อนพ่น\nจงกางกันภัยให้ผู้ที่มันจ้อง"' },
   ],
   village: [
@@ -24,7 +26,8 @@ export const STORY = {
   ending: [
     { art: 'krasue', text: 'กระสือร่ำไห้…' },
     { art: 'krasue', text: '"อาจารย์เจ้า…\nอยู่กับ \'ท่าน\' แล้ว"' },
-    { art: 'art_shrine', text: '\'ท่าน\' คือใคร…\nใครเปิดประตูหิมพานต์' },
+    { art: 'heir', text: 'ผู้สืบทอดวิชากำตะเกียงแน่น\n\'ท่าน\' คือใคร…' },
+    { art: 'art_shrine', text: 'ใครกันที่เปิดประตูหิมพานต์' },
     { art: null, end: true, text: 'จบบทที่ ๑\nคืนเดือนดับ' },
   ],
 };

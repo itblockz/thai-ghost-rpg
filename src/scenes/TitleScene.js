@@ -26,9 +26,9 @@ export class TitleScene extends Phaser.Scene {
     };
     ghost('krasue', 300, 330, PX, 0.85, 1700);
     ghost('kongkoi', 50, 450, PX, 0.8, 1300);
-    // the heir's companion, seen from behind as a silhouette, facing the gate
-    const heir = this.add.image(180, 572, 'kumarn').setScale(PX).setTintFill(0x05030a);
-    idleFrames(this, heir, 'kumarn');
+    // the heir, a silhouette facing the gate
+    const heir = this.add.image(180, 572, 'heir').setScale(PX).setTintFill(0x05030a);
+    idleFrames(this, heir, 'heir');
     this.add.text(180, 52, 'ประตูหิมพานต์', { ...FONT, fontSize: '40px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
     this.add.text(180, 92, 'บทที่ ๑ — คืนเดือนดับ', { ...FONT, fontSize: '17px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
     const saved = loadProgress();

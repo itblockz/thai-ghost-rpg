@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, pixelBob } from '../display.js';
 import { registerSprites, pixelDisc } from '../art/sprites.js';
-import { STAGES } from '../data/units.js';
+import { STAGES, ALLIES } from '../data/units.js';
 import { cleared, currentTeam, playStage } from '../flow.js';
 import { saveProgress } from '../save.js';
 import { play } from '../audio/sfx.js';
@@ -46,10 +46,15 @@ export class MapScene extends Phaser.Scene {
     const chapterDone = done >= STAGES.length;
     this.node(NEXT_CHAPTER, 'node_lock', chapterDone ? 'บทที่ ๒ · เร็ว ๆ นี้' : '', 'locked');
 
-    // the companion stands where the journey has reached
+    // the heir stands where the journey has reached; retainers follow in a line behind
     const here = data?.arrived != null ? STAGES[data.arrived].map : done === 0 ? START : STAGES[Math.min(done, STAGES.length) - 1].map;
-    this.walker = this.add.image(here[0] + 48, here[1] - 8, 'kumarn').setScale(PX).setDepth(5);
-    idleFrames(this, this.walker, 'kumarn');
+    this.party = ['heir', ...currentTeam(this).map(id => ALLIES[id].sprite)].map((key, i) => {
+      const [ox, oy] = this.offset(i);
+      const img = this.add.image(here[0] + ox, here[1] + oy, key).setScale(PX).setDepth(5 - i * 0.1);
+      idleFrames(this, img, key);
+      return img;
+    });
+    this.walker = this.party[0];
 
     this.add.text(180, 610, chapterDone ? 'ผ่านบทที่ ๑ แล้ว · แตะด่านเพื่อเล่นซ้ำ' : 'แตะด่านเพื่อออกเดินทาง', { ...FONT, fontSize: '13px', color: '#bbbbdd', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
     this.busy = false;
@@ -66,15 +71,24 @@ export class MapScene extends Phaser.Scene {
     if (onTap && state !== 'locked') this.add.zone(x, y, 90, 90).setInteractive({ useHandCursor: true }).on('pointerdown', onTap);
   }
 
-  // walk to the chosen stop in whole-pixel steps, then set off
+  // where each party member stands around a stop: the heir on the right, retainers on the left (same pixel size)
+  offset(i) { return i === 0 ? [48, -8] : [-48 - (i - 1) * 26, -4 + (i - 1) * 10]; }
+
+  // walk to the chosen stop in whole-pixel steps (legs swapping), the party trailing, then set off
   go(i) {
     if (this.busy) return;
     this.busy = true;
     play('click');
     const [x, y] = STAGES[i].map;
-    this.tweens.add({
-      targets: this.walker, x: x + 48, y: y - 8, duration: 500, ease: 'Stepped', easeParams: [8],
-      onComplete: () => this.time.delayedCall(150, () => playStage(this, i)),
+    let step = false;
+    const legs = this.time.addEvent({ delay: 110, loop: true, callback: () => { step = !step; this.walker.setTexture(step ? 'heir_walk1' : 'heir_walk2'); } });
+    this.party.forEach((p, k) => this.tweens.add({
+      targets: p, x: x + this.offset(k)[0], y: y + this.offset(k)[1], duration: 600, delay: k * 90, ease: 'Stepped', easeParams: [10],
+    }));
+    this.time.delayedCall(600 + this.party.length * 90, () => {
+      legs.remove();
+      this.walker.setTexture('heir');
+      this.time.delayedCall(150, () => playStage(this, i));
     });
   }
 }

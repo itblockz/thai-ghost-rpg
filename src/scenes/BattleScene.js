@@ -5,6 +5,8 @@ import { registerSprites, pixelDisc, pixelRing } from '../art/sprites.js';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, pixelBob } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, currentTeam } from '../flow.js';
+import { rollCharm, applyCharm, charmText, charmName, RARITIES, CHARM_TYPES } from '../data/charms.js';
+import { saveFrom } from '../save.js';
 
 // How each unit travels to its target: dash (default), hop, float.
 const MOTION = { kongkoi: 'hop', krasue: 'float' };
@@ -56,6 +58,9 @@ export class BattleScene extends Phaser.Scene {
       for (const u of [...this.allies, ...this.enemies]) if (u.alive && (u.pose === 'idle' || u.pose === 'idle2')) this.pose(u, 'idle');
     } });
     this.allies = team.map((id, i) => this.makeUnit('ally', id, ALLIES[id], ALLIES[id].name, ax[i], ALLY_Y, 5));
+    // worn charms
+    const bag = this.registry.get('bag') || [], gear = this.registry.get('gear') || {};
+    this.allies.forEach(u => applyCharm(u, bag.find(c => c.id === gear[u.id])));
 
     const muteKey = () => (isMuted() ? 'icon_sound_off' : 'icon_sound_on');
     const mute = this.add.image(334, 26, muteKey()).setScale(PX).setInteractive({ useHandCursor: true });
@@ -144,6 +149,8 @@ export class BattleScene extends Phaser.Scene {
   // ---------- turn flow ----------
   // A round: every living retainer acts (player chooses), then every living enemy acts.
   startRound() {
+    // ประคำ: shielded for the opening rounds
+    for (const u of this.alive(this.allies)) if (u.openBlock > 0) { u.openBlock--; u.block = true; u.shieldIcon.setVisible(true); }
     this.queue = this.alive(this.allies);
     this.nextAllyTurn();
   }
@@ -232,11 +239,13 @@ export class BattleScene extends Phaser.Scene {
       if (e.damage != null) {
         if (blindNow) missed = true;
         else if (target.block) blocked = true;
-        else { mult = target.takenMult; const d = e.damage * mult; target.hp -= d; dealt += d; }
+        else { mult = target.takenMult; const d = (e.damage + (user.dmgBonus || 0)) * mult; target.hp -= d; dealt += d; }
       }
       if (e.block) { target.block = true; target.shieldIcon.setVisible(true); }
-      if (e.stun && !missed && !blocked) target.stunned = (target.stunned || 0) + e.stun;
-      if (e.blind && !missed && !blocked) target.blind = true;
+      const warded = k => target.wards?.has(k);
+      if ((e.stun && warded('stun')) || (e.blind && warded('blind'))) this.popup(target.x, target.y + 24, 'ผ้ายันต์คุ้มกัน!', '#ffe08a', 15);
+      if (e.stun && !missed && !blocked && !warded('stun')) target.stunned = (target.stunned || 0) + e.stun;
+      if (e.blind && !missed && !blocked && !warded('blind')) target.blind = true;
       if (e.heal) { const h = Math.min(e.heal, target.maxHp - target.hp); target.hp += h; healed += h; }
     }
     // show the real rest count right away; the end-of-round tick skips skills used this round
@@ -306,6 +315,25 @@ export class BattleScene extends Phaser.Scene {
         this.time.delayedCall(90, () => target.alive && target.sprite.clearTint());
       }
     }
+  }
+
+  // A win yields one random charm, shown where the enemies stood, and saved right away.
+  dropCharm() {
+    const c = rollCharm();
+    this.registry.set('bag', [...(this.registry.get('bag') || []), c]);
+    saveFrom(this);
+    const r = RARITIES[c.rarity];
+    const g = this.add.graphics().setDepth(9);
+    this.pixelPanel(g, 180, 140, 300, 112, 0x1a1626, r.hex);
+    const objs = [g,
+      this.add.text(180, 102, 'ได้ของขลัง', { ...FONT, fontSize: '13px', color: '#bbbbdd' }).setOrigin(0.5).setDepth(9),
+      this.add.image(70, 148, CHARM_TYPES[c.type].icon).setScale(PX).setDepth(9),
+      this.add.text(106, 132, charmName(c), { ...FONT, fontSize: '17px', fontStyle: 'bold', color: r.color }).setOrigin(0, 0.5).setDepth(9),
+      this.add.text(106, 160, charmText(c), { ...FONT, fontSize: '14px', color: '#ffffff' }).setOrigin(0, 0.5).setDepth(9),
+    ];
+    objs.forEach(o => o.setAlpha(0));
+    this.tweens.add({ targets: objs, alpha: 1, duration: 400, delay: 500, ease: 'Stepped', easeParams: [4] });
+    this.time.delayedCall(500, () => play(c.rarity === 'mythic' ? 'win' : 'ward'));
   }
 
   knockOut(u) {
@@ -769,6 +797,7 @@ export class BattleScene extends Phaser.Scene {
         u.sprite.y = u.y - (up ? PX * 4 : 0);
       } });
     });
+    if (won) this.dropCharm();
     this.add.text(180, 250, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
     const next = won ? () => afterVictory(this, this.stage, this.first) : () => this.scene.start('Prep', { stage: this.stage, first: this.first, retry: true });

@@ -9,6 +9,8 @@ export function startNewGame(scene) {
   clearProgress();
   scene.registry.set('team', []);
   scene.registry.set('cleared', 0);
+  scene.registry.set('bag', []);
+  scene.registry.set('gear', {});
   scene.scene.start('Story', { keys: ['intro'], next: { scene: 'Map' } });
 }
 
@@ -17,6 +19,8 @@ export function continueGame(scene) {
   if (!p) return startNewGame(scene);
   scene.registry.set('team', p.team);
   scene.registry.set('cleared', Math.min(p.cleared, STAGES.length));
+  scene.registry.set('bag', p.bag);
+  scene.registry.set('gear', p.gear);
   scene.scene.start('Map');
 }
 

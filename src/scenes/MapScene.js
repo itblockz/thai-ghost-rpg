@@ -3,7 +3,7 @@ import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, pixelBob 
 import { registerSprites, pixelDisc } from '../art/sprites.js';
 import { STAGES, CHAPTERS, chapterOf } from '../data/units.js';
 import { cleared, currentTeam, playStage } from '../flow.js';
-import { saveProgress } from '../save.js';
+import { saveFrom } from '../save.js';
 import { play } from '../audio/sfx.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
@@ -19,7 +19,7 @@ export class MapScene extends Phaser.Scene {
     setupCamera(this);
     registerSprites(this);
     const done = cleared(this);
-    saveProgress(done, currentTeam(this));
+    saveFrom(this);
 
     // which chapter to show: the one with the next stage to play (or the one asked for)
     const reached = chapterOf(Math.min(done, STAGES.length - 1));

@@ -8,16 +8,17 @@ const GEMS = { common: 1, rare: 2, mythic: 3 };
 export function charmTitle(scene, x, y, c, size = 15) {
   const r = RARITIES[c.rarity];
   const t = scene.add.text(x, y, CHARM_TYPES[c.type].name, { ...FONT, fontSize: `${size}px`, fontStyle: 'bold', color: r.color }).setOrigin(0, 0.5);
-  const g = scene.add.graphics();
-  let gx = x + t.width + 8;
-  // each gem a small cut-gem shape (flat top, pointed bottom)
-  for (let i = 0; i < GEMS[c.rarity]; i++) {
-    // colour body, lighter top facet
-    [5, 7, 5, 3, 1].forEach((w, row) => g.fillStyle(r.hex).fillRect(gx + (7 - w) / 2 * PX, y + (row - 2.5) * PX, w * PX, PX));
-    [5].forEach((w, row) => g.fillStyle(0xffffff, 0.45).fillRect(gx + (7 - w) / 2 * PX, y + (row - 2.5) * PX, w * PX, PX));
-    gx += 8 * PX;
+  return [t, gems(scene, x + t.width + 8, y, c.rarity)];
+}
+
+// 1–3 small cut gems (flat top, pointed bottom) in the rarity's colour.
+export function gems(scene, x, y, rarity) {
+  const g = scene.add.graphics(), hex = RARITIES[rarity].hex;
+  for (let i = 0, gx = x; i < GEMS[rarity]; i++, gx += 8 * PX) {
+    [5, 7, 5, 3, 1].forEach((w, row) => g.fillStyle(hex).fillRect(gx + (7 - w) / 2 * PX, y + (row - 2.5) * PX, w * PX, PX));
+    g.fillStyle(0xffffff, 0.45).fillRect(gx + PX, y - 2.5 * PX, 5 * PX, PX);
   }
-  return [t, g];
+  return g;
 }
 
 // What a charm does. Base stats as picture + number (heart +N, fist +N);

@@ -10,6 +10,7 @@ import { BattleScene } from './scenes/BattleScene.js';
 import { StoryScene } from './scenes/StoryScene.js';
 import { PrepScene } from './scenes/PrepScene.js';
 import { MapScene } from './scenes/MapScene.js';
+import { GuideScene } from './scenes/GuideScene.js';
 import { RosterScene } from './scenes/RosterScene.js';
 import { W, H, ZOOM } from './display.js';
 
@@ -21,5 +22,5 @@ Promise.all(fontLoads).catch(() => {}).then(() => new Phaser.Game({
   backgroundColor: '#0b0b1a',
   antialias: true,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: W * ZOOM, height: H * ZOOM },
-  scene: [TitleScene, StoryScene, MapScene, PrepScene, RosterScene, BattleScene],
+  scene: [TitleScene, StoryScene, MapScene, PrepScene, RosterScene, GuideScene, BattleScene],
 }));

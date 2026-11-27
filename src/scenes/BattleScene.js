@@ -330,7 +330,7 @@ export class BattleScene extends Phaser.Scene {
 
   // A win yields one random charm, shown where the enemies stood, and saved right away.
   dropCharm() {
-    const c = rollCharm();
+    const c = rollCharm(STAGES[this.stage]);
     this.registry.set('bag', [...(this.registry.get('bag') || []), c]);
     saveFrom(this);
     const r = RARITIES[c.rarity];

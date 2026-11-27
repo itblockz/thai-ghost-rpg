@@ -34,6 +34,9 @@ export class RosterScene extends Phaser.Scene {
     this.add.text(180, 26, 'บริวาร', { ...FONT, fontSize: '20px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0.5);
     this.add.text(14, 26, '‹ กลับ', { ...FONT, fontSize: '15px', color: '#ccccee' }).setOrigin(0, 0.5).setPadding(6, 6, 6, 6)
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start(this.back.scene, this.back.data); });
+    // where to farm which charm
+    this.add.text(346, 26, 'คู่มือ ›', { ...FONT, fontSize: '15px', color: '#ffe08a' }).setOrigin(1, 0.5).setPadding(6, 6, 6, 6)
+      .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Guide', { back: { scene: 'Roster', data: { back: this.back, sel: this.sel } } }); });
 
     // retainer row
     this.marker = this.add.graphics().setDepth(5);

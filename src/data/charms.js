@@ -23,9 +23,12 @@ const pick = (weights) => {
 };
 const between = ([a, b]) => a + Math.floor(Math.random() * (b - a + 1));
 
-export function rollCharm() {
-  const rarity = pick(Object.entries(RARITIES).map(([k, r]) => [k, r.weight]));
-  const type = pick(Object.keys(CHARM_TYPES).map(k => [k, 1]));
+// Where to farm: each stage favours one kind (3x as likely as each other kind);
+// a boss stage (richDrop) gives no favourite kind but triples the chance of วิเศษ.
+export const FAVOURED = 3, RICH_MYTHIC = 3;
+export function rollCharm(stage = {}) {
+  const rarity = pick(Object.entries(RARITIES).map(([k, r]) => [k, r.weight * (stage.richDrop && k === 'mythic' ? RICH_MYTHIC : 1)]));
+  const type = pick(Object.keys(CHARM_TYPES).map(k => [k, k === stage.drop ? FAVOURED : 1]));
   const c = { id: `c${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`, type, rarity, value: between(CHARM_TYPES[type].range[rarity]) };
   // ผ้ายันต์: value 1 wards off one condition (chosen at random), value 2 both
   if (type === 'yant') c.wards = c.value >= 2 ? ['stun', 'blind'] : [Math.random() < 0.5 ? 'stun' : 'blind'];

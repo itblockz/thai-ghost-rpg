@@ -5,7 +5,8 @@ import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
 import { currentTeam } from '../flow.js';
 import { play } from '../audio/sfx.js';
-import { applyCharm } from '../data/charms.js';
+import { applyCharm, CHARM_TYPES } from '../data/charms.js';
+import { gems } from '../ui/charmUi.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const TEAM_SLOTS = 3;
@@ -53,6 +54,12 @@ export class PrepScene extends Phaser.Scene {
     const back = this.add.text(14, 24, '‹ แผนที่', { ...FONT, fontSize: '15px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0, 0.5)
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Map'); });
     back.setPadding(6, 6, 6, 6);
+
+    // what this stage tends to drop (tap for the charm guide)
+    if (stage.drop) this.add.image(332, 26, CHARM_TYPES[stage.drop].icon).setScale(PX);
+    else if (stage.richDrop) gems(this, 308, 26, 'mythic'); // boss: วิเศษ more often
+    this.add.zone(332, 30, 52, 52).setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => { play('click'); this.scene.start('Guide', { back: { scene: 'Prep', data: this.startData } }); });
 
     picks[0]();
   }

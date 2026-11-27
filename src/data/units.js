@@ -49,10 +49,10 @@ export const STARTING_TEAM = ['kumarn'];
 
 // Chapter 1 journey: story before → fight → story after.
 export const STAGES = [
-  { name: 'ชายป่า', node: 'node_forest', map: [108, 262], before: 'forest', bg: 'bg_night', enemies: ['kongkoi', 'kongkoi'], after: 'afterKongkoi' },
-  { name: 'หมู่บ้าน', node: 'node_village', map: [248, 382], before: 'village', bg: 'bg_village', enemies: ['krasue'], after: 'ending' },
+  { name: 'ชายป่า', node: 'node_forest', map: [108, 262], before: 'forest', bg: 'bg_night', enemies: ['kongkoi', 'kongkoi'], after: 'afterKongkoi', drop: 'fang' },
+  { name: 'หมู่บ้าน', node: 'node_village', map: [248, 382], before: 'village', bg: 'bg_village', enemies: ['krasue'], after: 'ending', drop: 'takrut' },
   // บทที่ ๒ — ลำน้ำมืด
-  { chapter: 1, name: 'ท่าน้ำ', node: 'node_pier', map: [112, 250], before: 'pier', bg: 'bg_pier', enemies: ['phrai', 'phrai'], after: 'afterPier' },
-  { chapter: 1, name: 'กลางน้ำ', node: 'node_river', map: [246, 360], before: 'river', bg: 'bg_river', enemies: ['khamot', 'phrai', 'khamot'], after: 'afterRiver' },
-  { chapter: 1, name: 'วังนาค', node: 'node_naga', map: [130, 440], before: 'nagaGate', bg: 'bg_naga', enemies: ['naga'], after: 'ending2' },
+  { chapter: 1, name: 'ท่าน้ำ', node: 'node_pier', map: [112, 250], before: 'pier', bg: 'bg_pier', enemies: ['phrai', 'phrai'], after: 'afterPier', drop: 'yant' },
+  { chapter: 1, name: 'กลางน้ำ', node: 'node_river', map: [246, 360], before: 'river', bg: 'bg_river', enemies: ['khamot', 'phrai', 'khamot'], after: 'afterRiver', drop: 'prakam' },
+  { chapter: 1, name: 'วังนาค', node: 'node_naga', map: [130, 440], before: 'nagaGate', bg: 'bg_naga', enemies: ['naga'], after: 'ending2', richDrop: true },
 ];

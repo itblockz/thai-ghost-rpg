@@ -21,20 +21,17 @@ export function charmTitle(scene, x, y, c, size = 15) {
   return [t, g];
 }
 
-// What a charm does, as 16x16 pictures and numbers: heart +N, fist +N, shield ×N (opening turns),
-// or shield + the conditions a ยันต์ wards off.
+// What a charm does. Base stats as picture + number (heart +N, fist +N);
+// anything else as a short sentence, like a skill's description.
 export function charmEffect(scene, x, y, c) {
-  const objs = [];
-  const icon = (k, ix) => objs.push(scene.add.image(ix, y, k).setScale(PX));
-  const num = (s, nx) => objs.push(scene.add.text(nx, y, s, numFont(15)).setOrigin(0, 0.5));
   const stat = charmStatIcon(c);
-  if (stat) { icon(stat, x + 16); num(`+${c.value}`, x + 38); }
-  else if (c.type === 'prakam') { icon('icon_shield', x + 16); num(`×${c.value}`, x + 38); }
-  else if (c.type === 'yant') {
-    icon('icon_shield', x + 16);
-    c.wards.forEach((w, i) => icon(w === 'stun' ? 'icon_drag' : 'icon_blind', x + 56 + i * 36));
-  }
-  return objs;
+  if (stat) return [scene.add.image(x + 16, y, stat).setScale(PX), scene.add.text(x + 38, y, `+${c.value}`, numFont(15)).setOrigin(0, 0.5)];
+  return [scene.add.text(x, y, charmDesc(c), { ...FONT, fontSize: '13px', color: '#ccccee' }).setOrigin(0, 0.5)];
+}
+export function charmDesc(c) {
+  if (c.type === 'prakam') return c.value > 1 ? `กางกันภัยตนเองใน ${c.value} ตาแรกของศึก` : 'กางกันภัยตนเองในตาแรกของศึก';
+  if (c.type === 'yant') return 'ผู้สวม' + c.wards.map(w => (w === 'stun' ? 'ไม่จมน้ำ' : 'ไม่ตาพร่า')).join('และ');
+  return '';
 }
 
 // The head of a retainer's sprite, cropped, at the shared pixel size — "who wears this".

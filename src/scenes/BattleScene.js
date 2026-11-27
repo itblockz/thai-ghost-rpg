@@ -152,13 +152,16 @@ export class BattleScene extends Phaser.Scene {
     // HP bar under the sprite (no name label: the art identifies the unit)
     const by = y + u.half + 6, bw = 92;
     u.hud = [
-      this.add.rectangle(x, by + 7, bw + 4, 10, 0x000000),
+      this.add.rectangle(x, by + 10, bw + 4, 16, 0x000000),
       this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x333344).setOrigin(0, 0.5),
+      this.add.rectangle(x - bw / 2, by + 14, bw, 4, 0x1c2a3a).setOrigin(0, 0.5),
     ];
     u.bar = this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x55cc66).setOrigin(0, 0.5);
     u.barW = bw;
-    u.hpText = this.add.text(x, by + 12, '', numFont(12, '#ccccee')).setOrigin(0.5, 0);
-    u.hud.push(u.bar, u.hpText);
+    // turn gauge under the life bar: fills toward this unit's next turn (faster units fill sooner)
+    u.ctBar = this.add.rectangle(x - bw / 2, by + 14, 0, 4, 0x66ccff).setOrigin(0, 0.5);
+    u.hpText = this.add.text(x, by + 19, '', numFont(12, '#ccccee')).setOrigin(0.5, 0);
+    u.hud.push(u.bar, u.ctBar, u.hpText);
 
     // enemy skills are studied on the prep screen; the field shows only the fight itself
     u.tiles = [];
@@ -199,6 +202,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.checkEnd()) return;
     const u = this.upcoming(1)[0];
     if (!u) return;
+    this.now = u.next; // the timeline's clock: this unit's turn has come
     u.next += this.stepOf(u);
     this.beginTurn(u);
   }
@@ -249,20 +253,20 @@ export class BattleScene extends Phaser.Scene {
     this.advance();
   }
 
-  // the order bar: the next turns as small faces, the one acting now framed
+  // turn gauges: how close each unit is to its next turn (the one acting now is full and bright)
   drawOrder() {
-    (this.orderObjs || []).forEach(o => o.destroy());
-    if (this.ended || !this.enemies || !this.allies || this.allies.some(u => u.next == null)) return;
-    const list = [this.turnOf, ...this.upcoming(6)].filter(u => u && u.alive).slice(0, 6);
-    this.orderObjs = list.map((u, i) => {
-      const x = 100 + i * 34 + (i ? 4 : 0), y = 26;
-      const g = this.add.graphics().setDepth(10);
-      // the unit acting now: bright frame; then the queue
-      this.pixelPanel(g, x, y, 32, 32, i ? 0x14121e : 0x2a2440, i ? (u.side === 'ally' ? 0x8a7040 : 0x883344) : (u.side === 'ally' ? 0xffdd55 : 0xff5577), PX);
-      const img = this.add.image(x, y, `tok_${u.def.sprite}`).setScale(PX).setDepth(10);
-      return [g, img];
-    }).flat();
+    if (!this.enemies || !this.allies || this.allies.some(u => u.next == null)) return;
+    const now = this.now ?? 0;
+    for (const u of [...this.allies, ...this.enemies]) {
+      if (!u.ctBar) continue;
+      const acting = u === this.turnOf && !this.ended;
+      const f = acting ? 1 : Math.max(0, Math.min(1, 1 - (u.next - now) / this.stepOf(u)));
+      const w = Math.round(u.barW * f / 4) * 4;
+      this.tweens.add({ targets: u.ctBar, width: w, duration: 250, ease: 'Stepped', easeParams: [3] });
+      u.ctBar.setFillStyle(acting ? 0xffffff : 0x66ccff);
+    }
   }
+
 
   checkEnd() {
     if (this.ended) return true;

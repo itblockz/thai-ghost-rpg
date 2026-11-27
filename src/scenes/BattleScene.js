@@ -524,7 +524,15 @@ export class BattleScene extends Phaser.Scene {
 
   // A win yields one random charm, shown where the enemies stood, and saved right away.
   dropCharm(wave = this.wave, fleeting = false) {
-    const c = rollCharm(STAGES[this.stage], wave);
+    // farming charms worn by anyone who fought: luck lifts rarities, มหาลาภ may bring a second find
+    const team = this.allies || [];
+    const luck = team.reduce((a, u) => a + (u.luck || 0), 0), extra = team.reduce((a, u) => a + (u.extraFind || 0), 0);
+    const c = rollCharm(STAGES[this.stage], wave, luck);
+    if (extra && Math.random() * 100 < extra) {
+      const c2 = rollCharm(STAGES[this.stage], wave, luck);
+      this.registry.set('bag', [...(this.registry.get('bag') || []), c2]);
+      this.time.delayedCall(900, () => this.popup(180, 196, `มหาลาภ! ได้${CHARM_TYPES[c2.type].name}อีกชิ้น`, '#ffe08a', 16));
+    }
     this.registry.set('bag', [...(this.registry.get('bag') || []), c]);
     saveFrom(this);
     const r = RARITIES[c.rarity];

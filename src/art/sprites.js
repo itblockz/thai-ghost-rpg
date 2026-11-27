@@ -611,38 +611,38 @@ export const SPRITES = {
   ],
   icon_flap: [
     '................',
+    '.....kkkkk......',
+    '...kkfgfgfkk....',
+    '..kfgfofofgfk...',
+    '..kgfofgfofgk...',
+    '..kfgfofofgfk...',
+    '...kkfgfgfkk....',
+    '.....kkkkk......',
     '................',
-    '................',
-    '................',
-    '..kkkkk..kkkkk..',
-    '.kgffgokkgffgok.',
-    '.kffgffkkffgffk.',
-    '.kogffgkkogffgk.',
-    '..kkkkk..kkkkk..',
-    '................',
-    '................',
-    '.Z.Z.Z.Z.Z.Z.Z..',
-    '..Z.Z.Z.Z.Z.Z.Z.',
-    '................',
-    '.J.J.J.J.J.J.J..',
+    '.ZZZZZZ.........',
+    '.......ZZZ......',
+    '..ZZZZZZZZZZ....',
+    '............ZZ..',
+    '.ZZZZZZZZ.......',
+    '.........ZZZ....',
     '................',
   ],
   icon_whack: [
-    '................',
-    '................',
-    '................',
-    '.....kkkkkkk....',
-    '...kkgoogoogkk..',
-    '...kgofgffgook..',
-    '..kgofgffgffgfk.',
-    '..kfogffgffgofk.',
-    '..kfgffgffgfogk.',
-    '...koogffgfogk..',
-    '...kkgoogoogkk..',
-    '.....kkkkkkk....',
+    '.......y........',
+    '...y...y...y....',
+    '....y..y..y.....',
+    '.....kkkkk......',
+    '...kkfgfgfkk....',
+    '..kfgfofofgfk...',
+    '.kgfofgfgfofgk..',
+    '.kfgofgfgfogfk..',
+    '.kgfofgfgfofgk..',
+    '..kfgfofofgfk...',
+    '...kkfgfgfkk....',
+    '.....kkkkk......',
     '..y.........y...',
-    '..y.y...y...y.y.',
-    '....y...y.....y.',
+    '.y...........y..',
+    '................',
     '................',
   ],
   kongkoi: [
@@ -1898,6 +1898,44 @@ export const SPRITES = {
     '.kk.............',
     '................',
   ],
+  // ตะกรุดมหาลาภ: a gold-wrapped scroll charm with a lucky coin
+  charm_lucky: [
+    '................',
+    '......kkk.......',
+    '.....k.r.k......',
+    '......kkk.......',
+    '....kkkkkkk.....',
+    '...kTTTTTTTk....',
+    '...kTgTgTgTk....',
+    '...kTTTTTTTk....',
+    '...kgTgTgTgk....',
+    '...kTTTTTTTk....',
+    '....kkkkkkk.....',
+    '.........kkkk...',
+    '........kTyyTk..',
+    '........kyTTyk..',
+    '........kTyyTk..',
+    '.........kkkk...',
+  ],
+  // เบี้ยแก้: a cowrie shell charm bound with red thread
+  charm_bia: [
+    '................',
+    '.......rr.......',
+    '......r..r......',
+    '.......rr.......',
+    '.....kkkkkk.....',
+    '....kQQQQQQk....',
+    '...kQddddddQk...',
+    '...kQdkdkdkQk...',
+    '...kQddddddQk...',
+    '...kQdkdkdkQk...',
+    '...kQddddddQk...',
+    '....kQQQQQQk....',
+    '.....kkkkkk.....',
+    '................',
+    '................',
+    '................',
+  ],
   charm_yant: [
     '................',
     '..dddddddddddd..',
@@ -2344,6 +2382,35 @@ function drawPortraits(scene) {
   const glowAt = (px, cx, cy, r, cols) => { for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) { const d = Math.hypot(x, y); if (d < r && (x + y) % 2 === 0) px(cx + x, cy + y, cols[Math.min(cols.length - 1, Math.floor(d / r * cols.length))]); } };
   const eyes = (px, rect, lx, rx, y, iris, K = '#141018') => { [lx, rx].forEach(x => { rect(x, y, 4, 4, K); rect(x + 1, y + 1, 2, 2, iris); px(x + 1, y + 1, '#ffffff'); }); };
 
+  // ผีกระหัง — dark-skinned man flying on two winnowing baskets, red eyes, red loincloth.
+  for (const [key, f] of [['p_krahang', 0], ['p_krahang_idle2', 1]]) canvasArt(scene, key, 64, 64, (px, rect) => {
+    const K = '#141018', s = '#5a3a20', sH = '#7a4a20', sD = '#3a2414';
+    const basket = (cx, cy, rx, ry) => {
+      ell(px, cx, cy, rx + 1, ry + 1, K);
+      for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) {
+        const d = (x * x) / (rx * rx) + (y * y) / (ry * ry);
+        if (d <= 1) px(cx + x, cy + y, d > 0.8 ? '#8a6a30' : (x + y) % 3 === 0 ? '#d4a020' : Math.abs(d - 0.4) < 0.08 ? '#7a4a20' : '#f0c890');
+      }
+    };
+    // baskets as wings, flapping
+    basket(13, 30 - f * 4, 12, 7); basket(51, 30 - f * 4, 12, 7);
+    // arms holding them
+    rect(20, 32 - f * 2, 8, 3, s); rect(36, 32 - f * 2, 8, 3, s);
+    // body
+    outlined(px, 32, 38, 8, 10, s); ell(px, 29, 35, 3, 5, sH); ell(px, 36, 41, 3, 5, sD);
+    // red loincloth and legs
+    rect(25, 46, 15, 5, '#c0283a'); rect(25, 50, 15, 1, '#7a1020'); rect(28, 51, 3, 4, '#c0283a'); rect(34, 51, 3, 4, '#c0283a');
+    rect(27, 51, 3, 11, K); rect(28, 51, 1, 10, s); rect(35, 51, 3, 11, K); rect(36, 51, 1, 10, s);
+    // head
+    outlined(px, 32, 18, 8, 9, s); ell(px, 35, 20, 3, 6, sD); ell(px, 29, 14, 3, 2, sH);
+    rect(25, 9, 15, 4, '#1a1414'); px(28, 10, '#3a2e30');
+    // glowing red eyes, grin
+    eyes(px, rect, 26, 34, 15, '#d01030');
+    rect(28, 23, 9, 2, K); px(29, 23, '#ffffff'); px(35, 23, '#ffffff');
+    // wind under the wings
+    [[4, 44], [10, 48], [50, 46], [56, 50]].forEach(([x, y]) => rect(x, y + f, 6, 1, '#c8d8e8'));
+  });
+
   // กุมารทอง — golden child spirit: topknot (จุก) with a gold ring, round face, red cloth, sitting cross-legged.
   for (const [key, f] of [['p_kumarn', 0], ['p_kumarn_idle2', 1]]) canvasArt(scene, key, 64, 64, (px, rect) => {
     const K = '#141018', g = '#d4a020', gS = '#a87818', gH = '#ffe066', red = '#c0283a', redD = '#7a1020';
@@ -2708,8 +2775,6 @@ export function registerSprites(scene) {
     SPRITES[`${key}_ko`] = rows[0].split('').map((_, x) => Array.from({ length: n }, (_, y) => rows[n - 1 - y][x]).join(''));
   }
   // story portraits (p_<unit>) are hand-drawn at 64x64 in drawPortraits
-  // (ผีกระหัง: smoothed up from his field sprite until he gets a drawn portrait)
-  for (const k of ['krahang', 'krahang_idle2']) if (!SPRITES[`p_${k}`]) SPRITES[`p_${k}`] = scale2x(SPRITES[k]);
   for (const key of Object.keys(SPRITES)) {
     // never upscale an upscale: '@2' keys used to be doubled again on every scene, exhausting phone memory
     if (key.startsWith('fx_') && !key.includes('@') && !SPRITES[`${key}@2`]) SPRITES[`${key}@2`] = scale2x(SPRITES[key]);

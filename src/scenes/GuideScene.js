@@ -33,7 +33,10 @@ export class GuideScene extends Phaser.Scene {
     this.add.text(180, 50, `ทุกครั้งที่ชนะ  ธรรมดา ${pct('common')}  หายาก ${pct('rare')}  วิเศษ ${pct('mythic')}`, { ...FONT, fontSize: '11px', color: '#9999bb' }).setOrigin(0.5);
     const kinds = Object.keys(CHARM_TYPES).length, fav = Math.round(FAVOURED / (FAVOURED + kinds - 1) * 100);
     let y = 62;
-    for (const [type, t] of Object.entries(CHARM_TYPES)) {
+    // two pages: four kinds, then the rest and the boss card
+    const all = Object.entries(CHARM_TYPES), PER = 4, pages = Math.ceil((all.length + 1) / PER);
+    const page = Math.min(data?.page || 0, pages - 1);
+    for (const [type, t] of all.slice(page * PER, page * PER + PER)) {
       const h = 100;
       this.panel(180, y + h / 2, 332, h - 6, 0x161424, 0x44445e);
       this.add.image(48, y + 24, t.icon).setScale(PX);
@@ -59,6 +62,14 @@ export class GuideScene extends Phaser.Scene {
       y += h;
     }
 
+    if (pages > 1) {
+      this.add.text(180, 618, `${page + 1}/${pages}`, { ...FONT, fontSize: '13px', color: '#aaaacc' }).setOrigin(0.5);
+      const flip = (label, x, to) => this.add.text(x, 618, label, { ...FONT, fontSize: '26px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0.5).setPadding(12, 4, 12, 4)
+        .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.restart({ ...data, page: to }); });
+      if (page > 0) flip('‹', 130, page - 1);
+      if (page < pages - 1) flip('›', 230, page + 1);
+    }
+    if (page < pages - 1) return;
     // the boss stage: no favourite kind, but วิเศษ comes more often
     const bi = STAGES.findIndex(s => s.richDrop);
     this.panel(180, y + 36, 332, 66, 0x1e1a10, 0x8a6a30);
@@ -78,6 +89,9 @@ export class GuideScene extends Phaser.Scene {
     if (stat) {
       this.add.text(x, y, a === b ? `+${a}` : `+${a}–${b}`, numFont(13, color)).setOrigin(0, 0.5);
     } else {
+      const span = a === b ? `${a}` : `${a}–${b}`;
+      if (type === 'lucky') return this.add.text(x, y, `ได้ของเพิ่มอีกชิ้น ${span}%`, { ...FONT, fontSize: '12px', color }).setOrigin(0, 0.5);
+      if (type === 'bia') return this.add.text(x, y, `โชค +${span} แต้ม`, { ...FONT, fontSize: '12px', color }).setOrigin(0, 0.5);
       const words = type === 'prakam' ? (a > 1 ? `กันภัย ${a} ตาแรก` : 'กันภัยตาแรก') : (a > 1 ? 'กันจมน้ำและตาพร่า' : 'กันจมน้ำหรือตาพร่าอย่างหนึ่ง');
       this.add.text(x, y, words, { ...FONT, fontSize: '12px', color }).setOrigin(0, 0.5);
     }

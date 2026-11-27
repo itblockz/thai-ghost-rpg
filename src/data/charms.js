@@ -15,6 +15,9 @@ export const CHARM_TYPES = {
   prakam: { name: 'ประคำไม้', icon: 'charm_prakam', range: { common: [1, 1], rare: [1, 1], mythic: [2, 2] } },
   yant: { name: 'ผ้ายันต์', icon: 'charm_yant', range: { common: [1, 1], rare: [1, 1], mythic: [2, 2] } },
   feather: { name: 'ขนนกการเวก', icon: 'charm_feather', range: { common: [1, 1], rare: [1, 2], mythic: [2, 2] } },
+  // farming charms: they help only while the wearer is in the fight
+  lucky: { name: 'ตะกรุดมหาลาภ', icon: 'charm_lucky', range: { common: [10, 10], rare: [15, 20], mythic: [25, 25] } }, // % chance of a second find
+  bia: { name: 'เบี้ยแก้', icon: 'charm_bia', range: { common: [2, 2], rare: [3, 4], mythic: [5, 5] } }, // luck: better rarities
 };
 
 const pick = (weights) => {
@@ -29,9 +32,11 @@ const between = ([a, b]) => a + Math.floor(Math.random() * (b - a + 1));
 export const FAVOURED = 3, RICH_MYTHIC = 3;
 // wave (ออกล่า): later waves raise the odds of rare and mythic finds
 export const WAVE_BOOST = [{ rare: 1, mythic: 1 }, { rare: 1.3, mythic: 1.6 }, { rare: 1.6, mythic: 2.5 }];
-export function rollCharm(stage = {}, wave = 0) {
+// luck (เบี้ยแก้): each point raises หายาก by 5% and วิเศษ by 10% of their odds
+export const luckBoost = (k, luck) => 1 + (luck || 0) * (k === 'mythic' ? 0.1 : k === 'rare' ? 0.05 : 0);
+export function rollCharm(stage = {}, wave = 0, luck = 0) {
   const b = WAVE_BOOST[Math.min(wave, 2)];
-  const rarity = pick(Object.entries(RARITIES).map(([k, r]) => [k, r.weight * (b[k] || 1) * (stage.richDrop && k === 'mythic' ? RICH_MYTHIC : 1)]));
+  const rarity = pick(Object.entries(RARITIES).map(([k, r]) => [k, r.weight * (b[k] || 1) * luckBoost(k, luck) * (stage.richDrop && k === 'mythic' ? RICH_MYTHIC : 1)]));
   const type = pick(Object.keys(CHARM_TYPES).map(k => [k, k === stage.drop ? FAVOURED : 1]));
   const c = { id: `c${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`, type, rarity, value: between(CHARM_TYPES[type].range[rarity]) };
   // ผ้ายันต์: value 1 wards off one condition (chosen at random), value 2 both
@@ -48,6 +53,8 @@ export function applyCharm(u, c) {
   if (c.type === 'takrut') { u.hp += c.value; u.maxHp += c.value; }
   if (c.type === 'fang') u.atk = (u.atk || 0) + c.value;
   if (c.type === 'feather') u.spd = (u.spd || 10) + c.value;
+  if (c.type === 'lucky') u.extraFind = (u.extraFind || 0) + c.value;
+  if (c.type === 'bia') u.luck = (u.luck || 0) + c.value;
   if (c.type === 'prakam') u.openBlock = (u.openBlock || 0) + c.value;
   if (c.type === 'yant') u.wards = new Set([...(u.wards || []), ...c.wards]);
 }

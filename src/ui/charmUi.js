@@ -31,5 +31,7 @@ export function charmEffect(scene, x, y, c) {
 export function charmDesc(c) {
   if (c.type === 'prakam') return c.value > 1 ? `กางกันภัยตนเองใน ${c.value} ตาแรกของศึก` : 'กางกันภัยตนเองในตาแรกของศึก';
   if (c.type === 'yant') return 'ผู้สวม' + c.wards.map(w => (w === 'stun' ? 'ไม่จมน้ำ' : 'ไม่ตาพร่า')).join('และ');
+  if (c.type === 'lucky') return `ชนะศึก มีโอกาส ${c.value}% ได้ของเพิ่มอีกชิ้น`;
+  if (c.type === 'bia') return `โชคหนุน ${c.value} แต้ม ได้ของดีบ่อยขึ้น`;
   return '';
 }

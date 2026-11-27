@@ -74,8 +74,11 @@ export const STAGES = [
   { chapter: 1, name: 'กลางน้ำ', node: 'node_river', map: [246, 360], before: 'river', bg: 'bg_river', enemies: ['khamot', 'phrai', 'khamot'], after: 'afterRiver', drop: 'prakam' },
   { chapter: 1, name: 'วังนาค', node: 'node_naga', map: [130, 440], before: 'nagaGate', bg: 'bg_naga', enemies: ['naga'], after: 'ending2', drop: 'feather', richDrop: true },
   // บทที่ ๓ — ป่าช้าวัดร้าง
-  { chapter: 2, name: 'ประตูวัด', node: 'node_gate', map: [112, 236], before: 'gate3', bg: 'bg_gate3', enemies: ['krahang', 'krahang'], after: 'afterGate3', drop: 'feather' },
-  { chapter: 2, name: 'ลานป่าช้า', node: 'node_yard', map: [252, 318], before: 'yard', bg: 'bg_yard', enemies: ['krahang', 'kongkoi', 'krahang'], after: 'afterYard', drop: 'lucky' },
+  { chapter: 2, name: 'ประตูวัด', node: 'node_gate', map: [112, 236], before: 'gate3', bg: 'bg_gate3', enemies: ['krahang', 'krahang'], after: 'afterGate3', drop: 'feather',
+    // first time through (story): a flock led by a big one — he becomes your retainer
+    story: { ids: ['krahang', 'krahang', 'krahang'], elite: 1, eliteMult: 2.5 } },
+  { chapter: 2, name: 'ลานป่าช้า', node: 'node_yard', map: [252, 318], before: 'yard', bg: 'bg_yard', enemies: ['krahang', 'kongkoi', 'krahang'], after: 'afterYard', drop: 'lucky',
+    story: { ids: ['krahang', 'pop', 'krahang'], elite: 1, eliteMult: 1.2 } },
   { chapter: 2, name: 'ศาลาสวดศพ', node: 'node_hall', map: [104, 400], before: 'hall', bg: 'bg_hall', enemies: ['pop', 'krahang', 'pop'], after: 'afterHall', drop: 'bia' },
   { chapter: 2, name: 'โบสถ์ร้าง', node: 'node_temple', map: [250, 440], before: 'temple', bg: 'bg_temple', enemies: ['pret'], after: 'ending3', richDrop: true },
 ];

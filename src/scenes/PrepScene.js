@@ -36,9 +36,11 @@ export class PrepScene extends Phaser.Scene {
 
     // enemies where they will stand in the fight; duplicates share one description
     const counts = {};
-    stage.enemies.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
-    const ex = slots(stage.enemies.length);
-    const picks = stage.enemies.map((id, i) => this.figure(ex[i], ENEMY_Y, ENEMIES[id], () => this.show(ENEMIES[id], counts[id], ex[i], ENEMY_Y, 'enemy')));
+    // the first (story) fight may bring a different band than later hunts
+    const foes = data?.first && stage.story ? stage.story.ids : stage.enemies;
+    foes.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+    const ex = slots(foes.length);
+    const picks = foes.map((id, i) => this.figure(ex[i], ENEMY_Y, ENEMIES[id], () => this.show(ENEMIES[id], counts[id], ex[i], ENEMY_Y, 'enemy')));
 
     // team row: one place per retainer you have (up to 3), positioned exactly as in the fight
     const team = currentTeam(this).slice(0, TEAM_SLOTS);

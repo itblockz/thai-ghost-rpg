@@ -26,12 +26,14 @@ function storageGet(k) { try { return localStorage.getItem(k); } catch { return 
 function storageSet(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } }
 
 // ออกล่า waves for a stage: 1) its own foes, 2) mixed with others from the same chapter, 3) its foes led by an elite
-function huntWaves(i) {
+function huntWaves(i, fighters = 3) {
   const stage = STAGES[i], ch = stage.chapter || 0;
+  // a small party (one or two going in) meets a gentler hunt: no extra foe, a lesser elite
+  const small = fighters < 3;
   const pool = [...new Set(STAGES.filter(s => (s.chapter || 0) === ch).flatMap(s => s.enemies))].filter(id => !ENEMIES[id].boss);
   const pick = () => pool[Math.floor(Math.random() * pool.length)];
-  const mixed = stage.enemies.length < 3 ? [...stage.enemies, pick()] : [...stage.enemies.slice(0, 2), pick()];
-  return [{ ids: stage.enemies }, { ids: mixed }, { ids: [...stage.enemies], elite: 0 }];
+  const mixed = small ? [...stage.enemies] : stage.enemies.length < 3 ? [...stage.enemies, pick()] : [...stage.enemies.slice(0, 2), pick()];
+  return [{ ids: stage.enemies }, { ids: mixed }, { ids: [...stage.enemies], elite: 0, small }];
 }
 
 export class BattleScene extends Phaser.Scene {
@@ -57,7 +59,7 @@ export class BattleScene extends Phaser.Scene {
     // ----- units -----
     // ออกล่า: replaying a cleared (non-boss) stage is a hunt of 3 waves, rising in danger, a charm per wave
     this.hunt = !this.first && !stage.enemies.some(id => ENEMIES[id].boss);
-    this.waves = this.hunt ? huntWaves(this.stage) : [{ ids: stage.enemies }];
+    this.waves = this.hunt ? huntWaves(this.stage, fightingTeam(this).length) : [this.first && stage.story ? stage.story : { ids: stage.enemies }];
     this.wave = 0;
     this.spawnWave(this.waves[0]);
     const team = fightingTeam(this);
@@ -68,6 +70,7 @@ export class BattleScene extends Phaser.Scene {
       for (const u of [...this.allies, ...this.enemies]) if (u.alive && (u.pose === 'idle' || u.pose === 'idle2')) this.pose(u, 'idle');
     } });
     this.allies = team.map((id, i) => this.makeUnit('ally', id, ALLIES[id], ALLIES[id].name, ax[i], ALLY_Y, 5));
+    this.alliesGoing = team.length; // small parties recover more between hunt waves
     // worn charms
     const bag = this.registry.get('bag') || [], gear = this.registry.get('gear') || {};
     this.allies.forEach(u => applyWorn(u, bag, gear, u.id));
@@ -136,7 +139,7 @@ export class BattleScene extends Phaser.Scene {
       const before = this.children.list.length;
       const u = this.makeUnit('enemy', id, ENEMIES[id], ENEMIES[id].name, ex[i], ENEMY_Y, 5);
       if (w.elite === i) {
-        u.elite = true; u.hp = u.maxHp = Math.round(u.maxHp * 1.8); u.dmgMult = 1.3; u.spd += 1;
+        u.elite = true; u.hp = u.maxHp = Math.round(u.maxHp * (w.eliteMult ?? (w.small ? 1.4 : 1.8))); if (!w.small) { u.dmgMult = 1.3; u.spd += 1; }
         u.glow.setTint(0xffd040);
       }
       u.objs = this.children.list.slice(before);
@@ -167,7 +170,7 @@ export class BattleScene extends Phaser.Scene {
     this.time.delayedCall(1700, () => {
       // survivors recover a quarter of their life and shake off conditions; the fallen stay down
       for (const u of this.alive(this.allies)) {
-        const h = Math.min(Math.round(u.maxHp * 0.25), u.maxHp - u.hp);
+        const h = Math.min(Math.round(u.maxHp * (this.alliesGoing < 3 ? 0.5 : 0.25)), u.maxHp - u.hp);
         u.hp += h; if (h) this.popup(u.x, u.y - 20, `+${h}`, '#66ee88', 22);
         u.poison = null; u.stunned = 0; u.blind = false;
         if (u.openBlock0) { u.openBlock = u.openBlock0; u.block = true; u.blockBy = u; u.shieldIcon.setVisible(true); }
@@ -334,13 +337,15 @@ export class BattleScene extends Phaser.Scene {
     let pick = null;
     // 1) shield whoever an enemy is winding up at, if that enemy moves before this retainer's next turn
     const guard = ready.find(id => has(id, 'block'));
-    const marked = foes.filter(e => e.pending && e.next < u.next).map(e => e.pending.target).find(t => t?.alive && !t.block);
+    // (auto reads a wind-up but not the turn order: it guards whenever someone is marked, even too early)
+    const marked = foes.filter(e => e.pending).map(e => e.pending.target).find(t => t?.alive && !t.block);
     if (guard && marked) pick = [guard, marked];
     // 2) heal the poisoned, or anyone low
     const heal = ready.find(id => has(id, 'heal'));
     if (!pick && heal) {
       const low = [...allies].sort((a, b) => (b.poison ? 1 : 0) - (a.poison ? 1 : 0) || a.hp / a.maxHp - b.hp / b.maxHp)[0];
-      if (low && (low.poison || low.hp / low.maxHp < 0.6)) pick = [heal, low];
+      // (auto heals late: only when someone is poisoned or below 40%)
+      if (low && (low.poison || low.hp / low.maxHp < 0.4)) pick = [heal, low];
     }
     // 3) dazzle the most dangerous foe (boss or elite) if it can still see
     const blind = ready.find(id => has(id, 'blind'));

@@ -4,7 +4,7 @@ import { SKILLS, skillDamage, skillFacts, amount } from '../data/skills.js';
 import { registerSprites, pixelDisc, pixelRing } from '../art/sprites.js';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, pixelBob, numFont } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
-import { afterVictory, currentTeam } from '../flow.js';
+import { afterVictory, fightingTeam } from '../flow.js';
 import { charmTitle, charmEffect } from '../ui/charmUi.js';
 import { rollCharm, applyCharm, RARITIES, CHARM_TYPES } from '../data/charms.js';
 import { saveFrom } from '../save.js';
@@ -52,7 +52,7 @@ export class BattleScene extends Phaser.Scene {
       const def = ENEMIES[id];
       return this.makeUnit('enemy', id, def, def.name, ex[i], ENEMY_Y, eScale);
     });
-    const team = currentTeam(this);
+    const team = fightingTeam(this);
     const ax = slots(team.length);
     this.time.addEvent({ delay: IDLE_MS, loop: true, callback: () => {
       // one shared beat, so every standing unit breathes in sync

@@ -12,6 +12,7 @@ export function startNewGame(scene) {
   scene.registry.set('bag', []);
   scene.registry.set('gear', {});
   scene.registry.set('seen', []);
+  scene.registry.set('bench', []);
   scene.scene.start('Story', { keys: ['intro'], next: { scene: 'Map' } });
 }
 
@@ -22,6 +23,7 @@ export function continueGame(scene) {
   scene.registry.set('cleared', Math.min(p.cleared, STAGES.length));
   scene.registry.set('bag', p.bag);
   scene.registry.set('gear', p.gear);
+  scene.registry.set('bench', p.bench);
   // saves from before the ??? system: foes of stages already cleared count as known
   const known = new Set(p.seen);
   STAGES.slice(0, p.cleared).forEach(s => s.enemies.forEach(id => ENEMIES[id].skills.forEach(k => known.add(k))));
@@ -46,4 +48,13 @@ export function afterVictory(scene, i, first) {
 export function currentTeam(scene) {
   const team = scene.registry.get('team');
   return team && team.length ? team : [...STARTING_TEAM];
+}
+
+// Who actually goes into battle: the team minus anyone told to sit out (always at least one).
+// Fewer fighters = shorter rounds, handy when farming an easy stage.
+export function fightingTeam(scene) {
+  const bench = new Set(scene.registry.get('bench') || []);
+  const team = currentTeam(scene).slice(0, 3);
+  const going = team.filter(id => !bench.has(id));
+  return going.length ? going : team.slice(0, 1);
 }

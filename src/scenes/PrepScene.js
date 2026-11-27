@@ -4,6 +4,7 @@ import { registerSprites } from '../art/sprites.js';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
 import { currentTeam } from '../flow.js';
+import { saveFrom } from '../save.js';
 import { play } from '../audio/sfx.js';
 import { applyCharm, CHARM_TYPES } from '../data/charms.js';
 import { gems } from '../ui/charmUi.js';
@@ -42,7 +43,11 @@ export class PrepScene extends Phaser.Scene {
     // team row: one place per retainer you have (up to 3), positioned exactly as in the fight
     const team = currentTeam(this).slice(0, TEAM_SLOTS);
     const tx = slots(team.length);
-    team.forEach((id, i) => this.figure(tx[i], TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id)));
+    this.teamIds = team;
+    this.teamImgs = {};
+    team.forEach((id, i) => { this.figure(tx[i], TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id)); this.teamImgs[id] = this.lastFigure; });
+    this.benchMarks = team.map((id, i) => this.add.text(tx[i], TEAM_Y + 44, 'พัก', { ...FONT, fontSize: '13px', color: '#9999bb', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5));
+    this.showBench();
 
     // start (same style as the battle buttons)
     this.panel(this.add.graphics(), 180, BTN_Y, 332, 80, 0x3d3d5e, 0xffdd55);
@@ -64,8 +69,14 @@ export class PrepScene extends Phaser.Scene {
     picks[0]();
   }
 
+  // resting retainers stand faded with a small 'พัก' under them
+  showBench() {
+    const bench = new Set(this.registry.get('bench') || []);
+    this.teamIds.forEach((id, i) => { this.teamImgs[id].setAlpha(bench.has(id) ? 0.35 : 1); this.benchMarks[i].setVisible(bench.has(id)); });
+  }
+
   figure(x, y, def, onPick) {
-    const img = this.add.image(x, y, def.sprite).setScale(PX);
+    const img = this.lastFigure = this.add.image(x, y, def.sprite).setScale(PX);
     idleFrames(this, img, def.sprite);
     this.add.zone(x, y, 100, 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onPick(); });
     return onPick;
@@ -100,6 +111,21 @@ export class PrepScene extends Phaser.Scene {
       // charms are managed on the roster screen
       add(this.add.text(30, PANEL_TOP + 44, 'จัดบริวารและของขลัง ›', { ...FONT, fontSize: '13px', color: '#ffe08a' }).setOrigin(0, 0.5).setPadding(4, 6, 4, 6)
         .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Roster', { sel: allyId, back: { scene: 'Prep', data: this.startData } }); }));
+      // sit this fight out (fewer fighters = quicker rounds); at least one must go
+      const bench = new Set(this.registry.get('bench') || []);
+      const resting = bench.has(allyId);
+      const going = this.teamIds.filter(id => !bench.has(id)).length;
+      const canRest = resting || going > 1;
+      add(this.add.text(330, PANEL_TOP + 44, resting ? 'ให้ออกศึก' : 'ให้พักศึก', { ...FONT, fontSize: '13px', color: canRest ? '#ffe08a' : '#55557a' }).setOrigin(1, 0.5).setPadding(4, 6, 4, 6)
+        .setInteractive({ useHandCursor: canRest }).on('pointerdown', () => {
+          if (!canRest) return;
+          play('click');
+          if (resting) bench.delete(allyId); else bench.add(allyId);
+          this.registry.set('bench', [...bench]);
+          saveFrom(this);
+          this.showBench();
+          this.show(...this.current);
+        }));
     } else {
       add(this.add.text(30, PANEL_TOP + 44, def.lore || '', { ...FONT, fontSize: '12px', color: '#a8a8c8' }).setOrigin(0, 0.5));
     }

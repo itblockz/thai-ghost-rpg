@@ -32,8 +32,10 @@ function huntWaves(i, fighters = 3) {
   const small = fighters < 3;
   const pool = [...new Set(STAGES.filter(s => (s.chapter || 0) === ch).flatMap(s => s.enemies))].filter(id => !ENEMIES[id].boss);
   const pick = () => pool[Math.floor(Math.random() * pool.length)];
-  const mixed = small ? [...stage.enemies] : stage.enemies.length < 3 ? [...stage.enemies, pick()] : [...stage.enemies.slice(0, 2), pick()];
-  return [{ ids: stage.enemies }, { ids: mixed }, { ids: [...stage.enemies], elite: 0, small }];
+  // ...and against a band of three, the later waves come two at a time
+  const base = small && stage.enemies.length > 2 ? stage.enemies.slice(0, 2) : stage.enemies;
+  const mixed = small ? [...base] : stage.enemies.length < 3 ? [...stage.enemies, pick()] : [...stage.enemies.slice(0, 2), pick()];
+  return [{ ids: stage.enemies }, { ids: mixed }, { ids: [...base], elite: 0, small }];
 }
 
 export class BattleScene extends Phaser.Scene {

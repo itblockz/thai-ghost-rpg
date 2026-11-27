@@ -92,7 +92,7 @@ export class BattleScene extends Phaser.Scene {
       // off: grey and still; on: gold, the arrows circling
       let spin = false;
       this.time.addEvent({ delay: 300, loop: true, callback: () => { spin = !spin; au.setTexture(this.auto && spin ? 'icon_auto2' : 'icon_auto'); } });
-      const show = () => (this.auto ? au.clearTint().setAlpha(1) : au.setTintFill(0x55557a).setAlpha(0.8));
+      const show = () => (this.auto ? au.clearTint().setAlpha(1) : au.setTint(0x6a6a88).setAlpha(0.9));
       show();
       this.add.zone(254, 26, 44, 44).setInteractive({ useHandCursor: true }).setDepth(10).on('pointerdown', () => {
           this.auto = !this.auto;

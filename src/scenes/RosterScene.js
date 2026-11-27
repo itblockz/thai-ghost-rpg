@@ -5,6 +5,7 @@ import { ALLIES } from '../data/units.js';
 import { SKILLS } from '../data/skills.js';
 import { RARITIES, CHARM_TYPES, applyWorn, wornIds, slotsOpen, SLOTS } from '../data/charms.js';
 import { cleared } from '../flow.js';
+import { applyGrowth, levelOf, OFFERINGS, MAX_EXP, MAX_LEVEL } from '../data/growth.js';
 import { charmTitle, charmEffect } from '../ui/charmUi.js';
 import { currentTeam } from '../flow.js';
 import { saveFrom } from '../save.js';
@@ -78,9 +79,16 @@ export class RosterScene extends Phaser.Scene {
     const worn = gear[id].map(cid => bag.find(c => c.id === cid) || null);
     if (this.slot == null || this.slot >= open) this.slot = Math.max(0, Math.min(open - 1, worn.findIndex((w, i) => !w && i < open)));
     const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0, spd: def.spd || 10 };
+    const myExp = (this.registry.get('exp') || {})[id] || 0, lvl = levelOf(myExp);
+    applyGrowth(u, myExp);
     applyWorn(u, bag, gear, id);
     add(this.panel(this.add.graphics(), 180, 252, 332, 160, 0x161424, 0xb89a50));
-    add(this.add.text(30, 190, def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
+    const nameT = add(this.add.text(30, 190, def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
+    // ขั้น and a thin บารมี bar toward the next step
+    const lx = 38 + nameT.width;
+    add(this.add.text(lx, 186, lvl.lv >= MAX_LEVEL ? `ขั้น ${lvl.lv} สูงสุด` : `ขั้น ${lvl.lv}`, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0, 0.5));
+    add(this.add.rectangle(lx, 199, 56, 4, 0x2a2440).setOrigin(0, 0.5));
+    add(this.add.rectangle(lx, 199, lvl.need ? Math.round(56 * lvl.into / lvl.need / 2) * 2 : 56, 4, 0xffe08a).setOrigin(0, 0.5));
     this.iconNums(330, 190, [['icon_hp', u.maxHp], ['icon_atk', u.atk], ['icon_spd', u.spd]], add);
     add(this.add.text(30, 213, def.lore, { ...FONT, fontSize: '12px', color: '#a8a8c8', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
     def.skills.forEach((sid, i) => {
@@ -111,6 +119,27 @@ export class RosterScene extends Phaser.Scene {
     const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
     this.page = Math.min(this.page, pages - 1);
     add(this.add.text(30, 352, `ย่าม (${bag.length})`, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5));
+    // ของเซ่น: tap one to feed it to the retainer above (บารมี without fighting)
+    const offer = this.registry.get('offer') || {};
+    Object.entries(OFFERINGS).forEach(([k, o], i) => {
+      const ox = 122 + i * 42, n = offer[k] || 0;
+      add(this.add.image(ox, 352, o.icon).setScale(PX).setAlpha(n ? 1 : 0.3));
+      add(this.add.text(ox + 12, 362, String(n), numFont(11, n ? '#ffffff' : '#666688')).setOrigin(0, 0.5));
+      if (n) add(this.add.zone(ox, 352, 40, 40).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+        const all = { ...(this.registry.get('exp') || {}) };
+        if ((all[id] || 0) >= MAX_EXP) return;
+        play('ward');
+        const before = levelOf(all[id] || 0).lv;
+        all[id] = Math.min(MAX_EXP, (all[id] || 0) + o.exp);
+        this.registry.set('exp', all);
+        this.registry.set('offer', { ...offer, [k]: n - 1 });
+        saveFrom(this);
+        this.redraw();
+        const up = levelOf(all[id]).lv - before;
+        const t = this.add.text(this.xs[this.ids.indexOf(id)], 160, up ? `ขึ้นขั้น! +${up}` : `บารมี +${o.exp}`, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(9);
+        this.tweens.add({ targets: t, y: 140, alpha: 0, duration: 1000, onComplete: () => t.destroy() });
+      }));
+    });
     if (pages > 1) {
       add(this.add.text(330, 352, `${this.page + 1}/${pages}`, { ...FONT, fontSize: '13px', color: '#aaaacc' }).setOrigin(1, 0.5));
       const flip = (label, x, d) => add(this.add.text(x, 352, label, { ...FONT, fontSize: '22px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0.5).setPadding(8, 2, 8, 2)

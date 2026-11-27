@@ -7,6 +7,7 @@ import { currentTeam, fightingTeam, MAX_FIGHTERS } from '../flow.js';
 import { saveFrom } from '../save.js';
 import { play } from '../audio/sfx.js';
 import { applyWorn, CHARM_TYPES } from '../data/charms.js';
+import { applyGrowth, levelOf } from '../data/growth.js';
 import { gems } from '../ui/charmUi.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
@@ -116,10 +117,11 @@ export class PrepScene extends Phaser.Scene {
     });
 
     add(this.panel(this.add.graphics(), 180, (PANEL_TOP + PANEL_BOTTOM) / 2, 332, PANEL_BOTTOM - PANEL_TOP, 0x161424, enemy ? 0xaa6677 : 0xb89a50));
-    add(this.add.text(30, PANEL_TOP + 20, count > 1 ? `${def.name} ×${count}` : def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
+    const nameT = add(this.add.text(30, PANEL_TOP + 20, count > 1 ? `${def.name} ×${count}` : def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
+    if (allyId) add(this.add.text(36 + nameT.width, PANEL_TOP + 22, `ขั้น ${levelOf((this.registry.get('exp') || {})[allyId] || 0).lv}`, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0, 0.5));
     // the unit as it will fight: base stats plus any worn charm
     const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0, spd: def.spd || 10 };
-    if (allyId) applyWorn(u, this.registry.get('bag') || [], this.registry.get('gear') || {}, allyId);
+    if (allyId) { const exp = (this.registry.get('exp') || {})[allyId] || 0; applyGrowth(u, exp); applyWorn(u, this.registry.get('bag') || [], this.registry.get('gear') || {}, allyId); }
     // stats as small pictures: heart = ขวัญ, fist = กำลัง (right-aligned)
     this.iconNums(330, PANEL_TOP + 20, [['icon_hp', u.maxHp], ...(def.atk ? [['icon_atk', u.atk]] : []), ['icon_spd', u.spd]], add);
     add(this.add.rectangle(180, PANEL_TOP + 62, 300, 2, 0x44445e));

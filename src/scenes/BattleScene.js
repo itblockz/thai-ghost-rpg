@@ -7,6 +7,7 @@ import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, fightingTeam } from '../flow.js';
 import { charmTitle, charmEffect } from '../ui/charmUi.js';
 import { rollCharm, applyWorn, RARITIES, CHARM_TYPES } from '../data/charms.js';
+import { applyGrowth, levelOf, EXP_PER_WIN, MAX_EXP, rollOfferings, OFFERINGS } from '../data/growth.js';
 import { saveFrom } from '../save.js';
 
 // How each unit travels to its target: dash (default), hop, float.
@@ -75,6 +76,9 @@ export class BattleScene extends Phaser.Scene {
     this.alliesGoing = team.length; // small parties recover more between hunt waves
     // worn charms
     const bag = this.registry.get('bag') || [], gear = this.registry.get('gear') || {};
+    // ขั้น first (the retainer's own growth), then the charms worn
+    const exp = this.registry.get('exp') || {};
+    this.allies.forEach(u => applyGrowth(u, exp[u.id] || 0));
     this.allies.forEach(u => applyWorn(u, bag, gear, u.id));
     // ประคำ: warded from the very start, renewed on the wearer's first turns
     this.allies.forEach(u => { u.openBlock0 = u.openBlock || 0; if (u.openBlock > 0) { u.block = true; u.blockBy = u; u.shieldIcon.setVisible(true); } });
@@ -164,7 +168,29 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // a wave is cleared: take its charm, catch breath, and the next wave comes on
+  // a win (battle or hunt wave): บารมี for everyone who fought, and ของเซ่น
+  rewardWin(kind, keep = false) {
+    const exp = { ...(this.registry.get('exp') || {}) };
+    this.allies.forEach(u => {
+      const before = levelOf(exp[u.id] || 0).lv;
+      exp[u.id] = Math.min(MAX_EXP, (exp[u.id] || 0) + EXP_PER_WIN);
+      if (levelOf(exp[u.id]).lv > before) this.time.delayedCall(700, () => this.popup(u.x, u.y - 44, 'ขึ้นขั้น!', '#ffe08a', 18));
+    });
+    this.registry.set('exp', exp);
+    const offer = { ...(this.registry.get('offer') || {}) };
+    const got = rollOfferings(kind);
+    got.forEach(k => { offer[k] = (offer[k] || 0) + 1; });
+    this.registry.set('offer', offer);
+    saveFrom(this);
+    // the offerings found, as small pictures under the charm panel
+    const objs = got.map((k, i) => this.add.image(180 + (i - (got.length - 1) / 2) * 40, 214, OFFERINGS[k].icon).setScale(PX).setDepth(9).setAlpha(0));
+    this.tweens.add({ targets: objs, alpha: 1, duration: 300, delay: 700, ease: 'Stepped', easeParams: [3] });
+    if (!keep) this.time.delayedCall(1700, () => objs.forEach(o => o.destroy()));
+    return objs;
+  }
+
   nextWave() {
+    this.rewardWin(this.wave === 0 ? 'plain' : 'w2');
     this.dropCharm(this.wave, true);
     this.loot = (this.loot || 0) + 1;
     this.fleeText?.setText('‹ ถอยพร้อมของ');
@@ -1041,7 +1067,7 @@ export class BattleScene extends Phaser.Scene {
     });
     // a vanquished foe holds no more secrets
     if (won) this.see(this.enemies.flatMap(e => e.skills));
-    if (won) { this.dropCharm(); if (this.hunt) { this.wave = this.waves.length; this.drawWaveStars(); } } else saveFrom(this);
+    if (won) { this.rewardWin(STAGES[this.stage].enemies.some(id => ENEMIES[id].boss) ? 'boss' : this.hunt ? 'w3' : 'plain', true); this.dropCharm(); if (this.hunt) { this.wave = this.waves.length; this.drawWaveStars(); } } else saveFrom(this);
     this.add.text(180, 250, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
     const next = won ? () => afterVictory(this, this.stage, this.first) : () => this.scene.start('Prep', { stage: this.stage, first: this.first, retry: true });

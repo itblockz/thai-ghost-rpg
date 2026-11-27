@@ -13,6 +13,8 @@ export function startNewGame(scene) {
   scene.registry.set('gear', {});
   scene.registry.set('seen', []);
   scene.registry.set('bench', []);
+  scene.registry.set('exp', {});
+  scene.registry.set('offer', {});
   scene.scene.start('Story', { keys: ['intro'], next: { scene: 'Map' } });
 }
 
@@ -24,6 +26,8 @@ export function continueGame(scene) {
   scene.registry.set('bag', p.bag);
   scene.registry.set('gear', p.gear);
   scene.registry.set('bench', p.bench);
+  scene.registry.set('exp', p.exp);
+  scene.registry.set('offer', p.offer);
   // saves already past the temple gate (where ผีกระหัง joins) but without him: he joins now
   if (p.cleared >= 6 && !p.team.includes('krahang')) scene.registry.set('team', [...p.team, 'krahang']);
   // saves from before the ??? system: foes of stages already cleared count as known

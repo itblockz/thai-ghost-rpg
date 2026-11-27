@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillDamage } from '../data/skills.js';
 import { registerSprites, pixelDisc, pixelRing } from '../art/sprites.js';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, pixelBob } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, currentTeam } from '../flow.js';
 
@@ -290,6 +290,10 @@ export class BattleScene extends Phaser.Scene {
       u.sprite.setTint(0x444455);
       u.sprite.setTexture(`${u.def.sprite}_ko`);
       this.tweens.add({ targets: [u.sprite, ...u.hud], alpha: 0.45, duration: 300, ease: 'Stepped', easeParams: [3] });
+      // a small spirit hovers over the fallen: out of the fight, not lost
+      const soul = this.add.image(u.x, u.y - u.half + 6, 'fx_soul').setScale(PX).setAlpha(0).setDepth(6);
+      this.tweens.add({ targets: soul, alpha: 0.8, duration: 600, delay: 300, ease: 'Stepped', easeParams: [3] });
+      pixelBob(this, soul, PX, 2, 280);
     }
   }
 

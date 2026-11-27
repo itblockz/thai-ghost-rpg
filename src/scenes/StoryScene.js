@@ -85,7 +85,7 @@ export class StoryScene extends Phaser.Scene {
       play('win');
       const title = this.add.text(180, 270, page.text, { ...FONT, fontSize: '34px', fontStyle: 'bold', align: 'center', color: '#ff7790', lineSpacing: 8 }).setOrigin(0.5).setAlpha(0);
       const thanks = this.add.text(180, 360, 'ขอบคุณที่ร่วมเดินทาง', { ...FONT, fontSize: '16px', color: '#ccccee' }).setOrigin(0.5).setAlpha(0);
-      const hint = this.add.text(180, 600, 'แตะเพื่อกลับหน้าแรก', { ...FONT, fontSize: '14px', color: '#9999bb' }).setOrigin(0.5).setAlpha(0);
+      const hint = this.add.text(180, 600, 'แตะเพื่อไปต่อ', { ...FONT, fontSize: '14px', color: '#9999bb' }).setOrigin(0.5).setAlpha(0);
       this.tweens.add({ targets: [title, thanks], alpha: 1, duration: 900 });
       this.tweens.add({ targets: hint, alpha: 1, duration: 600, delay: 1200 });
       this.endCard = [title, thanks, hint];

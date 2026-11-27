@@ -28,6 +28,7 @@ export class BattleScene extends Phaser.Scene {
     registerSprites(this);
     setupCamera(this);
     this.stage = data?.stage ?? 0;
+    this.first = !!data?.first;
     const stage = STAGES[this.stage];
     this.busy = true;
     this.camHome = undefined;
@@ -677,7 +678,7 @@ export class BattleScene extends Phaser.Scene {
     });
     this.add.text(180, 250, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
-    const next = won ? () => afterVictory(this, this.stage) : () => this.scene.start('Prep', { stage: this.stage, retry: true });
+    const next = won ? () => afterVictory(this, this.stage, this.first) : () => this.scene.start('Prep', { stage: this.stage, first: this.first, retry: true });
     this.pixelPanel(this.add.graphics().setDepth(9), 180, BTN_Y, 332, 120, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
     this.add.image(84, BTN_Y, won ? 'icon_next' : 'icon_retry').setScale(PX).setDepth(9);
     this.add.text(124, BTN_Y, label, { ...FONT, fontSize: '28px' }).setOrigin(0, 0.5).setDepth(9);

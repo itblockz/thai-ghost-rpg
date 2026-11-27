@@ -40,7 +40,7 @@ export class TitleScene extends Phaser.Scene {
       return;
     }
     // a journey is saved: continue it, or start over
-    this.button(180, 560, 300, 56, `เดินทางต่อ · ด่านที่ ${saved.stage + 1}`, 0x3d3d5e, 0xffdd55, go(continueGame));
+    this.button(180, 560, 300, 56, 'เดินทางต่อ', 0x3d3d5e, 0xffdd55, go(continueGame));
     this.button(180, 616, 300, 40, 'เริ่มใหม่', 0x1e1e2a, 0x55557a, go(startNewGame), '15px');
   }
 

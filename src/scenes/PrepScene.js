@@ -5,7 +5,6 @@ import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
 import { currentTeam } from '../flow.js';
 import { play } from '../audio/sfx.js';
-import { saveProgress } from '../save.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const TEAM_SLOTS = 3;
@@ -22,7 +21,6 @@ export class PrepScene extends Phaser.Scene {
     registerSprites(this);
     this.stage = data?.stage ?? 0;
     const stage = STAGES[this.stage];
-    saveProgress(this.stage, currentTeam(this)); // reaching a fight is the checkpoint
 
     this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(PX);
     this.add.rectangle(180, 320, 360, 640, 0x07060f, 0.35);
@@ -47,7 +45,12 @@ export class PrepScene extends Phaser.Scene {
     this.panel(this.add.graphics(), 180, BTN_Y, 332, 80, 0x3d3d5e, 0xffdd55);
     this.add.text(180, BTN_Y, 'เข้าสู้', { ...FONT, fontSize: '26px', fontStyle: 'bold' }).setOrigin(0.5);
     this.add.zone(180, BTN_Y, 332, 80).setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => { play('click'); this.scene.start('Battle', { stage: this.stage, retry: !!data?.retry }); });
+      .on('pointerdown', () => { play('click'); this.scene.start('Battle', { stage: this.stage, first: !!data?.first, retry: !!data?.retry }); });
+
+    // back to the map
+    const back = this.add.text(14, 24, '‹ แผนที่', { ...FONT, fontSize: '15px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0, 0.5)
+      .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Map'); });
+    back.setPadding(6, 6, 6, 6);
 
     picks[0]();
   }

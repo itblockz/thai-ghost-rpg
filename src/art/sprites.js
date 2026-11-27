@@ -761,6 +761,79 @@ export const SPRITES = {
     '................',
     '................',
   ],
+  // map nodes (16x16)
+  node_shrine: [
+    '................',
+    '.......gg.......',
+    '......kggk......',
+    '.....kkkkkk.....',
+    '....kkkkkkkk....',
+    '...kkkkkkkkkk...',
+    '..yggggggggggy..',
+    '....oo....oo....',
+    '....oo.yy.oo....',
+    '....oo.yy.oo....',
+    '....oo....oo....',
+    '..oooooooooooo..',
+    '..llllllllllll..',
+    '................',
+    '................',
+    '................',
+  ],
+  node_forest: [
+    '................',
+    '.....N......N...',
+    '....NnN....NnN..',
+    '...NnnnN..NnnnN.',
+    '...NNnNN..NNnNN.',
+    '..NnnnnnNNnnnnnN',
+    '..NNNnNNNNNNnNNN',
+    '.NnnnnnnNnnnnnnN',
+    '.NNNNnNNNNNNnNNN',
+    '.....o.....o....',
+    '.....o.....o....',
+    '..N..o..N..o....',
+    '.NnN.o.NnN.o....',
+    '.NNN...NNN......',
+    '..o.....o.......',
+    '................',
+  ],
+  node_village: [
+    '................',
+    '......kkkk......',
+    '.....kkkkkk.....',
+    '....kkkkkkkk....',
+    '...kkkkkkkkkk...',
+    '..kkkkkkkkkkkk..',
+    '...oooooooooo...',
+    '...oaaooooaao...',
+    '...oaaooooaao...',
+    '...oooooooooo...',
+    '...l..l..l..l...',
+    '...l..l..l..l...',
+    '...l..l..l..l...',
+    '................',
+    '......p.........',
+    '.....ppp........',
+  ],
+  node_lock: [
+    '................',
+    '.....aaaaaa.....',
+    '....a......a....',
+    '....a......a....',
+    '....a......a....',
+    '..aaaaaaaaaaaa..',
+    '..avvvvvvvvvva..',
+    '..avvvvkkvvvva..',
+    '..avvvvkkvvvva..',
+    '..avvvvvkvvvva..',
+    '..avvvvvkvvvva..',
+    '..avvvvvvvvvva..',
+    '..aaaaaaaaaaaa..',
+    '................',
+    '................',
+    '................',
+  ],
   // effects
   fx_slash: [
     '.......................w',
@@ -932,6 +1005,24 @@ function drawVillageBackdrop(scene) {
 }
 
 /** Title art (90x160, shown at 4x): a cracked Thai gate leaking light from the other side. */
+/** Chapter map: night countryside seen from above, 120x214 art px. */
+function drawMapArt(scene) {
+  canvasArt(scene, 'art_map', BG_W, BG_H, (px, rect, W, H) => {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const n = Math.sin(x / 9 + y / 13) + Math.sin(x / 5 - y / 7) * 0.5;
+      px(x, y, n > 0.9 ? '#132016' : n > 0.2 ? '#0f1a12' : (x + y) % 2 ? '#0c140e' : '#0d1610');
+    }
+    // a river winding down the right side
+    for (let y = 0; y < H; y++) {
+      const cx = 100 + Math.round(Math.sin(y / 18) * 8);
+      for (let x = cx - 4; x <= cx + 4; x++) px(x, y, Math.abs(x - cx) > 3 ? '#1a2a3a' : (x + y) % 5 ? '#16223a' : '#243a5a');
+    }
+    // scattered pines
+    const pine = (cx, cy) => { for (let t = 0; t < 7; t++) rect(cx - Math.floor(t / 2), cy + t, 2 * Math.floor(t / 2) + 1, 1, t % 3 === 2 ? '#0a1a0e' : '#06120a'); px(cx, cy + 7, '#2a1a10'); };
+    [[8, 20], [20, 40], [12, 70], [30, 100], [6, 130], [18, 170], [44, 20], [70, 40], [80, 120], [60, 150], [40, 190], [84, 186], [66, 70], [12, 200]].forEach(([x, y]) => pine(x, y));
+  });
+}
+
 function drawTitleArt(scene) {
   // drawn natively on the shared grid: 120x213 art px = full screen at PX
   canvasArt(scene, 'art_gate', 120, 213, (px, rect, W, H) => {
@@ -1153,6 +1244,7 @@ export function registerSprites(scene) {
   drawStoryArt(scene);
   drawVillageBackdrop(scene);
   drawTitleArt(scene);
+  drawMapArt(scene);
   drawPixelShapes(scene);
   for (const key of ['kumarn', 'kongkoi', 'krasue']) {
     const rows = SPRITES[key], n = rows.length;

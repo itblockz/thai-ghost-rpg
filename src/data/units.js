@@ -26,6 +26,6 @@ export const STARTING_TEAM = ['kumarn'];
 
 // Chapter 1 journey: story before → fight → story after.
 export const STAGES = [
-  { before: 'forest', bg: 'bg_night', enemies: ['kongkoi', 'kongkoi'], after: 'afterKongkoi' },
-  { before: 'village', bg: 'bg_village', enemies: ['krasue'], after: 'ending' },
+  { name: 'ชายป่า', node: 'node_forest', map: [108, 262], before: 'forest', bg: 'bg_night', enemies: ['kongkoi', 'kongkoi'], after: 'afterKongkoi' },
+  { name: 'หมู่บ้าน', node: 'node_village', map: [248, 382], before: 'village', bg: 'bg_village', enemies: ['krasue'], after: 'ending' },
 ];

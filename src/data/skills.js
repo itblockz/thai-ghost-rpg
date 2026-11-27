@@ -23,6 +23,8 @@ export const SKILLS = {
   khamotEmber: { name: 'ไฟลวก', desc: 'ปล่อยไฟลวกศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งร้อน', icon: 'icon_heal', anim: 'wisp', cooldown: 0, effects: [{ damage: 1, scale: 1 }] },
   khamotBlind: { name: 'ไฟหลอกตา', desc: 'ล่อไฟวูบวาบใส่ศัตรูหนึ่งตนจนตาพร่า การโจมตีครั้งถัดไปของมันจะพลาด', icon: 'icon_blind', anim: 'wisp', cooldown: 3, effects: [{ damage: 2 }, { blind: true }] },
   khamotHeal: { name: 'ไฟอุ่นใจ', desc: 'ส่องไฟอุ่นปลอบขวัญ และถอนพิษบริวารหนึ่งตน ยิ่งมีขวัญมากยิ่งปลอบได้มาก', icon: 'icon_heal', anim: 'heal', cooldown: 2, target: 'ally', effects: [{ heal: 2, scale: 0.4, stat: 'hp' }] },
+  gnaw: { name: 'แทะ', desc: 'แทะศัตรูหนึ่งตน แล้วฟื้นขวัญตนเองเท่าที่แทะได้ ยิ่งมีกำลังยิ่งแทะได้มาก', icon: 'icon_devour', anim: 'bite', cooldown: 0, effects: [{ damage: 1, scale: 1, drain: true }] },
+  gorge: { name: 'ตะกละ', desc: 'ขย้ำศัตรูหนึ่งตนอย่างตะกละ ฟื้นขวัญตนเองเท่าที่กินได้ ยิ่งมีกำลังยิ่งกินมาก', icon: 'icon_devour', anim: 'bite', cooldown: 3, effects: [{ damage: 3, scale: 2, drain: true }] },
   // enemies
   flap: { name: 'กระพือกระด้ง', desc: 'กระพือกระด้งเป็นลมแรงใส่ศัตรูทุกตน ยิ่งมีกำลังยิ่งแรง', icon: 'icon_flap', anim: 'flap', cooldown: 0, area: true, effects: [{ damage: 1, scale: 0.8 }] },
   whack: { name: 'ฟาดกระด้ง', desc: 'ฟาดกระด้งใส่ศัตรูหนึ่งตนอย่างแรง ยิ่งมีกำลังยิ่งฟาดแรง', icon: 'icon_whack', anim: 'ram', cooldown: 2, effects: [{ damage: 3, scale: 2 }] },
@@ -57,6 +59,7 @@ export function skillFacts(skill, u) {
     if (e.block) out.push('กันภัยให้บริวาร 1 ตา');
     if (e.stun) out.push(`เป้าเสียตา ${e.stun} ตา`);
     if (e.blind) out.push('เป้าตาพร่า ตีครั้งหน้าพลาด');
+    if (e.drain) out.push('ฟื้นขวัญตนเองเท่าที่ทำได้');
     if (e.heal) out.push(`ฟื้นขวัญ ${amount(e, 'heal', u)}${formula(e, 'heal')}`);
   }
   if (skill.area) out.push('ใส่ทุกตน');

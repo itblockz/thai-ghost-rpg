@@ -13,6 +13,10 @@ export const ALLIES = {
     name: 'ผีกระหัง', sprite: 'krahang', hp: 20, atk: 3, spd: 14, skills: ['flap', 'whack'],
     lore: 'ผีชายบินด้วยกระด้งสองใบ ว่องไวกว่าผีใด',
   },
+  pop: {
+    name: 'ผีปอบ', sprite: 'pop', hp: 32, atk: 3, spd: 9, skills: ['gnaw', 'gorge'],
+    lore: 'ผีปอบหิวไม่รู้อิ่ม ยิ่งกัดกินยิ่งมีแรงสู้',
+  },
   khamot: {
     name: 'ผีโขมด', sprite: 'khamot', hp: 18, atk: 2, spd: 12, skills: ['khamotEmber', 'khamotHeal', 'khamotBlind'],
     lore: 'ดวงไฟลอยกลางน้ำ เคยหลอกคนหลงทาง บัดนี้ส่องทางให้',

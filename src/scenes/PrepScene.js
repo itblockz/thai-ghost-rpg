@@ -11,9 +11,9 @@ import { applyGrowth, levelOf, shownLevel } from '../data/growth.js';
 import { gems } from '../ui/charmUi.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
-const TEAM_SLOTS = 4; // retainers shown (three of them can go in)
+const TEAM_SLOTS = 8; // retainers shown (three of them can go in)
 const ENEMY_Y = 100, TEAM_Y = 492, PANEL_TOP = 160, PANEL_BOTTOM = 430, BTN_Y = 588;
-const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : n === 3 ? [65, 180, 295] : [48, 136, 224, 312]);
+const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : n === 3 ? [65, 180, 295] : n === 4 ? [48, 136, 224, 312] : [36, 108, 180, 252, 324]);
 
 // Before each fight. Laid out like the battlefield (enemies above, team below);
 // tap anyone to read them in the middle panel. No pop-ups.
@@ -95,7 +95,7 @@ export class PrepScene extends Phaser.Scene {
   figure(x, y, def, onPick) {
     const img = this.lastFigure = this.add.image(x, y, def.sprite).setScale(PX);
     idleFrames(this, img, def.sprite);
-    this.add.zone(x, y, 100, 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onPick(); });
+    this.add.zone(x, y, 72, 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onPick(); });
     return onPick;
   }
 
@@ -109,7 +109,7 @@ export class PrepScene extends Phaser.Scene {
 
     // selection brackets, like target brackets in battle
     const m = this.marker.clear().fillStyle(enemy ? 0xff7790 : 0xffdd55);
-    const h = 40, k = 10;
+    const h = !enemy && this.teamIds.length > 4 ? 34 : 40, k = 10;
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
       const cx = x + sx * h, cy = y + sy * h;
       m.fillRect(Math.min(cx, cx - sx * k), cy - (sy > 0 ? 3 : 0), k, 3);
@@ -131,9 +131,11 @@ export class PrepScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Roster', { sel: allyId, back: { scene: 'Prep', data: this.startData } }); }));
       // arrows beside the chosen retainer: move it left/right in the line-up
       const i = this.teamIds.indexOf(allyId);
-      [[-1, x - 58], [1, x + 58]].forEach(([d, ax]) => {
+      // five or more stand close together: the arrows go under the figure, beside the ✓
+      const tight = this.teamIds.length > 4, ay = tight ? y + 44 : y;
+      [[-1, x - (tight ? 24 : 58)], [1, x + (tight ? 24 : 58)]].forEach(([d, ax]) => {
         if (i + d < 0 || i + d >= this.teamIds.length) return;
-        add(this.add.text(ax, y, d < 0 ? '‹' : '›', { ...FONT, fontSize: '30px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setPadding(10, 8, 10, 8)
+        add(this.add.text(ax, ay, d < 0 ? '‹' : '›', { ...FONT, fontSize: '30px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setPadding(10, 8, 10, 8)
           .setDepth(6).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.swap(allyId, d); }));
       });
       // choose who goes in (fewer fighters = quicker rounds); anyone not chosen rests. At least one must go.

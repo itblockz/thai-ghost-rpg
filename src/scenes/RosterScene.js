@@ -14,7 +14,7 @@ import { play } from '../audio/sfx.js';
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const PER_PAGE = 12;
 const RARITY_ORDER = { mythic: 0, rare: 1, common: 2 };
-const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : n === 3 ? [65, 180, 295] : [48, 136, 224, 312]);
+const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : n === 3 ? [65, 180, 295] : n === 4 ? [48, 136, 224, 312] : [36, 108, 180, 252, 324]);
 
 // จัดบริวาร: every retainer in full, and the whole bag of charms — look before you wear, page through,
 // throw away. Opened from the map or the prep screen (and returns there).
@@ -46,7 +46,7 @@ export class RosterScene extends Phaser.Scene {
     this.ids.forEach((id, i) => {
       const img = this.add.image(xs[i], 104, ALLIES[id].sprite).setScale(PX);
       idleFrames(this, img, ALLIES[id].sprite);
-      this.add.zone(xs[i], 104, 100, 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.sel = id; this.picked = null; this.pickedSkill = null; this.redraw(); });
+      this.add.zone(xs[i], 104, 72, 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.sel = id; this.picked = null; this.pickedSkill = null; this.redraw(); });
     });
     this.xs = xs;
     this.objs = [];
@@ -69,7 +69,7 @@ export class RosterScene extends Phaser.Scene {
     // brackets on the chosen retainer
     const x0 = this.xs[this.ids.indexOf(id)], m = this.marker.clear().fillStyle(0xffdd55);
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
-      const cx = x0 + sx * 40, cy = 104 + sy * 40;
+      const cx = x0 + sx * (this.ids.length > 4 ? 34 : 40), cy = 104 + sy * 40;
       m.fillRect(Math.min(cx, cx - sx * 12), cy - (sy > 0 ? 3 : 0), 12, 3);
       m.fillRect(cx - (sx > 0 ? 3 : 0), Math.min(cy, cy - sy * 12), 3, 12);
     });

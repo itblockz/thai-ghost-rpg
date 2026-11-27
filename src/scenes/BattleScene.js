@@ -116,16 +116,19 @@ export class BattleScene extends Phaser.Scene {
 
     // HP bar under the sprite (no name label: the art identifies the unit)
     const by = y + u.half + 6, bw = 92;
-    this.add.rectangle(x, by + 7, bw + 4, 10, 0x000000);
-    this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x333344).setOrigin(0, 0.5);
+    u.hud = [
+      this.add.rectangle(x, by + 7, bw + 4, 10, 0x000000),
+      this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x333344).setOrigin(0, 0.5),
+    ];
     u.bar = this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x55cc66).setOrigin(0, 0.5);
     u.barW = bw;
     u.hpText = this.add.text(x, by + 14, '', { ...FONT, fontSize: '11px', color: '#ccccee' }).setOrigin(0.5, 0);
+    u.hud.push(u.bar, u.hpText);
 
     // enemies show their skills (cooldowns visible) under the bar
     if (side === 'enemy') {
       u.tiles = u.skills.map((sid, i) => {
-        const tx = x + (i - (u.skills.length - 1) / 2) * 56, ty = by + 46;
+        const tx = x + (i - (u.skills.length - 1) / 2) * 56, ty = by + 62; // clear of the HP numbers
         const g = this.add.graphics();
         const icon = this.add.image(tx, ty, SKILLS[sid].icon).setScale(PX);
         const cdText = this.add.text(tx, ty, '', { ...FONT, fontSize: '26px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
@@ -280,12 +283,13 @@ export class BattleScene extends Phaser.Scene {
         const px = this.add.rectangle(u.x + Phaser.Math.Between(-40, 40), u.y + Phaser.Math.Between(-50, 50), 6, 6, Phaser.Math.RND.pick([0x5d4d6e, 0xffffff, 0xd01030]));
         this.tweens.add({ targets: px, y: px.y - Phaser.Math.Between(40, 120), alpha: 0, duration: Phaser.Math.Between(400, 900), onComplete: () => px.destroy() });
       }
-      this.tweens.add({ targets: [u.sprite, u.glow], alpha: 0, duration: 400, ease: 'Stepped', easeParams: [4] });
+      // a vanquished enemy leaves nothing behind: sprite, glow, HP and skill tiles all fade away
+      this.tweens.add({ targets: [u.sprite, u.glow, ...u.hud], alpha: 0, duration: 400, ease: 'Stepped', easeParams: [4] });
       (u.tiles || []).forEach(t => { t.icon.setVisible(false); t.cdText.setVisible(false); t.g.clear(); });
     } else {
       u.sprite.setTint(0x444455);
       u.sprite.setTexture(`${u.def.sprite}_ko`);
-      this.tweens.add({ targets: u.sprite, alpha: 0.45, duration: 300, ease: 'Stepped', easeParams: [3] });
+      this.tweens.add({ targets: [u.sprite, ...u.hud], alpha: 0.45, duration: 300, ease: 'Stepped', easeParams: [3] });
     }
   }
 

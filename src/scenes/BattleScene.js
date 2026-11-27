@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
-import { SKILLS, skillDamage, skillFacts } from '../data/skills.js';
+import { SKILLS, skillDamage, skillFacts, amount } from '../data/skills.js';
 import { registerSprites, pixelDisc, pixelRing } from '../art/sprites.js';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, pixelBob } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
@@ -110,7 +110,7 @@ export class BattleScene extends Phaser.Scene {
   makeUnit(side, id, def, name, x, y, scale) {
     const u = {
       side, id, def, name, x, y, scale,
-      hp: def.hp, maxHp: def.hp, skills: def.skills, cd: {}, block: false, pending: null, takenMult: 1, alive: true,
+      hp: def.hp, maxHp: def.hp, atk: def.atk || 0, skills: def.skills, cd: {}, block: false, pending: null, takenMult: 1, alive: true,
     };
     // every unit is drawn at the same pixel size; bigger creatures simply have bigger grids
     const grid = this.textures.get(def.sprite).getSourceImage().width;
@@ -239,14 +239,14 @@ export class BattleScene extends Phaser.Scene {
       if (e.damage != null) {
         if (blindNow) missed = true;
         else if (target.block) blocked = true;
-        else { mult = target.takenMult; const d = (e.damage + (user.dmgBonus || 0)) * mult; target.hp -= d; dealt += d; }
+        else { mult = target.takenMult; const d = amount(e, 'damage', user) * mult; target.hp -= d; dealt += d; }
       }
       if (e.block) { target.block = true; target.shieldIcon.setVisible(true); }
       const warded = k => target.wards?.has(k);
       if ((e.stun && warded('stun')) || (e.blind && warded('blind'))) this.popup(target.x, target.y + 24, 'ผ้ายันต์คุ้มกัน!', '#ffe08a', 15);
       if (e.stun && !missed && !blocked && !warded('stun')) target.stunned = (target.stunned || 0) + e.stun;
       if (e.blind && !missed && !blocked && !warded('blind')) target.blind = true;
-      if (e.heal) { const h = Math.min(e.heal, target.maxHp - target.hp); target.hp += h; healed += h; }
+      if (e.heal) { const h = Math.min(amount(e, 'heal', user), target.maxHp - target.hp); target.hp += h; healed += h; }
     }
     // show the real rest count right away; the end-of-round tick skips skills used this round
     if (skill.cooldown) { user.cd[skillId] = skill.cooldown; (user.fresh ||= new Set()).add(skillId); }
@@ -419,7 +419,7 @@ export class BattleScene extends Phaser.Scene {
     const s = SKILLS[this.selected];
     // only a first-time hint; the gold glow shows whose turn it is
     // one line under the buttons: what the chosen skill does, and whom to tap
-    this.turnText.setText(`${s.name} · ${skillFacts(s).join(' · ')} — ${s.target === 'ally' ? 'แตะบริวาร' : 'แตะศัตรู'}`);
+    this.turnText.setText(`${s.name} · ${skillFacts(s, u).join(' · ')} — ${s.target === 'ally' ? 'แตะบริวาร' : 'แตะศัตรู'}`);
   }
 
   // Panel with notched (pixel-style) corners.
@@ -517,7 +517,7 @@ export class BattleScene extends Phaser.Scene {
     for (const e of skill.effects) {
       if (e.wait) y = this.cardRow(y, 'icon_clock', 'ตั้งท่าก่อน', `${e.wait} ตา`, '#ff8899');
       if (e.takenMult > 1) y = this.cardRow(y, 'icon_danger', 'ระหว่างตั้งท่าถูกตีแรงขึ้น', `x${e.takenMult}`, '#ff8899');
-      if (e.damage != null) y = this.cardRow(y, 'icon_dmg', 'อานุภาพ', String(e.damage), '#ffdd55');
+      if (e.damage != null) y = this.cardRow(y, 'icon_dmg', 'อานุภาพ', String(amount(e, 'damage', this.active)), '#ffdd55');
       if (e.block) y = this.cardRow(y, 'icon_shield', 'กันภัยให้', 'ตานี้', '#ffe066');
     }
     return this.cardRow(y, 'icon_clock', 'พักฤทธิ์', skill.cooldown ? `${skill.cooldown} ตา` : 'มิต้องพัก');

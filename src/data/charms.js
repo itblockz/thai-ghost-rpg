@@ -35,7 +35,7 @@ export function rollCharm() {
 export function charmText(c) {
   switch (c.type) {
     case 'takrut': return `ขวัญ +${c.value}`;
-    case 'fang': return `อานุภาพ +${c.value} ทุกฤทธิ์`;
+    case 'fang': return `กำลัง +${c.value}`;
     case 'prakam': return `กันภัยตนเอง ${c.value} ตาแรก`;
     case 'yant': return c.wards.map(w => (w === 'stun' ? 'กันจมน้ำ' : 'กันตาพร่า')).join(' · ');
     default: return '';
@@ -47,7 +47,7 @@ export const charmName = c => `${CHARM_TYPES[c.type].name} (${RARITIES[c.rarity]
 export function applyCharm(u, c) {
   if (!c) return;
   if (c.type === 'takrut') { u.hp += c.value; u.maxHp += c.value; }
-  if (c.type === 'fang') u.dmgBonus = c.value;
+  if (c.type === 'fang') u.atk = (u.atk || 0) + c.value;
   if (c.type === 'prakam') u.openBlock = c.value;
   if (c.type === 'yant') u.wards = new Set(c.wards);
 }

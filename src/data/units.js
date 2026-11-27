@@ -1,15 +1,15 @@
 // Retainers (บริวาร) — the player's units. Each retainer is unique (no duplicates in the team).
 export const ALLIES = {
   kumarn: {
-    name: 'กุมารทอง', sprite: 'kumarn', hp: 28, skills: ['ram', 'guard'],
+    name: 'กุมารทอง', sprite: 'kumarn', hp: 28, atk: 4, skills: ['ram', 'guard'],
     lore: 'เด็กน้อยผิวทอง ผมจุก ภักดีต่อผู้เลี้ยง',
   },
   kongkoi: {
-    name: 'ผีกองกอย', sprite: 'kongkoi', hp: 20, skills: ['rake', 'frenzy'],
+    name: 'ผีกองกอย', sprite: 'kongkoi', hp: 20, atk: 4, skills: ['rake', 'frenzy'],
     lore: 'ผีป่าขาเดียว ว่องไว ขี้แกล้ง',
   },
   khamot: {
-    name: 'ผีโขมด', sprite: 'khamot', hp: 18, skills: ['khamotEmber', 'khamotHeal', 'khamotBlind'],
+    name: 'ผีโขมด', sprite: 'khamot', hp: 18, atk: 2, skills: ['khamotEmber', 'khamotHeal', 'khamotBlind'],
     lore: 'ดวงไฟลอยกลางน้ำ เคยหลอกคนหลงทาง บัดนี้ส่องทางให้',
   },
 };

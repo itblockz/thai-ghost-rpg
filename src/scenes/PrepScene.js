@@ -5,7 +5,7 @@ import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
 import { currentTeam } from '../flow.js';
 import { play } from '../audio/sfx.js';
-import { RARITIES, CHARM_TYPES, charmText, charmName } from '../data/charms.js';
+import { RARITIES, CHARM_TYPES, charmText, charmName, applyCharm } from '../data/charms.js';
 import { saveFrom } from '../save.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
@@ -83,7 +83,10 @@ export class PrepScene extends Phaser.Scene {
 
     add(this.panel(this.add.graphics(), 180, (PANEL_TOP + PANEL_BOTTOM) / 2, 332, PANEL_BOTTOM - PANEL_TOP, 0x161424, enemy ? 0xaa6677 : 0xb89a50));
     add(this.add.text(30, PANEL_TOP + 20, count > 1 ? `${def.name} ×${count}` : def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
-    add(this.add.text(330, PANEL_TOP + 20, `ขวัญ ${def.hp}`, { ...FONT, fontSize: '16px', color: '#88dd99' }).setOrigin(1, 0.5));
+    // the unit as it will fight: base stats plus any worn charm
+    const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0 };
+    if (allyId) { const bag = this.registry.get('bag') || []; applyCharm(u, bag.find(c => c.id === (this.registry.get('gear') || {})[allyId])); }
+    add(this.add.text(330, PANEL_TOP + 20, def.atk ? `ขวัญ ${u.maxHp} · กำลัง ${u.atk}` : `ขวัญ ${u.maxHp}`, { ...FONT, fontSize: '15px', color: '#88dd99' }).setOrigin(1, 0.5));
     add(this.add.rectangle(180, PANEL_TOP + 62, 300, 2, 0x44445e));
     if (allyId) {
       // retainers: two tabs — their skills, or the charm they wear
@@ -101,7 +104,7 @@ export class PrepScene extends Phaser.Scene {
     for (const sid of def.skills) {
       const s = SKILLS[sid];
       add(this.add.text(84, ry, s.name, { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0));
-      const facts = add(this.add.text(84, ry + 22, skillFacts(s).join(' · '), { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 236 }, lineSpacing: 2 }).setOrigin(0, 0));
+      const facts = add(this.add.text(84, ry + 22, skillFacts(s, u).join(' · '), { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 236 }, lineSpacing: 2 }).setOrigin(0, 0));
       const rowH = Math.max(54, 26 + facts.height);
       add(this.add.image(50, ry + 26, s.icon).setScale(PX));
       ry += rowH;

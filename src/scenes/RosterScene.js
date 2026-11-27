@@ -40,7 +40,7 @@ export class RosterScene extends Phaser.Scene {
     this.ids.forEach((id, i) => {
       const img = this.add.image(xs[i], 104, ALLIES[id].sprite).setScale(PX);
       idleFrames(this, img, ALLIES[id].sprite);
-      this.add.zone(xs[i], 104, 100, 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.sel = id; this.picked = null; this.redraw(); });
+      this.add.zone(xs[i], 104, 100, 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.sel = id; this.picked = null; this.pickedSkill = null; this.redraw(); });
     });
     this.xs = xs;
     this.objs = [];
@@ -76,7 +76,9 @@ export class RosterScene extends Phaser.Scene {
     def.skills.forEach((sid, i) => {
       const x = 58 + i * 66;
       add(this.add.image(x, 262, SKILLS[sid].icon).setScale(PX));
-      add(this.add.text(x, 300, SKILLS[sid].name, { ...FONT, fontSize: '11px', color: '#ccccee' }).setOrigin(0.5));
+      add(this.add.text(x, 300, SKILLS[sid].name, { ...FONT, fontSize: '11px', color: this.pickedSkill === sid ? '#ffe08a' : '#ccccee' }).setOrigin(0.5));
+      // tap a skill to read it in the panel below
+      add(this.add.zone(x, 272, 62, 76).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.pickedSkill = sid; this.picked = null; this.redraw(); }));
     });
     // the single charm slot: its frame says "one" without words; empty shows +
     const sx = 288, sy = 268;
@@ -84,7 +86,7 @@ export class RosterScene extends Phaser.Scene {
     add(this.panel(this.add.graphics(), sx, sy, 62, 62, worn ? 0x2a2418 : 0x121020, worn ? RARITIES[worn.rarity].hex : 0x44445e));
     if (worn) {
       add(this.add.image(sx, sy, CHARM_TYPES[worn.type].icon).setScale(PX));
-      add(this.add.zone(sx, sy, 62, 62).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.picked = worn.id; this.confirmDrop = null; this.redraw(); }));
+      add(this.add.zone(sx, sy, 62, 62).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.picked = worn.id; this.pickedSkill = null; this.confirmDrop = null; this.redraw(); }));
     } else {
       add(this.add.text(sx, sy, '+', { ...FONT, fontSize: '28px', color: '#55557a' }).setOrigin(0.5));
     }
@@ -100,6 +102,11 @@ export class RosterScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.page = (this.page + d + pages) % pages; this.picked = null; this.redraw(); }));
       flip('‹', 250, -1); flip('›', 290, 1);
     }
+    const pageItems = list.slice(this.page * PER_PAGE, (this.page + 1) * PER_PAGE);
+    for (let i = pageItems.length; i < PER_PAGE; i++) {
+      const x = 46 + (i % 6) * 54, y = 400 + Math.floor(i / 6) * 56;
+      add(this.panel(this.add.graphics(), x, y, 50, 50, 0x100e1a, 0x26263a));
+    }
     const wornBy = Object.fromEntries(Object.entries(gear).map(([k, v]) => [v, k]));
     list.slice(this.page * PER_PAGE, (this.page + 1) * PER_PAGE).forEach((c, i) => {
       const x = 46 + (i % 6) * 54, y = 400 + Math.floor(i / 6) * 56;
@@ -107,7 +114,7 @@ export class RosterScene extends Phaser.Scene {
       this.panel(g, x, y, 50, 50, this.picked === c.id ? 0x4a4020 : 0x1e1c2a, this.picked === c.id ? 0xffffff : RARITIES[c.rarity].hex);
       add(this.add.image(x, y, CHARM_TYPES[c.type].icon).setScale(PX).setAlpha(wornBy[c.id] && wornBy[c.id] !== id ? 0.45 : 1));
       if (wornBy[c.id]) add(this.add.text(x + 20, y - 18, wornBy[c.id] === id ? '✓' : '•', { ...FONT, fontSize: '13px', fontStyle: 'bold', color: wornBy[c.id] === id ? '#88dd99' : '#ccccee', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5));
-      add(this.add.zone(x, y, 50, 50).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.picked = c.id; this.confirmDrop = null; this.redraw(); }));
+      add(this.add.zone(x, y, 50, 50).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.picked = c.id; this.pickedSkill = null; this.confirmDrop = null; this.redraw(); }));
     });
 
     // ---- the charm under inspection: look first, then wear or throw away ----
@@ -129,9 +136,15 @@ export class RosterScene extends Phaser.Scene {
         this.registry.set('bag', this.bag().filter(b => b.id !== c.id));
         this.picked = null; this.confirmDrop = null; this.setGear(g); this.redraw();
       });
+    } else if (this.pickedSkill && def.skills.includes(this.pickedSkill)) {
+      const sk = SKILLS[this.pickedSkill];
+      add(this.panel(this.add.graphics(), 180, 556, 332, 82, 0x161424, 0xb89a50));
+      add(this.add.text(30, 534, sk.name, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5));
+      if (sk.cooldown) { add(this.add.image(296, 534, 'mini_cd').setScale(PX)); add(this.add.text(314, 534, String(sk.cooldown), { ...FONT, fontSize: '14px' }).setOrigin(0, 0.5)); }
+      add(this.add.text(30, 552, sk.desc, { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 300 }, lineSpacing: 2 }).setOrigin(0, 0));
     } else {
       add(this.panel(this.add.graphics(), 180, 556, 332, 82, 0x121020, 0x33334a));
-      add(this.add.text(180, 556, bag.length ? 'แตะของขลังในย่ามเพื่อดูก่อนสวม' : 'ย่ามยังว่าง ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0.5));
+      add(this.add.text(180, 556, bag.length ? 'แตะฤทธิ์หรือของขลังเพื่อดูรายละเอียด' : 'แตะฤทธิ์เพื่ออ่าน ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0.5));
     }
   }
 

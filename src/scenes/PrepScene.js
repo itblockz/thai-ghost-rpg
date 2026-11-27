@@ -9,7 +9,7 @@ import { applyCharm } from '../data/charms.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const TEAM_SLOTS = 3;
-const ENEMY_Y = 100, TEAM_Y = 492, PANEL_TOP = 160, PANEL_BOTTOM = 430, BTN_Y = 588;
+const ENEMY_Y = 100, TEAM_Y = 492, PANEL_TOP = 160, PANEL_BOTTOM = 456, BTN_Y = 588;
 const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : [65, 180, 295]);
 
 // Before each fight. Laid out like the battlefield (enemies above, team below);
@@ -74,7 +74,7 @@ export class PrepScene extends Phaser.Scene {
 
     // selection brackets, like target brackets in battle
     const m = this.marker.clear().fillStyle(enemy ? 0xff7790 : 0xffdd55);
-    const h = 52, k = 12;
+    const h = 36, k = 10;
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
       const cx = x + sx * h, cy = y + sy * h;
       m.fillRect(Math.min(cx, cx - sx * k), cy - (sy > 0 ? 3 : 0), k, 3);
@@ -97,22 +97,22 @@ export class PrepScene extends Phaser.Scene {
       add(this.add.text(30, PANEL_TOP + 44, def.lore || '', { ...FONT, fontSize: '12px', color: '#a8a8c8' }).setOrigin(0, 0.5));
     }
 
-    let ry = PANEL_TOP + 68;
+    let ry = PANEL_TOP + 66;
     const seen = new Set(this.registry.get('seen') || []);
     for (const sid of def.skills) {
       const s = SKILLS[sid];
       // enemy skills stay unknown (???) until witnessed in a fight
       const known = !!allyId || seen.has(sid);
       // each skill sits in its own card; cooldown in that card's top-right corner
-      add(this.add.text(94, ry + 4, known ? s.name : '?', { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0).setDepth(1));
-      const facts = add(this.add.text(94, ry + 23, known ? s.desc : '', { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 228 }, lineSpacing: 0 }).setOrigin(0, 0).setDepth(1));
-      const rowH = Math.max(54, 29 + facts.height);
+      add(this.add.text(106, ry + 6, known ? s.name : '?', { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0).setDepth(1));
+      const facts = add(this.add.text(106, ry + 27, known ? s.desc : '', { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 216 }, lineSpacing: 0 }).setOrigin(0, 0).setDepth(1));
+      const rowH = Math.max(72, 33 + facts.height);
       add(this.panel(this.add.graphics(), 180, ry + rowH / 2, 312, rowH - 4, 0x201c30, 0x2e2a40));
       if (known && s.cooldown) {
         // 6pt (two art pixels) clear of the card's inner edge on top and right, like the skill icon on the left
         const t = add(this.add.text(324, ry + 26, String(s.cooldown), numFont(15)).setOrigin(1, 0.5).setDepth(1));
         add(this.add.image(324 - t.width - 20, ry + 26, 'icon_cd').setScale(PX).setDepth(1)); }
-      const icon = add(this.add.image(60, ry + rowH / 2, s.icon).setScale(PX).setDepth(1));
+      const icon = add(this.add.image(64, ry + rowH / 2, `L_${s.icon}`).setScale(PX).setDepth(1));
       if (!known) icon.setTintFill(0x2a2a3a);
       ry += rowH;
     }

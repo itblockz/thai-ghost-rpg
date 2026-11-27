@@ -16,7 +16,7 @@ const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT
 const ENEMY_Y = 140;   // enemy sprite centre
 const ALLY_Y = 345;    // retainer sprite centre
 const BTN_Y = 505;     // skill buttons
-const BTN_H = 96;      // sized to a 32pt skill icon plus its name
+const BTN_H = 116;     // sized to a 64pt skill picture plus its name
 const PANEL_BOTTOM = 436;
 
 // x positions for 1–3 units in a row
@@ -338,7 +338,7 @@ export class BattleScene extends Phaser.Scene {
     this.pixelPanel(g, 180, 140, 300, 112, 0x1a1626, r.hex);
     const objs = [g,
       this.add.text(180, 102, 'ได้ของขลัง', { ...FONT, fontSize: '13px', color: '#bbbbdd' }).setOrigin(0.5).setDepth(9),
-      this.add.image(70, 148, CHARM_TYPES[c.type].icon).setScale(PX).setDepth(9),
+      this.add.image(66, 148, `L_${CHARM_TYPES[c.type].icon}`).setScale(PX).setDepth(9),
       ...charmTitle(this, 106, 132, c, 17).map(o => o.setDepth(9)),
       ...charmEffect(this, 106, 160, c).map(o => o.setDepth(9)),
     ];
@@ -417,8 +417,8 @@ export class BattleScene extends Phaser.Scene {
       const cd = u.cd[id] || 0, sel = this.selected === id && !cd;
       const g = this.add.graphics();
       this.pixelPanel(g, x, y, w, BTN_H, cd ? 0x1e1e2a : sel ? 0x3d3d5e : 0x33334d, cd ? 0x444455 : sel ? 0xffdd55 : 0x8888cc);
-      const icon = this.add.image(x, y - 12, s.icon).setScale(PX);
-      const name = this.add.text(x, y + 26, s.name, { ...FONT, fontSize: n === 3 ? '16px' : '20px' }).setOrigin(0.5);
+      const icon = this.add.image(x, y - 14, `L_${s.icon}`).setScale(PX);
+      const name = this.add.text(x, y + 38, s.name, { ...FONT, fontSize: n === 3 ? '16px' : '20px' }).setOrigin(0.5);
       const cdText = this.add.text(x, y, cd ? String(cd) : '', { ...numFont(44), stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
       const parts = [g, icon, name, cdText];
       if (cd) [icon, name].forEach(p => p.setAlpha(0.25));

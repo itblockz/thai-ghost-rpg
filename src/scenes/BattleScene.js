@@ -183,7 +183,8 @@ export class BattleScene extends Phaser.Scene {
     for (const u of [...this.allies, ...this.enemies]) {
       u.block = false;
       u.shieldIcon.setVisible(false);
-      for (const k in u.cd) if (u.cd[k] > 0) u.cd[k]--;
+      for (const k in u.cd) if (u.cd[k] > 0 && !u.fresh?.has(k)) u.cd[k]--;
+      u.fresh?.clear();
     }
     this.refresh();
     this.startRound();
@@ -234,7 +235,8 @@ export class BattleScene extends Phaser.Scene {
       }
       if (e.block) { target.block = true; target.shieldIcon.setVisible(true); }
     }
-    if (skill.cooldown) user.cd[skillId] = skill.cooldown + 1; // +1: ticks down at end of this round
+    // show the real rest count right away; the end-of-round tick skips skills used this round
+    if (skill.cooldown) { user.cd[skillId] = skill.cooldown; (user.fresh ||= new Set()).add(skillId); }
     return { skill, dealt, blocked, mult, waiting: false };
   }
 

@@ -125,12 +125,12 @@ export class RosterScene extends Phaser.Scene {
       this.effect(30, 556, c, add);
       const owner = wornBy[c.id];
       add(this.add.text(30, 578, owner ? `${ALLIES[owner].name}สวมอยู่` : 'ยังไม่มีผู้ใดสวม', { ...FONT, fontSize: '12px', color: '#9999bb' }).setOrigin(0, 0.5));
-      if (owner === id) this.button(add, 290, 540, 90, 34, 'ถอด', 0x2a2a3a, 0x8888aa, () => { const g = this.gear(); delete g[id]; this.setGear(g); this.redraw(); });
-      if (owner !== id) this.button(add, 290, 540, 90, 34, 'สวม', 0x3d3d5e, 0xffdd55, () => {
+      if (owner === id) this.button(add, 290, 540, 80, 26, 'ถอด', 0x2a2a3a, 0x8888aa, () => { const g = this.gear(); delete g[id]; this.setGear(g); this.redraw(); });
+      if (owner !== id) this.button(add, 290, 540, 80, 26, 'สวม', 0x3d3d5e, 0xffdd55, () => {
         const g = this.gear(); for (const k in g) if (g[k] === c.id) delete g[k]; g[id] = c.id; this.setGear(g); this.redraw();
       });
       const confirming = this.confirmDrop === c.id;
-      this.button(add, 290, 578, 90, 30, confirming ? 'ทิ้งแน่?' : 'ทิ้ง', confirming ? 0x5a2d3a : 0x2a2a3a, confirming ? 0xff7790 : 0x8888aa, () => {
+      this.button(add, 290, 572, 80, 26, confirming ? 'ทิ้งแน่?' : 'ทิ้ง', confirming ? 0x5a2d3a : 0x2a2a3a, confirming ? 0xff7790 : 0x8888aa, () => {
         if (!confirming) { this.confirmDrop = c.id; return this.redraw(); }
         const g = this.gear(); for (const k in g) if (g[k] === c.id) delete g[k];
         this.registry.set('bag', this.bag().filter(b => b.id !== c.id));
@@ -160,7 +160,7 @@ export class RosterScene extends Phaser.Scene {
 
   button(add, x, y, w, h, label, fill, border, onTap) {
     add(this.panel(this.add.graphics(), x, y, w, h, fill, border));
-    add(this.add.text(x, y, label, { ...FONT, fontSize: '15px', fontStyle: 'bold' }).setOrigin(0.5));
+    add(this.add.text(x, y, label, { ...FONT, fontSize: h < 30 ? '13px' : '15px', fontStyle: 'bold' }).setOrigin(0.5));
     add(this.add.zone(x, y, w, h).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onTap(); }));
   }
 

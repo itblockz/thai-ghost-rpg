@@ -9,7 +9,7 @@ import { applyCharm } from '../data/charms.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const TEAM_SLOTS = 3;
-const ENEMY_Y = 112, TEAM_Y = 488, PANEL_TOP = 178, PANEL_BOTTOM = 424, BTN_Y = 588;
+const ENEMY_Y = 100, TEAM_Y = 492, PANEL_TOP = 160, PANEL_BOTTOM = 430, BTN_Y = 588;
 const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : [65, 180, 295]);
 
 // Before each fight. Laid out like the battlefield (enemies above, team below);

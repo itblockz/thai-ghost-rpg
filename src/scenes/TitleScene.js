@@ -30,7 +30,7 @@ export class TitleScene extends Phaser.Scene {
     const heir = this.add.image(180, 572, 'heir').setScale(PX).setTintFill(0x05030a);
     idleFrames(this, heir, 'heir');
     this.add.text(180, 52, 'ประตูหิมพานต์', { ...FONT, fontSize: '40px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
-    this.add.text(180, 92, 'บทที่ ๑ — คืนเดือนดับ', { ...FONT, fontSize: '17px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+    this.add.text(180, 92, 'บรรพที่ ๑ — คืนเดือนดับ', { ...FONT, fontSize: '17px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
     const saved = loadProgress();
     const go = fn => () => { unlockAudio(); play('click'); fn(this); };
     if (!saved) {

@@ -289,7 +289,7 @@ export class BattleScene extends Phaser.Scene {
 
   // Popups/sounds/flash for one target's result.
   feedback(target, r) {
-    if (r.missed) { this.popup(target.x, target.y - 30, 'พลาด!', '#bbbbcc', 22); return; }
+    if (r.missed) { this.popup(target.x, target.y - 30, 'ตาพร่า พลาดเป้า!', '#bbbbcc', 22); return; }
     if (r.healed) { this.popup(target.x, target.y - 20, `+${r.healed}`, '#66ee88', 26); play('ward'); }
     if (!r.dealt && !r.blocked) return;
     {
@@ -297,7 +297,7 @@ export class BattleScene extends Phaser.Scene {
       else if (r.dealt) {
         const heavy = r.dealt >= 12;
         this.popup(target.x, target.y - 20, `-${r.dealt}`, target.side === 'ally' ? '#ff5566' : r.mult > 1 ? '#ff7733' : '#ffdd55', heavy ? 34 : 26);
-        if (r.mult > 1) this.popup(target.x, target.y + 20, 'โดนจุดอ่อน!', '#ff9944', 16);
+        if (r.mult > 1) this.popup(target.x, target.y + 20, 'ถูกจุดอ่อน!', '#ff9944', 16);
         if (target.side === 'ally') this.pixelShake(heavy ? 300 : 120, heavy ? 8 : 4);
         target.sprite.setTintFill(0xffffff);
         this.time.delayedCall(90, () => target.alive && target.sprite.clearTint());
@@ -343,7 +343,7 @@ export class BattleScene extends Phaser.Scene {
     u.stunned--;
     this.busy = true;
     this.buildButtons();
-    this.popup(u.x, u.y - 20, 'จมน้ำ… เสียตา', '#88bbff', 18);
+    this.popup(u.x, u.y - 20, 'จมน้ำ! เสียตา', '#88bbff', 18);
     this.tweens.add({ targets: u.sprite, y: u.y + 9, yoyo: true, duration: 260, ease: 'Stepped', easeParams: [3] });
     this.refresh();
     this.time.delayedCall(700, then);
@@ -381,7 +381,7 @@ export class BattleScene extends Phaser.Scene {
       const parts = [g, icon, name, cdText];
       if (cd) [icon, name].forEach(p => p.setAlpha(0.25));
       const zone = this.add.zone(x, y, w, 120).setInteractive({ useHandCursor: true });
-      zone.on('pointerdown', () => { if (this.busy) return; if (cd) this.turnText.setText(`${s.name} · อีก ${cd} ตาจึงใช้ได้`); else this.select(id); });
+      zone.on('pointerdown', () => { if (this.busy) return; if (cd) this.turnText.setText(`${s.name} · ต้องพักฤทธิ์อีก ${cd} ตา`); else this.select(id); });
       parts.push(zone);
       this.btns.push({ id, parts });
     });
@@ -485,11 +485,11 @@ export class BattleScene extends Phaser.Scene {
   skillRows(y, skill) {
     for (const e of skill.effects) {
       if (e.wait) y = this.cardRow(y, 'icon_clock', 'ตั้งท่าก่อน', `${e.wait} ตา`, '#ff8899');
-      if (e.takenMult > 1) y = this.cardRow(y, 'icon_danger', 'ระหว่างตั้งท่าโดนตี', `x${e.takenMult}`, '#ff8899');
+      if (e.takenMult > 1) y = this.cardRow(y, 'icon_danger', 'ระหว่างตั้งท่าถูกตีแรงขึ้น', `x${e.takenMult}`, '#ff8899');
       if (e.damage != null) y = this.cardRow(y, 'icon_dmg', 'อานุภาพ', String(e.damage), '#ffdd55');
-      if (e.block) y = this.cardRow(y, 'icon_shield', 'กันการโจมตีให้เป้า', 'ตานี้', '#ffe066');
+      if (e.block) y = this.cardRow(y, 'icon_shield', 'กันภัยให้', 'ตานี้', '#ffe066');
     }
-    return this.cardRow(y, 'icon_clock', 'พักวิชา', skill.cooldown ? `${skill.cooldown} ตา` : 'มิต้องพัก');
+    return this.cardRow(y, 'icon_clock', 'พักฤทธิ์', skill.cooldown ? `${skill.cooldown} ตา` : 'มิต้องพัก');
   }
 
   showSkillInfo(skill, type, where = 'bottom') {

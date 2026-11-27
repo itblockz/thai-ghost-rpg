@@ -40,8 +40,8 @@ export const ENEMIES = {
 
 // Chapters group stages on the map.
 export const CHAPTERS = [
-  { title: 'บทที่ ๑ — คืนเดือนดับ', start: { name: 'ศาลาอาจารย์', node: 'node_shrine' }, map: 'art_map' },
-  { title: 'บทที่ ๒ — ลำน้ำมืด', start: { name: 'ปลายหมู่บ้าน', node: 'node_village' }, map: 'art_map2' },
+  { title: 'บรรพที่ ๑ — คืนเดือนดับ', start: { name: 'ศาลาอาจารย์', node: 'node_shrine' }, map: 'art_map' },
+  { title: 'บรรพที่ ๒ — ลำน้ำมืด', start: { name: 'ปลายหมู่บ้าน', node: 'node_village' }, map: 'art_map2' },
 ];
 export const chapterOf = i => STAGES[i]?.chapter ?? 0;
 

@@ -43,7 +43,7 @@ export class PrepScene extends Phaser.Scene {
 
     // start (same style as the battle buttons)
     this.panel(this.add.graphics(), 180, BTN_Y, 332, 80, 0x3d3d5e, 0xffdd55);
-    this.add.text(180, BTN_Y, 'เข้าสู้', { ...FONT, fontSize: '26px', fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.text(180, BTN_Y, 'ออกศึก', { ...FONT, fontSize: '26px', fontStyle: 'bold' }).setOrigin(0.5);
     this.add.zone(180, BTN_Y, 332, 80).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => { play('click'); this.scene.start('Battle', { stage: this.stage, first: !!data?.first, retry: !!data?.retry }); });
 

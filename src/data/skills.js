@@ -39,14 +39,14 @@ export function skillFacts(skill) {
   const out = [];
   for (const e of skill.effects) {
     if (e.wait) out.push(`ตั้งท่า ${e.wait} ตาก่อนออกฤทธิ์`);
-    if (e.takenMult > 1) out.push(`ระหว่างตั้งท่าโดนตี x${e.takenMult}`);
+    if (e.takenMult > 1) out.push(`ระหว่างตั้งท่าถูกตีแรงขึ้น ${e.takenMult} เท่า`);
     if (e.damage != null) out.push(`อานุภาพ ${e.damage}`);
-    if (e.block) out.push('กันการโจมตีให้พวกเดียวกัน 1 ตา');
+    if (e.block) out.push('กันภัยให้บริวาร 1 ตา');
     if (e.stun) out.push(`เป้าเสียตา ${e.stun} ตา`);
-    if (e.blind) out.push('การโจมตีครั้งถัดไปของเป้าพลาด');
+    if (e.blind) out.push('เป้าตาพร่า ตีครั้งหน้าพลาด');
     if (e.heal) out.push(`ฟื้นขวัญ ${e.heal}`);
   }
-  if (skill.area) out.push('โดนทุกตัว');
-  out.push(skill.cooldown ? `พัก ${skill.cooldown} ตา` : 'ใช้ได้ทุกตา');
+  if (skill.area) out.push('ใส่ทุกตน');
+  out.push(skill.cooldown ? `พักฤทธิ์ ${skill.cooldown} ตา` : 'ใช้ได้ทุกตา');
   return out;
 }

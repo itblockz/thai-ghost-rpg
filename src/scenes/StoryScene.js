@@ -71,7 +71,7 @@ export class StoryScene extends Phaser.Scene {
     if (page.recruit) {
       const team = this.registry.get('team') || [];
       if (!team.includes(page.recruit)) this.registry.set('team', [...team, page.recruit]);
-      this.gift.setText(`ได้บริวาร: ${ALLIES[page.recruit].name}`);
+      this.gift.setText(`${ALLIES[page.recruit].name} เข้ามาเป็นบริวาร`);
       play('ward');
     }
 

@@ -24,8 +24,8 @@ export function continueGame(scene) {
   scene.registry.set('bag', p.bag);
   scene.registry.set('gear', p.gear);
   scene.registry.set('bench', p.bench);
-  // saves that finished chapter 2 before ผีกระหัง joined there: he joins now
-  if (p.cleared >= 5 && !p.team.includes('krahang')) scene.registry.set('team', [...p.team, 'krahang']);
+  // saves already past the temple gate (where ผีกระหัง joins) but without him: he joins now
+  if (p.cleared >= 6 && !p.team.includes('krahang')) scene.registry.set('team', [...p.team, 'krahang']);
   // saves from before the ??? system: foes of stages already cleared count as known
   const known = new Set(p.seen);
   STAGES.slice(0, p.cleared).forEach(s => s.enemies.forEach(id => ENEMIES[id].skills.forEach(k => known.add(k))));

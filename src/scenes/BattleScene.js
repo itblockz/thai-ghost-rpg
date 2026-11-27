@@ -30,6 +30,7 @@ export class BattleScene extends Phaser.Scene {
     this.stage = data?.stage ?? 0;
     const stage = STAGES[this.stage];
     this.busy = true;
+    this.camHome = undefined;
     this.ended = false;
     this.active = null;
 
@@ -75,11 +76,14 @@ export class BattleScene extends Phaser.Scene {
 
   // Screen shake in whole-pixel jumps.
   pixelShake(duration, amp) {
+    // the camera is zoomed and centred, so its resting scroll is not 0,0 — shake around that
     const cam = this.cameras.main, n = Math.max(2, Math.round(duration / 40));
+    if (this.camHome === undefined) this.camHome = { x: cam.scrollX, y: cam.scrollY };
+    const home = this.camHome;
     this.time.addEvent({ delay: 40, repeat: n - 1, callback: () => {
-      cam.setScroll(Phaser.Math.RND.pick([-amp, 0, amp]), Phaser.Math.RND.pick([-amp, 0, amp]));
+      cam.setScroll(home.x + Phaser.Math.RND.pick([-amp, 0, amp]), home.y + Phaser.Math.RND.pick([-amp, 0, amp]));
     } });
-    this.time.delayedCall(n * 40 + 10, () => cam.setScroll(0, 0));
+    this.time.delayedCall(n * 40 + 10, () => cam.setScroll(home.x, home.y));
   }
 
   // Pixel-art feel: units move in whole art pixels, never sub-pixel.
@@ -605,7 +609,7 @@ export class BattleScene extends Phaser.Scene {
   intro(short) {
     const veil = this.add.rectangle(180, 320, 360, 640, 0x000000, 1).setDepth(20);
     let done = false;
-    const raised = this.enemies.flatMap(e => [e.sprite, e.glow]);
+    const raised = this.enemies.map(e => e.sprite); // glows keep their own faint alpha (set in refresh)
     const finish = () => {
       if (done) return;
       done = true;
@@ -621,7 +625,7 @@ export class BattleScene extends Phaser.Scene {
 
     raised.forEach(o => o.setDepth(21).setAlpha(0));
     this.enemies.forEach(e => {
-      this.tweens.add({ targets: [e.sprite, e.glow], alpha: 1, duration: 900, ease: 'Stepped', easeParams: [5] });
+      this.tweens.add({ targets: e.sprite, alpha: 1, duration: 900, ease: 'Stepped', easeParams: [5] });
     });
     this.time.delayedCall(350, () => play('laugh'));
     this.time.delayedCall(700, () => {

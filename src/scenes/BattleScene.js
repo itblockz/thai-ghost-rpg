@@ -68,6 +68,17 @@ export class BattleScene extends Phaser.Scene {
     const mute = this.add.image(334, 26, muteKey()).setScale(PX).setInteractive({ useHandCursor: true });
     mute.on('pointerdown', () => { toggleMute(); mute.setTexture(muteKey()); });
 
+    // retreat to the prep screen (tap twice, so a stray tap doesn't throw the fight away)
+    let sure = false;
+    const flee = this.add.text(14, 26, '‹ ถอย', { ...FONT, fontSize: '15px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0, 0.5).setPadding(6, 6, 6, 6).setDepth(10)
+      .setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+        if (this.ended) return;
+        play('click');
+        if (!sure) { sure = true; flee.setText('‹ ถอยแน่?').setColor('#ff7790'); this.time.delayedCall(2500, () => { sure = false; flee.setText('‹ ถอย').setColor('#ccccee'); }); return; }
+        this.ended = true;
+        this.scene.start('Prep', { stage: this.stage, first: this.first, retry: true });
+      });
+
     this.turnText = this.add.text(180, 606, '', { ...FONT, fontSize: '13px', color: '#ccccee', align: 'center', wordWrap: { width: 340 } }).setOrigin(0.5);
     this.btns = [];
     this.card = this.add.container(0, 0).setDepth(10).setVisible(false);

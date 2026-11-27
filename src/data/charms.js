@@ -47,16 +47,43 @@ export function rollCharm(stage = {}, wave = 0, luck = 0) {
 // For stat charms, the 8x8 icon that goes with the number (scenes draw icon + '+N').
 export const charmStatIcon = c => ({ takrut: 'icon_hp', fang: 'icon_atk', feather: 'icon_spd' }[c.type] || null);
 
+// ปลุกเสก: feeding other charms into one raises its เสก level (0–10). Points per charm fed:
+// common 1, rare 3, mythic 10 — doubled when it is the same kind. Each level needs more.
+export const ENCH_MAX = 10;
+export const enchNeed = l => 5 + 5 * l;              // points from level l to l+1
+export function enchLevel(pts = 0) {
+  let l = 0, left = pts;
+  while (l < ENCH_MAX && left >= enchNeed(l)) { left -= enchNeed(l); l++; }
+  return { l, into: l >= ENCH_MAX ? 0 : left, need: l >= ENCH_MAX ? 0 : enchNeed(l) };
+}
+const RARITY_PTS = { common: 1, rare: 3, mythic: 10 };
+export const enchPoints = (feed, main) => RARITY_PTS[feed.rarity] * (feed.type === main.type ? 2 : 1);
+// what a charm gives once its เสก level is counted in
+export function effective(c) {
+  const e = enchLevel(c.pts).l;
+  switch (c.type) {
+    case 'takrut': return { value: c.value + e };
+    case 'fang': return { value: c.value + Math.floor(e / 2) };
+    case 'feather': return { value: c.value + Math.floor(e / 4) };
+    case 'lucky': return { value: c.value + 2 * e };
+    case 'bia': return { value: c.value + e };
+    case 'prakam': return { value: c.value + (e >= 5 ? 1 : 0) + (e >= 10 ? 1 : 0) };
+    case 'yant': return { value: c.value, wards: e >= ENCH_MAX ? ['stun', 'blind'] : c.wards };
+    default: return { value: c.value };
+  }
+}
+
 // What a worn charm changes on a unit at the start of a fight.
 export function applyCharm(u, c) {
   if (!c) return;
-  if (c.type === 'takrut') { u.hp += c.value; u.maxHp += c.value; }
-  if (c.type === 'fang') u.atk = (u.atk || 0) + c.value;
-  if (c.type === 'feather') u.spd = (u.spd || 10) + c.value;
-  if (c.type === 'lucky') u.extraFind = (u.extraFind || 0) + c.value;
-  if (c.type === 'bia') u.luck = (u.luck || 0) + c.value;
-  if (c.type === 'prakam') u.openBlock = (u.openBlock || 0) + c.value;
-  if (c.type === 'yant') u.wards = new Set([...(u.wards || []), ...c.wards]);
+  const { value, wards } = effective(c);
+  if (c.type === 'takrut') { u.hp += value; u.maxHp += value; }
+  if (c.type === 'fang') u.atk = (u.atk || 0) + value;
+  if (c.type === 'feather') u.spd = (u.spd || 10) + value;
+  if (c.type === 'lucky') u.extraFind = (u.extraFind || 0) + value;
+  if (c.type === 'bia') u.luck = (u.luck || 0) + value;
+  if (c.type === 'prakam') u.openBlock = (u.openBlock || 0) + value;
+  if (c.type === 'yant') u.wards = new Set([...(u.wards || []), ...wards]);
 }
 
 // Charm slots: one at first, a second once chapter 2 is reached. The same kind may be worn twice.

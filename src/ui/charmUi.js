@@ -1,5 +1,5 @@
 import { ZOOM, FONT_FAMILY, TEXT_METRICS, PX, numFont } from '../display.js';
-import { RARITIES, CHARM_TYPES, charmStatIcon } from '../data/charms.js';
+import { RARITIES, CHARM_TYPES, charmStatIcon, effective, enchLevel } from '../data/charms.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const GEMS = { common: 1, rare: 2, mythic: 3 };
@@ -7,7 +7,8 @@ const GEMS = { common: 1, rare: 2, mythic: 3 };
 // Charm name in its rarity colour, followed by 1–3 pixel gems (more = rarer) instead of a word.
 export function charmTitle(scene, x, y, c, size = 15) {
   const r = RARITIES[c.rarity];
-  const t = scene.add.text(x, y, CHARM_TYPES[c.type].name, { ...FONT, fontSize: `${size}px`, fontStyle: 'bold', color: r.color }).setOrigin(0, 0.5);
+  const e = enchLevel(c.pts).l; // เสก level shown as +N after the name
+  const t = scene.add.text(x, y, CHARM_TYPES[c.type].name + (e ? ` +${e}` : ''), { ...FONT, fontSize: `${size}px`, fontStyle: 'bold', color: r.color }).setOrigin(0, 0.5);
   return [t, gems(scene, x + t.width + 8, y, c.rarity)];
 }
 
@@ -25,10 +26,11 @@ export function gems(scene, x, y, rarity) {
 // anything else as a short sentence, like a skill's description.
 export function charmEffect(scene, x, y, c) {
   const stat = charmStatIcon(c);
-  if (stat) return [scene.add.image(x + 16, y, stat).setScale(PX), scene.add.text(x + 38, y, `+${c.value}`, numFont(15)).setOrigin(0, 0.5)];
+  if (stat) return [scene.add.image(x + 16, y, stat).setScale(PX), scene.add.text(x + 38, y, `+${effective(c).value}`, numFont(15)).setOrigin(0, 0.5)];
   return [scene.add.text(x, y, charmDesc(c), { ...FONT, fontSize: '13px', color: '#ccccee' }).setOrigin(0, 0.5)];
 }
-export function charmDesc(c) {
+export function charmDesc(c0) {
+  const c = { ...c0, ...effective(c0) };
   if (c.type === 'prakam') return c.value > 1 ? `กางกันภัยตนเองใน ${c.value} ตาแรกของศึก` : 'กางกันภัยตนเองในตาแรกของศึก';
   if (c.type === 'yant') return 'ผู้สวม' + c.wards.map(w => (w === 'stun' ? 'ไม่จมน้ำ' : 'ไม่ตาพร่า')).join('และ');
   if (c.type === 'lucky') return `ชนะศึก มีโอกาส ${c.value}% ได้ของเพิ่มอีกชิ้น`;

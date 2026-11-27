@@ -20,3 +20,16 @@ export const SKILLS = {
 };
 
 export const skillDamage = skill => skill.effects.reduce((s, e) => s + (e.damage || 0), 0);
+
+// Plain-language facts for a skill, every number shown (used on the pre-battle screen).
+export function skillFacts(skill) {
+  const out = [];
+  for (const e of skill.effects) {
+    if (e.wait) out.push(`ตั้งท่า ${e.wait} ตาก่อนออกฤทธิ์`);
+    if (e.takenMult > 1) out.push(`ระหว่างตั้งท่าโดนตี x${e.takenMult}`);
+    if (e.damage != null) out.push(`อานุภาพ ${e.damage}`);
+    if (e.block) out.push('กันการโจมตีให้พวกเดียวกัน 1 ตา');
+  }
+  out.push(skill.cooldown ? `พัก ${skill.cooldown} ตา` : 'ใช้ได้ทุกตา');
+  return out;
+}

@@ -125,17 +125,8 @@ export class BattleScene extends Phaser.Scene {
     u.hpText = this.add.text(x, by + 14, '', { ...FONT, fontSize: '11px', color: '#ccccee' }).setOrigin(0.5, 0);
     u.hud.push(u.bar, u.hpText);
 
-    // enemies show their skills (cooldowns visible) under the bar
-    if (side === 'enemy') {
-      u.tiles = u.skills.map((sid, i) => {
-        const tx = x + (i - (u.skills.length - 1) / 2) * 56, ty = by + 62; // clear of the HP numbers
-        const g = this.add.graphics();
-        const icon = this.add.image(tx, ty, SKILLS[sid].icon).setScale(PX);
-        const cdText = this.add.text(tx, ty, '', { ...FONT, fontSize: '26px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
-        this.add.zone(tx, ty, 54, 54).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(SKILLS[sid], `ฤทธิ์ของ${def.name}`));
-        return { sid, g, icon, cdText, x: tx, y: ty };
-      });
-    }
+    // enemy skills are studied on the prep screen; the field shows only the fight itself
+    u.tiles = [];
     u.marker = this.add.image(x, y - u.half - 10, 'icon_target').setScale(PX).setVisible(false).setDepth(6);
     u.shieldIcon = this.add.image(x + u.half * 0.7, y - u.half * 0.7, 'icon_shield').setScale(PX).setVisible(false).setDepth(6);
 
@@ -653,16 +644,8 @@ export class BattleScene extends Phaser.Scene {
       this.tweens.add({ targets: e.sprite, alpha: 1, duration: 900, ease: 'Stepped', easeParams: [5] });
     });
     later(350, () => play('laugh'));
-    later(700, () => {
-      const counts = {};
-      this.enemies.forEach(e => { counts[e.def.name] = (counts[e.def.name] || 0) + 1; });
-      const title = Object.entries(counts).map(([n, c]) => (c > 1 ? `${n} ×${c}` : n)).join(' · ');
-      this.banner = this.add.text(180, 300, `— ${title} —`, { ...FONT, fontSize: '28px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(22).setAlpha(0);
-      this.bannerSub = this.add.text(180, 335, this.enemies[0].def.lore || '', { ...FONT, fontSize: '14px', color: '#ccccee', align: 'center', wordWrap: { width: 300 } }).setOrigin(0.5, 0).setDepth(22).setAlpha(0);
-      this.tweens.add({ targets: [this.banner, this.bannerSub], alpha: 1, duration: 400, ease: 'Stepped', easeParams: [4] });
-      play('growl');
-    });
-    later(2600, finish);
+    later(700, () => play('growl')); // names and skills were shown on the prep screen
+    later(1500, finish);
     this.input.once('pointerdown', finish);
   }
 
@@ -693,7 +676,7 @@ export class BattleScene extends Phaser.Scene {
     });
     this.add.text(180, 250, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
-    const next = won ? () => afterVictory(this, this.stage) : () => this.scene.restart({ stage: this.stage, retry: true });
+    const next = won ? () => afterVictory(this, this.stage) : () => this.scene.start('Prep', { stage: this.stage, retry: true });
     this.pixelPanel(this.add.graphics().setDepth(9), 180, BTN_Y, 332, 120, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
     this.add.image(84, BTN_Y, won ? 'icon_next' : 'icon_retry').setScale(PX).setDepth(9);
     this.add.text(124, BTN_Y, label, { ...FONT, fontSize: '28px' }).setOrigin(0, 0.5).setDepth(9);

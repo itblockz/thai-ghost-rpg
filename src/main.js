@@ -7,6 +7,7 @@ import '@fontsource/kanit/latin-700.css';
 import { TitleScene } from './scenes/TitleScene.js';
 import { BattleScene } from './scenes/BattleScene.js';
 import { StoryScene } from './scenes/StoryScene.js';
+import { PrepScene } from './scenes/PrepScene.js';
 import { W, H, ZOOM } from './display.js';
 
 // Map (WorldScene) is kept in the repo but not loaded yet — focusing on combat first.
@@ -18,5 +19,5 @@ Promise.all(fontLoads).catch(() => {}).then(() => new Phaser.Game({
   backgroundColor: '#0b0b1a',
   antialias: true,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: W * ZOOM, height: H * ZOOM },
-  scene: [TitleScene, StoryScene, BattleScene],
+  scene: [TitleScene, StoryScene, PrepScene, BattleScene],
 }));

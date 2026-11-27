@@ -62,9 +62,10 @@ export class PrepScene extends Phaser.Scene {
     back.setPadding(6, 6, 6, 6);
 
     // what this stage tends to drop (tap for the charm guide)
-    if (stage.drop) this.add.image(332, 26, CHARM_TYPES[stage.drop].icon).setScale(PX);
-    else if (stage.richDrop) gems(this, 308, 26, 'mythic'); // boss: วิเศษ more often
-    this.add.zone(332, 30, 52, 52).setInteractive({ useHandCursor: true })
+    if (stage.drop) this.add.image(334, 26, CHARM_TYPES[stage.drop].icon).setScale(PX);
+    if (stage.richDrop) gems(this, 300, 44, 'mythic'); // boss: วิเศษ more often
+    this.add.text(314, 26, 'ของ ›', { ...FONT, fontSize: '12px', color: '#ffe08a', stroke: '#000', strokeThickness: 3 }).setOrigin(1, 0.5);
+    this.add.zone(316, 30, 80, 52).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => { play('click'); this.scene.start('Guide', { back: { scene: 'Prep', data: this.startData } }); });
 
     // reopen on the retainer just moved (see swap)

@@ -2090,6 +2090,68 @@ function drawTitleArt(scene) {
   });
 }
 
+
+/** Story portraits drawn at 64x64 on the shared grid (128pt): richer than the 32x32 field sprites. */
+function drawPortraits(scene) {
+  // ทายาท — the master's young disciple: cropped hair, white shirt, red sash, holding the master's lantern.
+  // Two frames: the lantern flame flickers.
+  for (const [key, flame] of [['p_heir', 0], ['p_heir_idle2', 1]]) {
+    canvasArt(scene, key, 64, 64, (px, rect) => {
+      const K = '#141018', skin = '#e8c9a0', skinS = '#c89a74', skinD = '#a8785a', hair = '#1a1414', hairH = '#3a2e30';
+      const shirt = '#f0ece4', shirtS = '#c8c4d0', shirtD = '#9a96a8', sash = '#c0283a', sashD = '#7a1020';
+      const disc = (cx, cy, rx, ry, col) => { for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) if ((x * x) / (rx * rx) + (y * y) / (ry * ry) <= 1) px(cx + x, cy + y, col); };
+      // lantern glow behind (dithered)
+      for (let y = -16; y <= 16; y++) for (let x = -16; x <= 16; x++) { const d = Math.hypot(x, y); if (d < 16 && (x + y) % 2 === 0) px(14 + x, 46 + y, d < 8 ? '#5a3a18' : '#3a2814'); }
+      // body: shoulders and shirt (outline first)
+      disc(33, 60, 22, 17, K);
+      disc(33, 60, 21, 16, shirt);
+      for (let y = 46; y < 64; y++) for (let x = 12; x < 55; x++) if ((x - 33) ** 2 / 441 + (y - 60) ** 2 / 256 <= 1 && x > 44) px(x, y, (x + y) % 2 ? shirtS : shirt);
+      rect(46, 50, 1, 14, shirtD); rect(20, 52, 1, 12, shirtD);
+      // collar (Thai round-neck shirt) and buttons
+      for (let x = -5; x <= 5; x++) px(33 + x, 44 + Math.round(Math.abs(x) * 0.5), shirtD);
+      [50, 55, 60].forEach(y => px(33, y, shirtD));
+      // red sash across the chest
+      for (let i = 0; i < 26; i++) { const x = 18 + i, y = 46 + Math.round(i * 0.62); rect(x, y, 2, 4, i % 5 === 4 ? sashD : sash); }
+      // neck
+      rect(29, 37, 9, 7, K); rect(30, 37, 7, 7, skinS); rect(30, 42, 7, 1, skinD);
+      // head: outline, face, cheek shade
+      disc(33, 25, 12, 14, K);
+      disc(33, 25, 11, 13, skin);
+      for (let y = 14; y < 39; y++) for (let x = 40; x < 45; x++) if ((x - 33) ** 2 / 121 + (y - 25) ** 2 / 169 <= 1) px(x, y, skinS);
+      // ears
+      disc(21, 26, 2, 3, K); disc(21, 26, 1, 2, skinS); disc(45, 26, 2, 3, K); disc(45, 26, 1, 2, skinS);
+      // hair: short crop with a side part
+      // (a little fuller than the skull, so the crop has volume)
+      disc(33, 22, 13, 12, K);
+      for (let y = 10; y < 24; y++) for (let x = 20; x < 47; x++) {
+        const inHair = (x - 33) ** 2 / 144 + (y - 22) ** 2 / 121 <= 1;
+        const fringe = y < 17 || (y < 22 && (x < 24 || x > 42)) || (y < 19 && x > 33 && x < 41);
+        if (inHair && fringe) px(x, y, (x === 30 && y < 17) || (y === 12 && x > 34 && x < 40) ? hairH : hair);
+      }
+      // face below the hairline (redrawn over the hair outline)
+      for (let y = 17; y < 39; y++) for (let x = 22; x < 45; x++) {
+        const inFace = (x - 33) ** 2 / 121 + (y - 25) ** 2 / 169 <= 1;
+        const fringe = (y < 22 && (x < 24 || x > 42)) || (y < 19 && x > 33 && x < 41);
+        if (inFace && !fringe) px(x, y, x > 40 ? skinS : skin);
+      }
+      // brows, eyes (with a light in them), nose, mouth
+      rect(26, 21, 5, 1, hair); rect(36, 21, 5, 1, hair);
+      rect(27, 24, 3, 3, K); px(28, 24, '#ffffff'); rect(37, 24, 3, 3, K); px(38, 24, '#ffffff');
+      px(33, 28, skinD); px(34, 29, skinD);
+      rect(31, 32, 5, 1, '#8a3a3a'); px(32, 33, '#a85050'); px(33, 33, '#a85050');
+      px(25, 30, '#e8a890'); px(41, 30, '#e8a890');
+      // hand raised, holding the lantern by its ring
+      disc(19, 41, 4, 3, K); disc(19, 41, 3, 2, skin);
+      rect(14, 36, 1, 4, '#555566');
+      // lantern: cap, glass, flame, base
+      rect(8, 39, 13, 2, '#7a4a20'); rect(9, 41, 11, 12, '#d08a30'); rect(10, 42, 9, 10, flame ? '#ffe080' : '#ffd070');
+      rect(13, 44 - flame, 3, 6 + flame, '#fff0b0'); px(14, 43 - flame, '#ffffff');
+      rect(8, 53, 13, 2, '#7a4a20');
+      rect(9, 41, 1, 12, '#a86a28'); rect(18, 41, 1, 12, '#a86a28');
+    });
+  }
+}
+
 /** Story illustrations (procedural pixel art). */
 function canvasArt(scene, key, W, H, draw, outW = W) {
   if (scene.textures.exists(key)) return;
@@ -2256,6 +2318,7 @@ export function registerSprites(scene) {
   // story's forest page: the sky-and-treeline part of the battle backdrop
   storyCrop(scene, 'art_forest', 'bg_night', 40);
   drawStoryArt(scene);
+  drawPortraits(scene);
   drawVillageBackdrop(scene);
   drawTitleArt(scene);
   drawMapArt(scene);
@@ -2268,7 +2331,7 @@ export function registerSprites(scene) {
     SPRITES[`${key}_ko`] = rows[0].split('').map((_, x) => Array.from({ length: n }, (_, y) => rows[n - 1 - y][x]).join(''));
   }
   // story portraits (p_<unit>): 64x64 on the shared grid, smoothed up from the 32x32 sprite and its idle frame
-  for (const key of ['heir', 'kumarn', 'kongkoi', 'krasue', 'phrai', 'khamot', 'naga']) {
+  for (const key of ['kumarn', 'kongkoi', 'krasue', 'phrai', 'khamot', 'naga']) { // heir: hand-drawn in drawPortraits
     for (const k of [key, `${key}_idle2`]) if (SPRITES[k] && !SPRITES[`p_${k}`]) SPRITES[`p_${k}`] = scale2x(SPRITES[k]);
   }
   for (const key of Object.keys(SPRITES)) {

@@ -75,18 +75,18 @@ export class RosterScene extends Phaser.Scene {
     this.iconNums(330, 190, [['icon_hp', u.maxHp], ['icon_atk', u.atk]], add);
     add(this.add.text(30, 213, def.lore, { ...FONT, fontSize: '12px', color: '#a8a8c8', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
     def.skills.forEach((sid, i) => {
-      const x = 64 + i * 76;
-      add(this.add.image(x, 260, `L_${SKILLS[sid].icon}`).setScale(PX));
-      add(this.add.text(x, 304, SKILLS[sid].name, { ...FONT, fontSize: '11px', color: this.pickedSkill === sid ? '#ffe08a' : '#ccccee' }).setOrigin(0.5));
+      const x = 58 + i * 66;
+      add(this.add.image(x, 262, SKILLS[sid].icon).setScale(PX));
+      add(this.add.text(x, 300, SKILLS[sid].name, { ...FONT, fontSize: '11px', color: this.pickedSkill === sid ? '#ffe08a' : '#ccccee' }).setOrigin(0.5));
       // tap a skill to read it in the panel below
-      add(this.add.zone(x, 272, 72, 80).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.pickedSkill = sid; this.picked = null; this.redraw(); }));
+      add(this.add.zone(x, 272, 62, 76).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.pickedSkill = sid; this.picked = null; this.redraw(); }));
     });
     // the single charm slot: its frame says "one" without words; empty shows +
     const sx = 288, sy = 268;
-    add(this.panel(this.add.graphics(), sx, sy, 76, 76, worn ? 0x2a2418 : 0x121020, worn ? RARITIES[worn.rarity].hex : 0x44445e));
+    add(this.panel(this.add.graphics(), sx, sy, 62, 62, worn ? 0x2a2418 : 0x121020, worn ? RARITIES[worn.rarity].hex : 0x44445e));
     if (worn) {
-      add(this.add.image(sx, sy, `L_${CHARM_TYPES[worn.type].icon}`).setScale(PX));
-      add(this.add.zone(sx, sy, 76, 76).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.picked = worn.id; this.pickedSkill = null; this.confirmDrop = null; this.redraw(); }));
+      add(this.add.image(sx, sy, CHARM_TYPES[worn.type].icon).setScale(PX));
+      add(this.add.zone(sx, sy, 62, 62).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.picked = worn.id; this.pickedSkill = null; this.confirmDrop = null; this.redraw(); }));
     } else {
       add(this.add.text(sx, sy, '+', { ...FONT, fontSize: '28px', color: '#55557a' }).setOrigin(0.5));
     }

@@ -2215,10 +2215,6 @@ export function registerSprites(scene) {
   for (const key of ['heir', 'kumarn', 'kongkoi', 'krasue', 'phrai', 'khamot', 'naga']) {
     for (const k of [key, `${key}_idle2`]) if (SPRITES[k] && !SPRITES[`p_${k}`]) SPRITES[`p_${k}`] = scale2x(SPRITES[k]);
   }
-  // large skill & charm pictures (L_<icon>): 32x32, the same size as a character, smoothed up from the 16x16 icon
-  for (const key of Object.keys(SPRITES)) {
-    if ((key.startsWith('icon_') || key.startsWith('charm_')) && !SPRITES[`L_${key}`] && SPRITES[key].length === 16) SPRITES[`L_${key}`] = scale2x(SPRITES[key]);
-  }
   for (const key of Object.keys(SPRITES)) {
     // never upscale an upscale: '@2' keys used to be doubled again on every scene, exhausting phone memory
     if (key.startsWith('fx_') && !key.includes('@') && !SPRITES[`${key}@2`]) SPRITES[`${key}@2`] = scale2x(SPRITES[key]);

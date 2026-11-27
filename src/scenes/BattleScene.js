@@ -108,7 +108,8 @@ export class BattleScene extends Phaser.Scene {
     };
     // every unit is drawn at the same pixel size; bigger creatures simply have bigger grids
     const grid = this.textures.get(def.sprite).getSourceImage().width;
-    u.glow = this.add.image(x, y, pixelDisc(this, grid + 6)).setScale(PX).setTint(side === 'enemy' ? 0xff3060 : 0xffd860).setAlpha(side === 'enemy' ? 0.12 : 0);
+    // a boss carries a wider, stronger aura
+    u.glow = this.add.image(x, y, pixelDisc(this, grid + (def.boss ? 22 : 6))).setScale(PX).setTint(side === 'enemy' ? 0xff3060 : 0xffd860).setAlpha(side === 'enemy' ? 0.12 : 0);
     u.sprite = this.add.image(x, y, def.sprite).setScale(PX);
     u.scale = PX;
     u.half = grid * PX / 2;
@@ -355,7 +356,7 @@ export class BattleScene extends Phaser.Scene {
     for (const u of [...this.allies, ...this.enemies]) {
       this.setBar(u);
       if (u.side === 'enemy' && u.alive) {
-        u.glow.setTint(u.pending ? 0xff1030 : 0xff3060).setAlpha(u.pending ? 0.45 : 0.12);
+        u.glow.setTint(u.pending ? 0xff1030 : 0xff3060).setAlpha(u.pending ? 0.45 : u.def.boss ? 0.28 : 0.12);
         // winding up: the body itself burns red
         if (u.pending) u.sprite.setTint(0xff7788); else u.sprite.clearTint();
         u.tiles.forEach(t => {

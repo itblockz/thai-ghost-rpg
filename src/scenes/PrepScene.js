@@ -5,6 +5,7 @@ import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
 import { currentTeam } from '../flow.js';
 import { play } from '../audio/sfx.js';
+import { saveProgress } from '../save.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const TEAM_SLOTS = 3;
@@ -21,6 +22,7 @@ export class PrepScene extends Phaser.Scene {
     registerSprites(this);
     this.stage = data?.stage ?? 0;
     const stage = STAGES[this.stage];
+    saveProgress(this.stage, currentTeam(this)); // reaching a fight is the checkpoint
 
     this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(PX);
     this.add.rectangle(180, 320, 360, 640, 0x07060f, 0.35);

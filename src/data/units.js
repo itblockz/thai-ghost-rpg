@@ -17,7 +17,7 @@ export const ENEMIES = {
     lore: 'ผีป่าตัวเล็ก ขาเดียว ชอบแกล้งคนหลงป่า',
   },
   krasue: {
-    name: 'กระสือ', sprite: 'krasue', hp: 68, skills: ['bite', 'spit'],
+    name: 'กระสือ', sprite: 'krasue', hp: 68, boss: true, skills: ['bite', 'spit'],
     lore: 'หัวหญิงสาวลอยได้ มีไส้ห้อยระย้า ออกหากินยามดึก',
   },
 };

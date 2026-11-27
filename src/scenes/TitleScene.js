@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { ZOOM, setupCamera, pixelBob, stepped, idleFrames, PX, FONT_FAMILY, TEXT_METRICS } from '../display.js';
 import { registerSprites, pixelOval } from '../art/sprites.js';
 import { unlockAudio, play } from '../audio/sfx.js';
-import { startNewGame } from '../flow.js';
+import { startNewGame, continueGame } from '../flow.js';
+import { loadProgress } from '../save.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 
@@ -30,12 +31,25 @@ export class TitleScene extends Phaser.Scene {
     idleFrames(this, heir, 'kumarn');
     this.add.text(180, 52, 'ประตูหิมพานต์', { ...FONT, fontSize: '40px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
     this.add.text(180, 92, 'บทที่ ๑ — คืนเดือนดับ', { ...FONT, fontSize: '17px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
-    const t = this.add.text(180, 618, 'แตะเพื่อเริ่มเดินทาง', { ...FONT, fontSize: '20px', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
-    this.tweens.add({ targets: t, alpha: 0.3, yoyo: true, repeat: -1, duration: 700, ease: 'Sine.inOut' });
-    this.input.once('pointerdown', () => {
-      unlockAudio();
-      play('click');
-      startNewGame(this);
-    });
+    const saved = loadProgress();
+    const go = fn => () => { unlockAudio(); play('click'); fn(this); };
+    if (!saved) {
+      const t = this.add.text(180, 618, 'แตะเพื่อเริ่มเดินทาง', { ...FONT, fontSize: '20px', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+      this.tweens.add({ targets: t, alpha: 0.3, yoyo: true, repeat: -1, duration: 700, ease: 'Sine.inOut' });
+      this.input.once('pointerdown', go(startNewGame));
+      return;
+    }
+    // a journey is saved: continue it, or start over
+    this.button(180, 560, 300, 56, `เดินทางต่อ · ด่านที่ ${saved.stage + 1}`, 0x3d3d5e, 0xffdd55, go(continueGame));
+    this.button(180, 616, 300, 40, 'เริ่มใหม่', 0x1e1e2a, 0x55557a, go(startNewGame), '15px');
+  }
+
+  button(x, y, w, h, label, fill, border, onTap, size = '19px') {
+    const g = this.add.graphics(), u = PX, l = x - w / 2, t = y - h / 2;
+    g.fillStyle(0x000000).fillRect(l + u, t, w - 2 * u, h).fillRect(l, t + u, w, h - 2 * u);
+    g.fillStyle(border).fillRect(l + 2 * u, t + u, w - 4 * u, h - 2 * u).fillRect(l + u, t + 2 * u, w - 2 * u, h - 4 * u);
+    g.fillStyle(fill).fillRect(l + 2 * u, t + 2 * u, w - 4 * u, h - 4 * u);
+    this.add.text(x, y, label, { ...FONT, fontSize: size, fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.zone(x, y, w, h).setInteractive({ useHandCursor: true }).once('pointerdown', onTap);
   }
 }

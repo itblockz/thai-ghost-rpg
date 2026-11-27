@@ -10,7 +10,6 @@ import { StoryScene } from './scenes/StoryScene.js';
 import { PrepScene } from './scenes/PrepScene.js';
 import { W, H, ZOOM } from './display.js';
 
-// Map (WorldScene) is kept in the repo but not loaded yet — focusing on combat first.
 // Wait for web fonts so Phaser text renders with the right font.
 const fontLoads = ['400 16px "Kanit"', '700 16px "Kanit"'].map(spec => document.fonts.load(spec, 'กขค123'));
 Promise.all(fontLoads).catch(() => {}).then(() => new Phaser.Game({

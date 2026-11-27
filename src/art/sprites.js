@@ -7,25 +7,6 @@ export const PALETTE = {
 };
 
 export const SPRITES = {
-  // first-person hand holding the knife (shown at the bottom of the battle screen)
-  hand_knife: [
-    '............vv..',
-    '...........vwv..',
-    '..........vwv...',
-    '.........vwv....',
-    '........vwv.....',
-    '.......vvv......',
-    '.....gg.v.......',
-    '......gg........',
-    '....ffoff.......',
-    '...fffofff......',
-    '...ffoffff......',
-    '...fffffff......',
-    '....fffff.......',
-    '....bbbbb.......',
-    '...bbbbbbb......',
-    '...bbbbbbb......',
-  ],
   // ---- animation frames: <unit>_idle2 (breathing), _wind (anticipation), _atk (strike) ----
   // กุมารทอง at 32x32 (trial of a finer grid; other units are still 16x16)
   kumarn: [
@@ -876,95 +857,6 @@ export const SPRITES = {
     '.....p......',
     '............',
   ],
-  // UI icons (8x8)
-  icon_charge: [
-    '.rrr....',
-    'r...rr..',
-    '......r.',
-    '..rrr...',
-    '.r...rr.',
-    '.......r',
-    '...rr...',
-    '..r..r..',
-  ],
-  icon_stun: [
-    '...y....',
-    '..yyy...',
-    '...y..y.',
-    '.....yyy',
-    '.y....y.',
-    'yyy.....',
-    '.y......',
-    '........',
-  ],
-  icon_star: [
-    '...yy...',
-    '...yy...',
-    'yyyyyyyy',
-    '.yyyyyy.',
-    '..yyyy..',
-    '.yy..yy.',
-    'yy....yy',
-    '........',
-  ],
-  icon_heart: [
-    '.ee..ee.',
-    'eeeeeeee',
-    'eweeeeee',
-    'eeeeeeee',
-    '.eeeeee.',
-    '..eeee..',
-    '...ee...',
-    '........',
-  ],
-  // left hand raising the takrut (first-person)
-  hand_takrut: [
-    '.....kk.........',
-    '....k..k........',
-    '.....kk.........',
-    '.....gg.........',
-    '....gyyg........',
-    '....gggg........',
-    '....gyyg........',
-    '....gggg........',
-    '...ffff.........',
-    '..ffffff........',
-    '..ffffff........',
-    '..fffff.........',
-    '...ffff.........',
-    '...bbbbb........',
-    '..bbbbbbb.......',
-    '..bbbbbbb.......',
-  ],
-  // item icons (12x12)
-  item_takrut: [
-    '....kkkk....',
-    '...k....k...',
-    '...k....k...',
-    '....k..k....',
-    '.....kk.....',
-    '....gggg....',
-    '....gyyg....',
-    '....gggg....',
-    '....gyyg....',
-    '....gggg....',
-    '....gyyg....',
-    '....gggg....',
-  ],
-  item_knife: [
-    '..........v.',
-    '.........vv.',
-    '........vwv.',
-    '.......vwv..',
-    '......vwv...',
-    '.....vvv....',
-    '...gg.v.....',
-    '....gg......',
-    '...oo.g.....',
-    '..oo........',
-    '.oo.........',
-    '............',
-  ],
 };
 
 /** Battle backdrops on the shared grid: 120x214 art px, shown at PX (3) = full 360 width. */
@@ -1041,48 +933,51 @@ function drawVillageBackdrop(scene) {
 
 /** Title art (90x160, shown at 4x): a cracked Thai gate leaking light from the other side. */
 function drawTitleArt(scene) {
-  canvasArt(scene, 'art_gate', 90, 160, (px, rect, W, H) => {
-    const bands = ['#06051a', '#0b0820', '#120b2c', '#1a1036', '#221440'];
-    for (let y = 0; y < 130; y++) for (let x = 0; x < W; x++) {
-      const f = y / 130 * (bands.length - 1), i = Math.floor(f);
-      px(x, y, bands[Math.min(bands.length - 1, f - i + ((x + y) % 2 ? 0.25 : -0.25) > 0.5 ? i + 1 : i)]);
-    }
-    [[6, 4], [18, 12], [70, 6], [84, 15], [10, 30], [80, 34], [30, 3], [57, 9], [4, 50], [86, 52]].forEach(([x, y]) => px(x, y, '#8a86b0'));
+  // drawn natively on the shared grid: 120x213 art px = full screen at PX
+  canvasArt(scene, 'art_gate', 120, 213, (px, rect, W, H) => {
+    const C = 60, GROUND = 173;
+    sky(px, W, ['#06051a', '#0b0820', '#120b2c', '#1a1036', '#221440'], GROUND);
+    [[8, 5], [24, 16], [93, 8], [112, 20], [13, 40], [107, 45], [40, 4], [76, 12], [5, 67], [115, 69], [28, 58], [98, 90]].forEach(([x, y]) => px(x, y, '#8a86b0'));
     // light from the other side, haloing the gate
-    for (let y = -40; y <= 40; y++) for (let x = -34; x <= 34; x++) {
+    for (let y = -54; y <= 54; y++) for (let x = -46; x <= 46; x++) {
       const d = Math.sqrt(x * x + (y * 0.8) ** 2);
-      if (d < 34 && (d < 14 || (x + y) % 2 === 0)) px(45 + x, 98 + y, d < 14 ? '#3a2850' : d < 24 ? '#261a40' : '#1a1232');
+      if (d < 46 && (d < 19 || (x + y) % 2 === 0)) px(C + x, 131 + y, d < 19 ? '#3a2850' : d < 32 ? '#261a40' : '#1a1232');
     }
-    const dark = '#0a0612', trim = '#3a2a40', gold = '#8a6a30';
-    // tiered spire (ยอดปราสาท)
-    rect(44, 30, 2, 6, gold);
+    const dark = '#0a0612', trim = '#3a2a40', gold = '#8a6a30', goldHi = '#c8a050';
+    // tiered spire (ยอดปราสาท) with gold eaves and upturned corner finials
+    rect(C - 1, 38, 2, 9, gold); px(C - 1, 37, goldHi);
     for (let t = 0; t < 4; t++) {
-      const top = 36 + t * 8, half = 4 + t * 4;
-      for (let y = 0; y < 8; y++) { const h = half + Math.floor(y / 2); rect(45 - h, top + y, 2 * h, 1, dark); }
-      rect(45 - half - 4, top + 7, 2 * half + 8, 1, trim);
+      const top = 47 + t * 11, half = 5 + t * 5;
+      for (let y = 0; y < 11; y++) { const h = half + Math.floor(y / 2); rect(C - h, top + y, 2 * h, 1, dark); }
+      const eave = half + 5;
+      rect(C - eave - 1, top + 10, 2 * eave + 2, 1, gold);
+      px(C - eave - 2, top + 9, goldHi); px(C + eave + 1, top + 9, goldHi); // ช่อฟ้า-like tips
+      for (let x = C - half + 2; x < C + half - 2; x += 4) px(x, top + 6, trim);
     }
     // lintel and pillars
-    rect(20, 68, 50, 5, dark); rect(20, 68, 50, 1, gold);
-    rect(23, 73, 7, 57, dark); rect(60, 73, 7, 57, dark);
-    rect(24, 73, 1, 57, trim); rect(65, 73, 1, 57, trim);
-    // door panels
-    rect(30, 73, 14, 57, '#140c1c'); rect(46, 73, 14, 57, '#140c1c');
-    for (let y = 78; y < 128; y += 10) { rect(32, y, 10, 1, '#22162a'); rect(48, y, 10, 1, '#22162a'); }
+    rect(26, 91, 68, 7, dark); rect(26, 91, 68, 1, goldHi); rect(26, 97, 68, 1, gold);
+    for (let x = 30; x < 92; x += 6) px(x, 94, gold);
+    rect(30, 98, 10, GROUND - 98, dark); rect(80, 98, 10, GROUND - 98, dark);
+    rect(31, 98, 1, GROUND - 98, trim); rect(88, 98, 1, GROUND - 98, trim);
+    rect(29, GROUND - 4, 12, 4, trim); rect(79, GROUND - 4, 12, 4, trim);
+    // door panels with studs
+    rect(40, 98, 19, GROUND - 98, '#140c1c'); rect(61, 98, 19, GROUND - 98, '#140c1c');
+    for (let y = 104; y < GROUND - 3; y += 13) { rect(43, y, 13, 1, '#22162a'); rect(64, y, 13, 1, '#22162a'); }
+    for (let y = 110; y < GROUND - 6; y += 13) { px(44, y, gold); px(54, y, gold); px(65, y, gold); px(75, y, gold); }
     // jagged crack of light between the doors
-    let cx = 45;
-    for (let y = 73; y < 130; y++) {
-      if (y % 4 === 0) cx += ((y * 7) % 3) - 1;
-      cx = Math.max(43, Math.min(47, cx));
+    let cx = C;
+    for (let y = 98; y < GROUND; y++) {
+      if (y % 5 === 0) cx += ((y * 7) % 3) - 1;
+      cx = Math.max(C - 2, Math.min(C + 2, cx));
       rect(cx - 1, y, 3, 1, '#c8a8ff'); px(cx, y, '#ffffff');
-      if (y === 84 || y === 101 || y === 117) { rect(cx + 2, y, 4, 1, '#a080e0'); px(cx + 6, y - 1, '#a080e0'); }
-      if (y === 92 || y === 110) { rect(cx - 5, y, 4, 1, '#a080e0'); px(cx - 6, y + 1, '#a080e0'); }
+      if (y === 112 || y === 135 || y === 156) { rect(cx + 2, y, 5, 1, '#a080e0'); px(cx + 7, y - 1, '#a080e0'); }
+      if (y === 123 || y === 147) { rect(cx - 6, y, 5, 1, '#a080e0'); px(cx - 7, y + 1, '#a080e0'); }
     }
-    // ground and path
-    for (let y = 130; y < H; y++) for (let x = 0; x < W; x++) px(x, y, (x * 7 + y * 3) % 11 === 0 ? '#1c2a1c' : '#0d140f');
-    for (let y = 130; y < H; y++) { const h = 8 + Math.floor((y - 130) / 2); rect(45 - h, y, 2 * h, 1, (y % 3) ? '#1c1626' : '#241c30'); }
-    // light spilling on the path
-    for (let y = 130; y < 140; y++) for (let x = 40; x < 51; x++) if ((x + y) % 2 === 0) px(x, y, '#5a4880');
-  }, 120);
+    // ground and a stone path leading to the gate
+    for (let y = GROUND; y < H; y++) for (let x = 0; x < W; x++) px(x, y, (x * 7 + y * 3) % 11 === 0 ? '#1c2a1c' : (x * 5 + y * 11) % 23 === 0 ? '#233523' : '#0d140f');
+    for (let y = GROUND; y < H; y++) { const h = 11 + Math.floor((y - GROUND) / 2); rect(C - h, y, 2 * h, 1, (y % 4) ? '#1c1626' : '#241c30'); }
+    for (let y = GROUND; y < GROUND + 14; y++) for (let x = C - 7; x < C + 8; x++) if ((x + y) % 2 === 0) px(x, y, '#5a4880');
+  });
 }
 
 /** Story illustrations (procedural pixel art). */
@@ -1107,29 +1002,34 @@ function canvasArt(scene, key, W, H, draw, outW = W) {
 
 function drawStoryArt(scene) {
   // Empty temple pavilion at night, a lantern still glowing, an empty mat.
-  canvasArt(scene, 'art_shrine', 90, 70, (px, rect, W, H) => {
+  // story scenes drawn natively on the shared grid: 114x88 art px (342x264 pt)
+  canvasArt(scene, 'art_shrine', 114, 88, (px, rect, W, H) => {
     rect(0, 0, W, H, '#0a0814');
-    for (let y = 0; y < 30; y++) for (let x = 0; x < W; x++) if ((x * 13 + y * 7) % 53 === 0) px(x, y, '#3a3660');
+    for (let y = 0; y < 38; y++) for (let x = 0; x < W; x++) if ((x * 13 + y * 7) % 53 === 0) px(x, y, '#3a3660');
     // lantern glow
-    for (let y = -22; y <= 22; y++) for (let x = -22; x <= 22; x++) {
+    for (let y = -28; y <= 28; y++) for (let x = -28; x <= 28; x++) {
       const d = Math.sqrt(x * x + y * y);
-      if (d < 22 && (d < 10 || (x + y) % 2 === 0)) px(45 + x, 34 + y, d < 10 ? '#3a2a18' : '#22180f');
+      if (d < 28 && (d < 13 || (x + y) % 2 === 0)) px(57 + x, 43 + y, d < 13 ? '#3a2a18' : '#22180f');
     }
-    // roof
-    for (let y = 0; y < 10; y++) rect(10 - y, 6 + y, W - 20 + 2 * y, 1, '#1a1020');
-    rect(0, 16, W, 3, '#2a1a24');
+    // roof with a lighter eave line and rafter ends
+    for (let y = 0; y < 13; y++) rect(13 - y, 7 + y, W - 26 + 2 * y, 1, '#1a1020');
+    rect(0, 20, W, 4, '#2a1a24'); rect(0, 20, W, 1, '#3a2632');
+    for (let x = 4; x < W; x += 9) rect(x, 24, 2, 2, '#2a1a24');
     // pillars
-    rect(8, 19, 5, 40, '#2a1a24'); rect(W - 13, 19, 5, 40, '#2a1a24');
-    // floor
-    rect(0, 59, W, 11, '#1c1418');
-    for (let x = 0; x < W; x += 6) rect(x, 59, 1, 11, '#140e12');
+    rect(10, 24, 6, 50, '#2a1a24'); rect(W - 16, 24, 6, 50, '#2a1a24');
+    rect(11, 24, 1, 50, '#3a2632'); rect(W - 15, 24, 1, 50, '#3a2632');
+    // floor boards
+    rect(0, 74, W, 14, '#1c1418');
+    for (let x = 0; x < W; x += 8) rect(x, 74, 1, 14, '#140e12');
     // empty mat
-    rect(32, 54, 26, 5, '#4a3a22'); rect(32, 54, 26, 1, '#5e4a2c');
-    // lantern
-    rect(44, 19, 1, 8, '#555'); rect(42, 27, 5, 7, '#d08a30'); rect(43, 28, 3, 5, '#ffd070'); rect(42, 34, 5, 1, '#7a4a20');
+    rect(40, 68, 34, 6, '#4a3a22'); rect(40, 68, 34, 1, '#5e4a2c');
+    for (let x = 42; x < 72; x += 4) px(x, 71, '#3e3020');
+    // lantern on its cord
+    rect(56, 24, 1, 10, '#555');
+    rect(53, 34, 7, 9, '#d08a30'); rect(54, 35, 5, 7, '#ffd070'); rect(53, 43, 7, 1, '#7a4a20'); rect(53, 33, 7, 1, '#7a4a20');
     // fallen note on the mat
-    rect(48, 52, 5, 3, '#d8c8a0'); px(49, 53, '#5a4a3a'); px(51, 53, '#5a4a3a');
-  }, 114);
+    rect(61, 65, 7, 4, '#d8c8a0'); px(62, 66, '#5a4a3a'); px(64, 66, '#5a4a3a'); px(66, 67, '#5a4a3a');
+  });
 
   // Torn paper note with scribbled lines.
   canvasArt(scene, 'art_note', 40, 30, (px, rect, W, H) => {
@@ -1147,27 +1047,27 @@ function drawStoryArt(scene) {
   });
 
   // Silent village on stilts; a red light glowing above the trees.
-  canvasArt(scene, 'art_village', 90, 70, (px, rect, W, H) => {
-    for (let y = 0; y < H; y++) rect(0, y, W, 1, y < 20 ? '#0b0820' : y < 40 ? '#140c2a' : '#1a1030');
+  canvasArt(scene, 'art_village', 114, 88, (px, rect, W, H) => {
+    sky(px, W, ['#0b0820', '#140c2a', '#1a1030'], 71);
     // red glow
-    for (let y = -14; y <= 14; y++) for (let x = -14; x <= 14; x++) {
+    for (let y = -18; y <= 18; y++) for (let x = -18; x <= 18; x++) {
       const d = Math.sqrt(x * x + y * y);
-      if (d < 14 && (d < 4 || (x + y) % 2 === 0)) px(68 + x, 14 + y, d < 3 ? '#ff6688' : d < 7 ? '#a01830' : '#4a0c20');
+      if (d < 18 && (d < 5 || (x + y) % 2 === 0)) px(86 + x, 18 + y, d < 4 ? '#ff6688' : d < 9 ? '#a01830' : '#4a0c20');
     }
-    // trees
-    const tree = (cx, top) => { for (let y = top; y < 52; y++) { const h = Math.min(6, Math.floor((y - top) / 2) + 1); rect(cx - h, y, 2 * h + 1, 1, '#06040c'); } };
-    tree(8, 18); tree(30, 24); tree(56, 22); tree(80, 20);
-    // stilt houses
+    const tree = (cx, top) => { for (let y = top; y < 66; y++) { const h = Math.min(8, Math.floor((y - top) / 2) + 1); rect(cx - h, y, 2 * h + 1, 1, '#06040c'); } };
+    tree(10, 23); tree(38, 30); tree(71, 28); tree(102, 25);
+    // stilt houses: roof, plank wall, shut windows, stilts
     const house = (x, w) => {
-      for (let y = 0; y < 8; y++) rect(x - y, 30 + y, w + 2 * y, 1, '#0d0912'); // roof
-      rect(x - 4, 38, w + 8, 10, '#120d18');
-      rect(x + 2, 41, 4, 4, '#05030a'); rect(x + w - 6, 41, 4, 4, '#05030a'); // shut windows
-      for (let i = 0; i < 4; i++) rect(x - 3 + i * Math.floor((w + 6) / 3), 48, 1, 8, '#0d0912'); // stilts
+      for (let y = 0; y < 10; y++) rect(x - y, 38 + y, w + 2 * y, 1, y === 9 ? '#1a1020' : '#0d0912');
+      rect(x - 5, 48, w + 10, 13, '#120d18');
+      for (let yy = 50; yy < 61; yy += 3) rect(x - 5, yy, w + 10, 1, '#0f0a14');
+      rect(x + 2, 52, 5, 5, '#05030a'); rect(x + w - 7, 52, 5, 5, '#05030a');
+      for (let i = 0; i < 4; i++) rect(x - 4 + i * Math.floor((w + 8) / 3), 61, 2, 10, '#0d0912');
     };
-    house(12, 14); house(44, 16); house(72, 12);
-    rect(0, 56, W, 14, '#0c140e');
-    for (let x = 0; x < W; x++) if ((x * 7) % 11 === 0) px(x, 56, '#1c2a1c');
-  }, 114);
+    house(15, 18); house(56, 20); house(92, 15);
+    rect(0, 71, W, 17, '#0c140e');
+    for (let y = 71; y < H; y++) for (let x = 0; x < W; x++) if ((x * 7 + y * 3) % 13 === 0) px(x, y, '#1c2a1c');
+  });
 }
 
 /** Pixel-grid glow disc (18x18, dithered rim) and thin ring (16x16) — tint and scale by whole steps. */

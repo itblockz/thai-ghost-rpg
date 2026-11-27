@@ -43,11 +43,12 @@ function huntWaves(i, fighters = 3) {
 // One place for all of them, so new ones (ไฟ, ช้า, …) show up the same way.
 export function statusList(u) {
   const out = [];
+  // most urgent first: a lost turn, then what burns each turn, then the rest
   if (u.stunned) out.push(['icon_drag', u.stunned]);
-  if (u.blind) out.push(['icon_blind', 0]);
-  if (u.poison) out.push(['icon_poison', u.poison.turns]);
   if (u.burn) out.push(['icon_fire', u.burn.turns]);
+  if (u.poison) out.push(['icon_poison', u.poison.turns]);
   if (u.slow) out.push(['icon_slow', u.slow]);
+  if (u.blind) out.push(['icon_blind', 0]);
   if (u.sealed) out.push(['icon_seal', 0]);
   return out;
 }
@@ -289,7 +290,7 @@ export class BattleScene extends Phaser.Scene {
     u.marker = this.add.image(x, y - u.half - 10, 'icon_target').setScale(PX).setVisible(false).setDepth(6);
     // conditions (สถานะ): a row of small icons under the unit's bars, each with the turns it has left
     u.statusY = by + 34;
-    u.statusIcons = [0, 1, 2, 3].map(() => ({
+    u.statusIcons = [0, 1, 2].map(() => ({
       img: this.add.image(x, u.statusY, 'icon_drag').setScale(PX).setVisible(false).setDepth(6),
       num: this.add.text(x, u.statusY + 10, '', numFont(13, '#ffffff')).setOrigin(0.5).setStroke('#000', 4).setDepth(7),
     }));
@@ -745,15 +746,18 @@ export class BattleScene extends Phaser.Scene {
     for (const u of [...this.allies, ...this.enemies]) {
       this.setBar(u);
       // lingering conditions show as a small icon on the unit's upper left
-      const list = u.alive ? statusList(u) : [];
+      // at most three places: with more, the third becomes a gold "+N" for the ones not shown
+      const all = u.alive ? statusList(u) : [], more = all.length > 3 ? all.length - 2 : 0;
+      const list = more ? [...all.slice(0, 2), ['+', more]] : all;
       u.statusIcons.forEach((s, i) => {
         const st = list[i];
         s.img.setVisible(!!st); s.num.setVisible(!!st && st[1] > 0);
         if (!st) return;
         // centred under the unit's numbers, 34pt apart; turns left at the icon's lower right
         const cx = u.x + (i - (list.length - 1) / 2) * 34;
+        if (st[0] === '+') { s.img.setVisible(false); s.num.setVisible(true).setText(`+${st[1]}`).setColor('#ffe08a').setFontSize(18).setPosition(cx, u.statusY); return; }
         s.img.setTexture(st[0]).setPosition(cx, u.statusY);
-        s.num.setText(String(st[1])).setPosition(cx + 12, u.statusY + 10);
+        s.num.setText(String(st[1])).setColor('#ffffff').setFontSize(13).setPosition(cx + 12, u.statusY + 10);
       });
       if (u.side === 'enemy' && u.alive) {
         // a wind-up burns red; an elite (หัวหน้า) keeps a strong gold aura

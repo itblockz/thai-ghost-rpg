@@ -57,7 +57,7 @@ export class BattleScene extends Phaser.Scene {
     this.allies = team.map((id, i) => this.makeUnit('ally', id, ALLIES[id], ALLIES[id].name, ax[i], ALLY_Y, 5));
 
     const muteKey = () => (isMuted() ? 'icon_sound_off' : 'icon_sound_on');
-    const mute = this.add.image(342, 18, muteKey()).setScale(3).setInteractive({ useHandCursor: true });
+    const mute = this.add.image(334, 26, muteKey()).setScale(PX).setInteractive({ useHandCursor: true });
     mute.on('pointerdown', () => { toggleMute(); mute.setTexture(muteKey()); });
 
     this.turnText = this.add.text(180, 606, '', { ...FONT, fontSize: '14px', color: '#ccccee', align: 'center' }).setOrigin(0.5);
@@ -115,7 +115,7 @@ export class BattleScene extends Phaser.Scene {
     u.pose = 'idle';
 
     // HP bar under the sprite (no name label: the art identifies the unit)
-    const by = y + u.half + 6, bw = grid >= 48 ? 180 : 92;
+    const by = y + u.half + 6, bw = 92;
     this.add.rectangle(x, by + 7, bw + 4, 10, 0x000000);
     this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x333344).setOrigin(0, 0.5);
     u.bar = this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x55cc66).setOrigin(0, 0.5);
@@ -125,11 +125,11 @@ export class BattleScene extends Phaser.Scene {
     // enemies show their skills (cooldowns visible) under the bar
     if (side === 'enemy') {
       u.tiles = u.skills.map((sid, i) => {
-        const tx = x + (i - (u.skills.length - 1) / 2) * 42, ty = by + 50;
+        const tx = x + (i - (u.skills.length - 1) / 2) * 56, ty = by + 46;
         const g = this.add.graphics();
         const icon = this.add.image(tx, ty, SKILLS[sid].icon).setScale(PX);
-        const cdText = this.add.text(tx, ty, '', { ...FONT, fontSize: '15px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
-        this.add.zone(tx, ty, 40, 40).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(SKILLS[sid], `ฤทธิ์ของ${def.name}`));
+        const cdText = this.add.text(tx, ty, '', { ...FONT, fontSize: '26px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
+        this.add.zone(tx, ty, 54, 54).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(SKILLS[sid], `ฤทธิ์ของ${def.name}`));
         return { sid, g, icon, cdText, x: tx, y: ty };
       });
     }
@@ -319,7 +319,7 @@ export class BattleScene extends Phaser.Scene {
       const cd = u.cd[id] || 0, sel = this.selected === id && !cd;
       const g = this.add.graphics();
       this.pixelPanel(g, x, y, w, 120, cd ? 0x1e1e2a : sel ? 0x3d3d5e : 0x33334d, cd ? 0x444455 : sel ? 0xffdd55 : 0x8888cc);
-      const icon = this.add.image(x, y - 14, `${s.icon}@2`).setScale(PX);
+      const icon = this.add.image(x, y - 14, s.icon).setScale(PX);
       const name = this.add.text(x, y + 36, s.name, { ...FONT, fontSize: '20px' }).setOrigin(0.5);
       const cdText = this.add.text(x, y, cd ? String(cd) : '', { ...FONT, fontSize: '52px', fontStyle: 'bold' }).setOrigin(0.5);
       const parts = [g, icon, name, cdText];
@@ -360,7 +360,7 @@ export class BattleScene extends Phaser.Scene {
         u.tiles.forEach(t => {
           const cd = u.cd[t.sid] || 0, winding = u.pending?.skillId === t.sid;
           t.g.clear();
-          this.pixelPanel(t.g, t.x, t.y, 36, 36, winding ? 0x5a1020 : 0x2a1a2e, winding ? 0xff3355 : 0xaa6677, 3);
+          this.pixelPanel(t.g, t.x, t.y, 54, 54, winding ? 0x5a1020 : 0x2a1a2e, winding ? 0xff3355 : 0xaa6677, 3);
           t.icon.setAlpha(cd ? 0.3 : 1);
           t.cdText.setText(cd ? String(cd) : '');
         });
@@ -404,7 +404,7 @@ export class BattleScene extends Phaser.Scene {
 
   cardHeader(top, iconKey, iconScale, title, type) {
     this.card.add([
-      this.add.image(70, top + 34, `${iconKey}@2`).setScale(PX),
+      this.add.image(70, top + 34, iconKey).setScale(PX),
       this.add.text(108, top + 24, title, { ...FONT, fontSize: '21px', fontStyle: 'bold' }).setOrigin(0, 0.5),
       this.add.text(108, top + 47, type, { ...FONT, fontSize: '13px', color: '#9999bb' }).setOrigin(0, 0.5),
       this.add.rectangle(180, top + 66, 260, 2, 0x55557a),
@@ -414,11 +414,11 @@ export class BattleScene extends Phaser.Scene {
 
   cardRow(y, icon, label, value, valueColor = '#ffffff') {
     this.card.add([
-      this.add.image(62, y + 11, icon).setScale(PX),
-      this.add.text(80, y + 11, label, { ...FONT, fontSize: '16px', color: '#ccccee' }).setOrigin(0, 0.5),
-      this.add.text(306, y + 11, value, { ...FONT, fontSize: '18px', fontStyle: 'bold', color: valueColor }).setOrigin(1, 0.5),
+      this.add.image(66, y + 22, icon).setScale(PX),
+      this.add.text(98, y + 22, label, { ...FONT, fontSize: '16px', color: '#ccccee' }).setOrigin(0, 0.5),
+      this.add.text(306, y + 22, value, { ...FONT, fontSize: '18px', fontStyle: 'bold', color: valueColor }).setOrigin(1, 0.5),
     ]);
-    return y + 32;
+    return y + 48;
   }
 
   skillRows(y, skill) {
@@ -685,7 +685,7 @@ export class BattleScene extends Phaser.Scene {
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
     const next = won ? () => afterVictory(this, this.stage) : () => this.scene.restart({ stage: this.stage, retry: true });
     this.pixelPanel(this.add.graphics().setDepth(9), 180, BTN_Y, 332, 120, won ? 0x2d5a3a : 0x5a2d3a, 0xffffff);
-    this.add.image(84, BTN_Y, won ? 'icon_next@2' : 'icon_retry@2').setScale(PX).setDepth(9);
+    this.add.image(84, BTN_Y, won ? 'icon_next' : 'icon_retry').setScale(PX).setDepth(9);
     this.add.text(124, BTN_Y, label, { ...FONT, fontSize: '28px' }).setOrigin(0, 0.5).setDepth(9);
     this.add.zone(180, BTN_Y, 332, 120).setInteractive({ useHandCursor: true }).setDepth(9)
       .on('pointerdown', () => { play('click'); next(); });

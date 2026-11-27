@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, numFont } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { ALLIES } from '../data/units.js';
 import { SKILLS } from '../data/skills.js';
@@ -140,7 +140,7 @@ export class RosterScene extends Phaser.Scene {
       const sk = SKILLS[this.pickedSkill];
       add(this.panel(this.add.graphics(), 180, 556, 332, 82, 0x161424, 0xb89a50));
       add(this.add.text(30, 534, sk.name, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5));
-      if (sk.cooldown) { add(this.add.image(296, 534, 'mini_cd').setScale(PX)); add(this.add.text(314, 534, String(sk.cooldown), { ...FONT, fontSize: '14px' }).setOrigin(0, 0.5)); }
+      if (sk.cooldown) { add(this.add.image(296, 534, 'mini_cd').setScale(PX)); add(this.add.text(314, 534, String(sk.cooldown), numFont(15)).setOrigin(0, 0.5)); }
       add(this.add.text(30, 552, sk.desc, { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 300 }, lineSpacing: 2 }).setOrigin(0, 0));
     } else {
       add(this.panel(this.add.graphics(), 180, 556, 332, 82, 0x121020, 0x33334a));
@@ -151,7 +151,7 @@ export class RosterScene extends Phaser.Scene {
   // a charm's effect: stat charms as icon + number, others as words
   effect(x, y, c, add) {
     const icon = charmStatIcon(c);
-    if (icon) { add(this.add.image(x + 12, y, icon).setScale(PX)); add(this.add.text(x + 30, y, `+${c.value}`, { ...FONT, fontSize: '14px' }).setOrigin(0, 0.5)); }
+    if (icon) { add(this.add.image(x + 12, y, icon).setScale(PX)); add(this.add.text(x + 30, y, `+${c.value}`, numFont(15)).setOrigin(0, 0.5)); }
     else add(this.add.text(x, y, charmText(c), { ...FONT, fontSize: '13px' }).setOrigin(0, 0.5));
   }
 
@@ -164,7 +164,7 @@ export class RosterScene extends Phaser.Scene {
   iconNums(right, y, pairs, add) {
     let x = right;
     for (const [key, n] of [...pairs].reverse()) {
-      const t = add(this.add.text(x, y, String(n), { ...FONT, fontSize: '15px' }).setOrigin(1, 0.5));
+      const t = add(this.add.text(x, y, String(n), numFont(15)).setOrigin(1, 0.5));
       x -= t.width + 4;
       add(this.add.image(x - 12, y, key).setScale(PX));
       x -= 34;

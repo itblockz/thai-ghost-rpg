@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, numFont } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
@@ -103,8 +103,9 @@ export class PrepScene extends Phaser.Scene {
       const s = SKILLS[sid];
       // enemy skills stay unknown (???) until witnessed in a fight
       const known = !!allyId || seen.has(sid);
-      add(this.add.text(84, ry, known ? s.name : '?', { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0));
-      if (known && s.cooldown) this.iconNums(330, ry + 10, [['mini_cd', s.cooldown]], add);
+      const nm = add(this.add.text(84, ry, known ? s.name : '?', { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0));
+      // cooldown sits right after the skill's own name, so it's clear whose it is
+      if (known && s.cooldown) { add(this.add.image(nm.x + nm.width + 20, ry + 11, 'mini_cd').setScale(PX)); add(this.add.text(nm.x + nm.width + 36, ry + 11, String(s.cooldown), numFont(15)).setOrigin(0, 0.5)); }
       const text = known ? s.desc : '';
       const facts = add(this.add.text(84, ry + 22, text, { ...FONT, fontSize: '12px', color: known ? '#ccccee' : '#7777aa', wordWrap: { width: 240 }, lineSpacing: 2 }).setOrigin(0, 0));
       const rowH = Math.max(54, 26 + facts.height);
@@ -118,7 +119,7 @@ export class PrepScene extends Phaser.Scene {
   iconNums(right, y, pairs, add) {
     let x = right;
     for (const [key, n] of [...pairs].reverse()) {
-      const t = add(this.add.text(x, y, String(n), { ...FONT, fontSize: '15px', color: '#ffffff' }).setOrigin(1, 0.5));
+      const t = add(this.add.text(x, y, String(n), numFont(15)).setOrigin(1, 0.5));
       x -= t.width + 4;
       add(this.add.image(x - 12, y, key).setScale(PX));
       x -= 34;

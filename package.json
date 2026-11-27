@@ -21,6 +21,7 @@
   "homepage": "https://github.com/itblockz/thai-ghost-rpg#readme",
   "dependencies": {
     "@fontsource/kanit": "^5.3.0",
+    "@fontsource/vt323": "^5.3.0",
     "phaser": "^3.90.0"
   },
   "devDependencies": {

@@ -14,6 +14,10 @@ export function setupCamera(scene) {
 // UI font (bundled via @fontsource/kanit, Thai + Latin, 400/700).
 export const FONT_FAMILY = '"Kanit", sans-serif';
 
+// Numbers use a pixel font with equal-width digits (VT323) so they line up and match the pixel art.
+// It runs small, so sizes are scaled up ~1.4x to sit level with Kanit text.
+export const numFont = (px, color = '#ffffff') => ({ fontFamily: '"VT323", monospace', fontSize: `${Math.round(px * 1.4)}px`, color, resolution: ZOOM, padding: { top: 2, bottom: 2 } });
+
 // Thai stacks vowels + tone marks above letters (e.g. สิ้, ทธิ์). Phaser measures text height
 // with a Latin test string, so on Safari the top marks get clipped. Measure with tall Thai
 // clusters and add a little top padding so nothing is cut off.

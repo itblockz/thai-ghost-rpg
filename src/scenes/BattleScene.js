@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillDamage, skillFacts, amount } from '../data/skills.js';
 import { registerSprites, pixelDisc, pixelRing } from '../art/sprites.js';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, pixelBob } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, pixelBob, numFont } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, currentTeam } from '../flow.js';
 import { rollCharm, applyCharm, charmText, charmName, charmStatIcon, RARITIES, CHARM_TYPES } from '../data/charms.js';
@@ -129,7 +129,7 @@ export class BattleScene extends Phaser.Scene {
     ];
     u.bar = this.add.rectangle(x - bw / 2, by + 7, bw, 6, 0x55cc66).setOrigin(0, 0.5);
     u.barW = bw;
-    u.hpText = this.add.text(x, by + 14, '', { ...FONT, fontSize: '11px', color: '#ccccee' }).setOrigin(0.5, 0);
+    u.hpText = this.add.text(x, by + 12, '', numFont(12, '#ccccee')).setOrigin(0.5, 0);
     u.hud.push(u.bar, u.hpText);
 
     // enemy skills are studied on the prep screen; the field shows only the fight itself
@@ -339,7 +339,7 @@ export class BattleScene extends Phaser.Scene {
       this.add.image(70, 148, CHARM_TYPES[c.type].icon).setScale(PX).setDepth(9),
       this.add.text(106, 132, charmName(c), { ...FONT, fontSize: '17px', fontStyle: 'bold', color: r.color }).setOrigin(0, 0.5).setDepth(9),
       ...(charmStatIcon(c)
-        ? [this.add.image(118, 160, charmStatIcon(c)).setScale(PX).setDepth(9), this.add.text(136, 160, `+${c.value}`, { ...FONT, fontSize: '15px', color: '#ffffff' }).setOrigin(0, 0.5).setDepth(9)]
+        ? [this.add.image(118, 160, charmStatIcon(c)).setScale(PX).setDepth(9), this.add.text(136, 160, `+${c.value}`, numFont(15)).setOrigin(0, 0.5).setDepth(9)]
         : [this.add.text(106, 160, charmText(c), { ...FONT, fontSize: '14px', color: '#ffffff' }).setOrigin(0, 0.5).setDepth(9)]),
     ];
     objs.forEach(o => o.setAlpha(0));
@@ -419,7 +419,7 @@ export class BattleScene extends Phaser.Scene {
       this.pixelPanel(g, x, y, w, 120, cd ? 0x1e1e2a : sel ? 0x3d3d5e : 0x33334d, cd ? 0x444455 : sel ? 0xffdd55 : 0x8888cc);
       const icon = this.add.image(x, y - 14, s.icon).setScale(PX);
       const name = this.add.text(x, y + 36, s.name, { ...FONT, fontSize: n === 3 ? '16px' : '20px' }).setOrigin(0.5);
-      const cdText = this.add.text(x, y, cd ? String(cd) : '', { ...FONT, fontSize: '52px', fontStyle: 'bold' }).setOrigin(0.5);
+      const cdText = this.add.text(x, y, cd ? String(cd) : '', { ...numFont(44), stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
       const parts = [g, icon, name, cdText];
       if (cd) [icon, name].forEach(p => p.setAlpha(0.25));
       const zone = this.add.zone(x, y, w, 120).setInteractive({ useHandCursor: true });
@@ -548,7 +548,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   popup(x, y, text, color = '#fff', size = 26) {
-    const t = this.add.text(x, y, text, { ...FONT, fontSize: `${size}px`, fontStyle: 'bold', color, stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(8);
+    // numbers (damage, healing) in the pixel digit font; words in Kanit
+    const style = /^[+-]?\d+$/.test(text) ? { ...numFont(size, color) } : { ...FONT, fontSize: `${size}px`, fontStyle: 'bold', color };
+    const t = this.add.text(x, y, text, { ...style, stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(8);
     this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 1000, onComplete: () => t.destroy() });
   }
 

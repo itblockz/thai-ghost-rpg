@@ -2056,19 +2056,24 @@ function drawStoryArt(scene) {
     rect(61, 65, 7, 4, '#d8c8a0'); px(62, 66, '#5a4a3a'); px(64, 66, '#5a4a3a'); px(66, 67, '#5a4a3a');
   });
 
-  // Torn paper note with scribbled lines.
-  canvasArt(scene, 'art_note', 40, 30, (px, rect, W, H) => {
-    for (let y = 2; y < H - 2; y++) for (let x = 3; x < W - 3; x++) {
-      const torn = (x === 3 || x === W - 4) && (y * 7) % 5 < 2;
-      const tornTop = y === 2 && (x * 5) % 7 < 3;
-      if (!torn && !tornTop) px(x, y, (x + y) % 9 === 0 ? '#c8b890' : '#dccca0');
+  // Torn paper note with scribbled lines (64x48 on the shared 2pt grid).
+  canvasArt(scene, 'art_note', 64, 48, (px, rect, W, H) => {
+    for (let y = 3; y < H - 3; y++) for (let x = 4; x < W - 4; x++) {
+      const torn = (x <= 5 || x >= W - 6) && (y * 7) % 5 < 2 && (x === 4 || x === W - 5 || (y * 3) % 4 === 0);
+      const tornTop = y <= 4 && (x * 5) % 7 < 3 && (y === 3 || x % 2 === 0);
+      if (!torn && !tornTop) px(x, y, (x + y) % 11 === 0 ? '#c8b890' : (x * 3 + y) % 17 === 0 ? '#e6d8b0' : '#dccca0');
     }
-    for (let line = 0; line < 5; line++) {
-      const y = 7 + line * 4, len = 26 - (line === 4 ? 12 : (line * 3) % 7);
-      for (let x = 7; x < 7 + len; x++) if ((x * 3 + line) % 5 !== 0) px(x, y + ((x + line) % 3 === 0 ? -1 : 0), '#3a2a20');
+    // a fold down the middle
+    for (let y = 5; y < H - 4; y++) px(32, y, '#cbbb90');
+    for (let line = 0; line < 6; line++) {
+      const y = 11 + line * 5, len = 44 - (line === 5 ? 22 : (line * 5) % 11);
+      for (let x = 10; x < 10 + len; x++) if ((x * 3 + line) % 7 !== 0) px(x, y + ((x + line) % 4 === 0 ? -1 : 0), '#3a2a20');
     }
     // dark stain
-    for (let y = 18; y < 25; y++) for (let x = 26; x < 33; x++) if ((x - 29) ** 2 + (y - 21) ** 2 < 10) px(x, y, '#6a2a20');
+    for (let y = 28; y < 42; y++) for (let x = 40; x < 56; x++) {
+      const d = (x - 47) ** 2 + (y - 34) ** 2;
+      if (d < 26) px(x, y, d < 10 ? '#5a2018' : '#6a2a20');
+    }
   });
 
   // Silent village on stilts; a red light glowing above the trees.
@@ -2186,6 +2191,10 @@ export function registerSprites(scene) {
     if (SPRITES[`${key}_ko`]) continue;
     const rows = SPRITES[key], n = rows.length;
     SPRITES[`${key}_ko`] = rows[0].split('').map((_, x) => Array.from({ length: n }, (_, y) => rows[n - 1 - y][x]).join(''));
+  }
+  // story portraits (p_<unit>): 64x64 on the shared grid, smoothed up from the 32x32 sprite and its idle frame
+  for (const key of ['heir', 'kumarn', 'kongkoi', 'krasue', 'phrai', 'khamot', 'naga']) {
+    for (const k of [key, `${key}_idle2`]) if (SPRITES[k] && !SPRITES[`p_${k}`]) SPRITES[`p_${k}`] = scale2x(SPRITES[k]);
   }
   for (const key of Object.keys(SPRITES)) {
     // never upscale an upscale: '@2' keys used to be doubled again on every scene, exhausting phone memory

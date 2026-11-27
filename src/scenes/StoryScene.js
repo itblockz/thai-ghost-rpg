@@ -45,17 +45,19 @@ export class StoryScene extends Phaser.Scene {
     // art
     this.frame.clear();
     if (page.art) {
-      const tex = this.textures.get(page.art).getSourceImage();
-      const wide = tex.width >= 60;
-      // scenes at the shared pixel size; single figures shown at double size so they read as portraits
-      const scale = wide ? BG_PX : PX * 3;
+      // figures use their 64x64 story portrait; scenes and the note are drawn at story size
+      const key = this.textures.exists(`p_${page.art}`) ? `p_${page.art}` : page.art;
+      const tex = this.textures.get(key).getSourceImage();
+      const figure = key !== page.art;
+      const wide = !figure;
+      const scale = figure || tex.width < 100 ? PX : BG_PX; // scenes stay 3pt until redrawn at 2pt
       this.tweens.killTweensOf(this.art);
       this.bob?.remove();
-      this.art.setTexture(page.art).setScale(scale).setVisible(true).setAlpha(0).setY(210);
+      this.art.setTexture(key).setScale(scale).setVisible(true).setAlpha(0).setY(210);
       this.tweens.add({ targets: this.art, alpha: 1, duration: 400, ...stepped(4), onComplete: () => {
         // gentle life: figures float, scenes flicker like lamplight
         if (wide) this.tweens.add({ targets: this.art, alpha: 0.82, yoyo: true, repeat: -1, duration: 1300, ...stepped(3) });
-        else this.bob = idleFrames(this, this.art, page.art) || pixelBob(this, this.art, scale, 1, 500);
+        else this.bob = idleFrames(this, this.art, key) || pixelBob(this, this.art, scale, 1, 500);
       } });
       if (wide) {
         const h = tex.height * scale;

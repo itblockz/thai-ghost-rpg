@@ -8,7 +8,7 @@ import { play } from '../audio/sfx.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const START = [180, 140];          // the master's shrine, where the journey began
-const NEXT_CHAPTER = [210, 540];   // the way on to the next chapter
+const NEXT_CHAPTER = [230, 504];   // the way on to the next chapter
 
 // Chapter map: the path from the shrine through each stage. Cleared stages can be replayed;
 // the next one is open; anything beyond is hidden. Reaching the map is the save point.

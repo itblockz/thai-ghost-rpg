@@ -5,8 +5,7 @@ import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
 import { currentTeam } from '../flow.js';
 import { play } from '../audio/sfx.js';
-import { RARITIES, CHARM_TYPES, charmText, charmName, applyCharm, charmStatIcon } from '../data/charms.js';
-import { saveFrom } from '../save.js';
+import { applyCharm } from '../data/charms.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const TEAM_SLOTS = 3;
@@ -22,6 +21,7 @@ export class PrepScene extends Phaser.Scene {
     setupCamera(this);
     registerSprites(this);
     this.stage = data?.stage ?? 0;
+    this.startData = data;
     const stage = STAGES[this.stage];
 
     this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(PX);
@@ -90,13 +90,9 @@ export class PrepScene extends Phaser.Scene {
     this.iconNums(330, PANEL_TOP + 20, def.atk ? [['mini_hp', u.maxHp], ['mini_atk', u.atk]] : [['mini_hp', u.maxHp]], add);
     add(this.add.rectangle(180, PANEL_TOP + 62, 300, 2, 0x44445e));
     if (allyId) {
-      // retainers: two tabs — their skills, or the charm they wear
-      [['skills', 'ฤทธิ์', 30], ['charm', 'ของขลัง', 100]].forEach(([key, label, tx]) => {
-        const on = tab === key;
-        add(this.add.text(tx, PANEL_TOP + 46, label, { ...FONT, fontSize: '14px', fontStyle: on ? 'bold' : 'normal', color: on ? '#ffe08a' : '#8888aa' }).setOrigin(0, 0.5)
-          .setPadding(4, 4, 4, 4).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.show(def, count, x, y, side, allyId, key); }));
-      });
-      if (tab === 'charm') return this.charmTab(allyId, add);
+      // charms are managed on the roster screen
+      add(this.add.text(30, PANEL_TOP + 44, 'จัดบริวารและของขลัง ›', { ...FONT, fontSize: '13px', color: '#ffe08a' }).setOrigin(0, 0.5).setPadding(4, 6, 4, 6)
+        .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Roster', { sel: allyId, back: { scene: 'Prep', data: this.startData } }); }));
     } else {
       add(this.add.text(30, PANEL_TOP + 44, def.lore || '', { ...FONT, fontSize: '12px', color: '#a8a8c8' }).setOrigin(0, 0.5));
     }
@@ -116,40 +112,6 @@ export class PrepScene extends Phaser.Scene {
       if (!known) icon.setTintFill(0x2a2a3a);
       ry += rowH;
     }
-  }
-
-  // What this retainer wears, and the bag to pick from (tap to wear; tap the worn one to take it off).
-  charmTab(allyId, add) {
-    const bag = this.registry.get('bag') || [], gear = { ...(this.registry.get('gear') || {}) };
-    const worn = bag.find(c => c.id === gear[allyId]);
-    const top = PANEL_TOP + 74;
-    if (worn) {
-      add(this.add.image(50, top + 18, CHARM_TYPES[worn.type].icon).setScale(PX));
-      add(this.add.text(84, top + 6, charmName(worn), { ...FONT, fontSize: '15px', fontStyle: 'bold', color: RARITIES[worn.rarity].color }).setOrigin(0, 0.5));
-      if (charmStatIcon(worn)) { add(this.add.image(96, top + 28, charmStatIcon(worn)).setScale(PX)); add(this.add.text(114, top + 28, `+${worn.value}`, { ...FONT, fontSize: '14px' }).setOrigin(0, 0.5)); }
-      else add(this.add.text(84, top + 28, charmText(worn), { ...FONT, fontSize: '13px', color: '#ffffff' }).setOrigin(0, 0.5));
-    } else {
-      add(this.add.text(30, top + 16, bag.length ? 'ยังไม่สวมของขลัง แตะของในย่ามเพื่อสวม' : 'ย่ามยังว่าง ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#a8a8c8' }).setOrigin(0, 0.5));
-    }
-    // the bag: best first; charms worn by someone else are dimmed (tapping moves them here)
-    const order = { mythic: 0, rare: 1, common: 2 };
-    const list = [...bag].sort((a, b) => order[a.rarity] - order[b.rarity] || b.value - a.value).slice(0, 12);
-    list.forEach((c, i) => {
-      const x = 46 + (i % 6) * 54, y = top + 74 + Math.floor(i / 6) * 56;
-      const g = add(this.add.graphics());
-      const mine = gear[allyId] === c.id, other = !mine && Object.values(gear).includes(c.id);
-      this.panel(g, x, y, 50, 50, mine ? 0x3a3420 : 0x1e1c2a, RARITIES[c.rarity].hex);
-      add(this.add.image(x, y, CHARM_TYPES[c.type].icon).setScale(PX).setAlpha(other ? 0.35 : 1));
-      add(this.add.zone(x, y, 50, 50).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-        play('click');
-        for (const k in gear) if (gear[k] === c.id) delete gear[k];
-        if (!mine) gear[allyId] = c.id;
-        this.registry.set('gear', gear);
-        saveFrom(this);
-        this.show(...this.current, 'charm');
-      }));
-    });
-    if (bag.length > 12) add(this.add.text(330, PANEL_BOTTOM - 14, `+${bag.length - 12} ชิ้น`, { ...FONT, fontSize: '12px', color: '#8888aa' }).setOrigin(1, 0.5));
   }
 
   // Right-aligned row of [8x8 icon, number] pairs, e.g. ❤ 28  ✊ 4.

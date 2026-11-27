@@ -1,0 +1,163 @@
+import Phaser from 'phaser';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames } from '../display.js';
+import { registerSprites } from '../art/sprites.js';
+import { ALLIES } from '../data/units.js';
+import { SKILLS } from '../data/skills.js';
+import { RARITIES, CHARM_TYPES, charmText, charmName, applyCharm, charmStatIcon } from '../data/charms.js';
+import { currentTeam } from '../flow.js';
+import { saveFrom } from '../save.js';
+import { play } from '../audio/sfx.js';
+
+const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
+const PER_PAGE = 12;
+const RARITY_ORDER = { mythic: 0, rare: 1, common: 2 };
+const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : [65, 180, 295]);
+
+// จัดบริวาร: every retainer in full, and the whole bag of charms — look before you wear, page through,
+// throw away. Opened from the map or the prep screen (and returns there).
+export class RosterScene extends Phaser.Scene {
+  constructor() { super('Roster'); }
+
+  create(data) {
+    setupCamera(this);
+    registerSprites(this);
+    this.back = data?.back || { scene: 'Map' };
+    this.ids = currentTeam(this);
+    this.sel = data?.sel && this.ids.includes(data.sel) ? data.sel : this.ids[0];
+    this.page = data?.page || 0;
+    this.picked = null;      // charm id under inspection
+    this.confirmDrop = null; // charm id awaiting a second tap to throw away
+
+    this.add.rectangle(180, 320, 360, 640, 0x0b0b1a);
+    this.add.image(180, 0, 'art_map').setOrigin(0.5, 0).setScale(PX).setAlpha(0.25);
+    this.add.text(180, 26, 'บริวาร', { ...FONT, fontSize: '20px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0.5);
+    this.add.text(14, 26, '‹ กลับ', { ...FONT, fontSize: '15px', color: '#ccccee' }).setOrigin(0, 0.5).setPadding(6, 6, 6, 6)
+      .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start(this.back.scene, this.back.data); });
+
+    // retainer row
+    this.marker = this.add.graphics().setDepth(5);
+    const xs = slots(this.ids.length);
+    this.ids.forEach((id, i) => {
+      const img = this.add.image(xs[i], 104, ALLIES[id].sprite).setScale(PX);
+      idleFrames(this, img, ALLIES[id].sprite);
+      this.add.zone(xs[i], 104, 100, 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.sel = id; this.picked = null; this.redraw(); });
+    });
+    this.xs = xs;
+    this.objs = [];
+    this.redraw();
+  }
+
+  bag() { return this.registry.get('bag') || []; }
+  gear() { return { ...(this.registry.get('gear') || {}) }; }
+  setGear(g) { this.registry.set('gear', g); saveFrom(this); }
+
+  redraw() {
+    this.objs.forEach(o => o.destroy());
+    const objs = this.objs = [];
+    const add = o => (objs.push(o), o);
+    const id = this.sel, def = ALLIES[id], bag = this.bag(), gear = this.gear();
+
+    // brackets on the chosen retainer
+    const x0 = this.xs[this.ids.indexOf(id)], m = this.marker.clear().fillStyle(0xffdd55);
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
+      const cx = x0 + sx * 52, cy = 104 + sy * 52;
+      m.fillRect(Math.min(cx, cx - sx * 12), cy - (sy > 0 ? 3 : 0), 12, 3);
+      m.fillRect(cx - (sx > 0 ? 3 : 0), Math.min(cy, cy - sy * 12), 3, 12);
+    });
+
+    // ---- the retainer ----
+    const worn = bag.find(c => c.id === gear[id]);
+    const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0 };
+    applyCharm(u, worn);
+    add(this.panel(this.add.graphics(), 180, 252, 332, 160, 0x161424, 0xb89a50));
+    add(this.add.text(30, 190, def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
+    this.iconNums(330, 190, [['mini_hp', u.maxHp], ['mini_atk', u.atk]], add);
+    add(this.add.text(30, 214, def.lore, { ...FONT, fontSize: '12px', color: '#a8a8c8', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
+    def.skills.forEach((sid, i) => add(this.add.image(54 + i * 56, 256, SKILLS[sid].icon).setScale(PX)));
+    add(this.add.text(30 + def.skills.length * 56 + 8, 256, def.skills.map(s => SKILLS[s].name).join('\n'), { ...FONT, fontSize: '12px', color: '#ccccee', lineSpacing: 2 }).setOrigin(0, 0.5));
+    // charm slot
+    if (worn) {
+      add(this.add.image(54, 306, CHARM_TYPES[worn.type].icon).setScale(PX));
+      add(this.add.text(86, 298, charmName(worn), { ...FONT, fontSize: '14px', fontStyle: 'bold', color: RARITIES[worn.rarity].color }).setOrigin(0, 0.5));
+      this.effect(86, 318, worn, add);
+      this.button(add, 290, 306, 70, 32, 'ถอด', 0x2a2a3a, 0x8888aa, () => { const g = this.gear(); delete g[id]; this.setGear(g); this.redraw(); });
+    } else {
+      add(this.add.text(30, 306, 'ยังไม่สวมของขลัง', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0, 0.5));
+    }
+
+    // ---- the bag ----
+    const list = [...bag].sort((a, b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity] || CHARM_TYPES[a.type].name.localeCompare(CHARM_TYPES[b.type].name) || b.value - a.value);
+    const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
+    this.page = Math.min(this.page, pages - 1);
+    add(this.add.text(30, 352, `ย่าม (${bag.length})`, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5));
+    if (pages > 1) {
+      add(this.add.text(330, 352, `${this.page + 1}/${pages}`, { ...FONT, fontSize: '13px', color: '#aaaacc' }).setOrigin(1, 0.5));
+      const flip = (label, x, d) => add(this.add.text(x, 352, label, { ...FONT, fontSize: '22px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0.5).setPadding(8, 2, 8, 2)
+        .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.page = (this.page + d + pages) % pages; this.picked = null; this.redraw(); }));
+      flip('‹', 250, -1); flip('›', 290, 1);
+    }
+    if (!bag.length) add(this.add.text(180, 420, 'ย่ามยังว่าง ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0.5));
+    const wornBy = Object.fromEntries(Object.entries(gear).map(([k, v]) => [v, k]));
+    list.slice(this.page * PER_PAGE, (this.page + 1) * PER_PAGE).forEach((c, i) => {
+      const x = 46 + (i % 6) * 54, y = 400 + Math.floor(i / 6) * 56;
+      const g = add(this.add.graphics());
+      this.panel(g, x, y, 50, 50, this.picked === c.id ? 0x4a4020 : 0x1e1c2a, this.picked === c.id ? 0xffffff : RARITIES[c.rarity].hex);
+      add(this.add.image(x, y, CHARM_TYPES[c.type].icon).setScale(PX).setAlpha(wornBy[c.id] && wornBy[c.id] !== id ? 0.45 : 1));
+      if (wornBy[c.id]) add(this.add.text(x + 20, y - 18, wornBy[c.id] === id ? '✓' : '•', { ...FONT, fontSize: '13px', fontStyle: 'bold', color: wornBy[c.id] === id ? '#88dd99' : '#ccccee', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5));
+      add(this.add.zone(x, y, 50, 50).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.picked = c.id; this.confirmDrop = null; this.redraw(); }));
+    });
+
+    // ---- the charm under inspection: look first, then wear or throw away ----
+    const c = bag.find(b => b.id === this.picked);
+    if (c) {
+      add(this.panel(this.add.graphics(), 180, 556, 332, 82, 0x1a1626, RARITIES[c.rarity].hex));
+      add(this.add.text(30, 534, charmName(c), { ...FONT, fontSize: '15px', fontStyle: 'bold', color: RARITIES[c.rarity].color }).setOrigin(0, 0.5));
+      this.effect(30, 556, c, add);
+      const owner = wornBy[c.id];
+      add(this.add.text(30, 578, owner ? `${ALLIES[owner].name}สวมอยู่` : 'ยังไม่มีผู้ใดสวม', { ...FONT, fontSize: '12px', color: '#9999bb' }).setOrigin(0, 0.5));
+      if (owner !== id) this.button(add, 250, 540, 90, 34, 'สวม', 0x3d3d5e, 0xffdd55, () => {
+        const g = this.gear(); for (const k in g) if (g[k] === c.id) delete g[k]; g[id] = c.id; this.setGear(g); this.redraw();
+      });
+      const confirming = this.confirmDrop === c.id;
+      this.button(add, 250, 578, 90, 30, confirming ? 'ทิ้งแน่?' : 'ทิ้ง', confirming ? 0x5a2d3a : 0x2a2a3a, confirming ? 0xff7790 : 0x8888aa, () => {
+        if (!confirming) { this.confirmDrop = c.id; return this.redraw(); }
+        const g = this.gear(); for (const k in g) if (g[k] === c.id) delete g[k];
+        this.registry.set('bag', this.bag().filter(b => b.id !== c.id));
+        this.picked = null; this.confirmDrop = null; this.setGear(g); this.redraw();
+      });
+    } else if (bag.length) {
+      add(this.add.text(180, 556, 'แตะของขลังเพื่อดูก่อนสวม', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0.5));
+    }
+  }
+
+  // a charm's effect: stat charms as icon + number, others as words
+  effect(x, y, c, add) {
+    const icon = charmStatIcon(c);
+    if (icon) { add(this.add.image(x + 12, y, icon).setScale(PX)); add(this.add.text(x + 30, y, `+${c.value}`, { ...FONT, fontSize: '14px' }).setOrigin(0, 0.5)); }
+    else add(this.add.text(x, y, charmText(c), { ...FONT, fontSize: '13px' }).setOrigin(0, 0.5));
+  }
+
+  button(add, x, y, w, h, label, fill, border, onTap) {
+    add(this.panel(this.add.graphics(), x, y, w, h, fill, border));
+    add(this.add.text(x, y, label, { ...FONT, fontSize: '15px', fontStyle: 'bold' }).setOrigin(0.5));
+    add(this.add.zone(x, y, w, h).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onTap(); }));
+  }
+
+  iconNums(right, y, pairs, add) {
+    let x = right;
+    for (const [key, n] of [...pairs].reverse()) {
+      const t = add(this.add.text(x, y, String(n), { ...FONT, fontSize: '15px' }).setOrigin(1, 0.5));
+      x -= t.width + 4;
+      add(this.add.image(x - 12, y, key).setScale(PX));
+      x -= 34;
+    }
+  }
+
+  panel(g, x, y, w, h, fill, border, u = PX) {
+    const l = x - w / 2, t = y - h / 2;
+    g.fillStyle(0x000000).fillRect(l + u, t, w - 2 * u, h).fillRect(l, t + u, w, h - 2 * u);
+    g.fillStyle(border).fillRect(l + 2 * u, t + u, w - 4 * u, h - 2 * u).fillRect(l + u, t + 2 * u, w - 2 * u, h - 4 * u);
+    g.fillStyle(fill).fillRect(l + 2 * u, t + 2 * u, w - 4 * u, h - 4 * u);
+    return g;
+  }
+}

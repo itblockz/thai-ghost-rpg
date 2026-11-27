@@ -70,7 +70,12 @@ export class MapScene extends Phaser.Scene {
     });
     this.walker = this.party[0];
 
-    this.add.text(180, 610, chapterDone ? 'ผ่านบรรพนี้แล้ว แตะศึกเพื่อประลองซ้ำ' : 'แตะจุดหมายเพื่อออกเดินทาง', { ...FONT, fontSize: '13px', color: '#bbbbdd', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+    // retainers & charms
+    const g = this.add.graphics().setDepth(6), bx = 300, by = 596;
+    g.fillStyle(0x000000).fillRect(bx - 50, by - 20, 100, 40).fillStyle(0xffdd55).fillRect(bx - 47, by - 17, 94, 34).fillStyle(0x3d3d5e).fillRect(bx - 44, by - 14, 88, 28);
+    this.add.text(bx, by, 'บริวาร', { ...FONT, fontSize: '15px', fontStyle: 'bold' }).setOrigin(0.5).setDepth(6);
+    this.add.zone(bx, by, 100, 40).setInteractive({ useHandCursor: true }).setDepth(6).on('pointerdown', () => { play('click'); this.scene.start('Roster', { back: { scene: 'Map', data: { chapter: this.ch } } }); });
+    this.add.text(125, 596, chapterDone ? 'ผ่านบรรพนี้แล้ว แตะศึกเพื่อประลองซ้ำ' : 'แตะจุดหมายเพื่อออกเดินทาง', { ...FONT, fontSize: '13px', wordWrap: { width: 220 }, align: 'center', color: '#bbbbdd', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
     this.busy = false;
   }
 

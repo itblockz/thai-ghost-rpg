@@ -41,6 +41,8 @@ export function charmText(c) {
     default: return '';
   }
 }
+// For stat charms, the 8x8 icon that goes with the number (scenes draw icon + '+N').
+export const charmStatIcon = c => (c.type === 'takrut' ? 'mini_hp' : c.type === 'fang' ? 'mini_atk' : null);
 export const charmName = c => `${CHARM_TYPES[c.type].name} (${RARITIES[c.rarity].name})`;
 
 // What a worn charm changes on a unit at the start of a fight.

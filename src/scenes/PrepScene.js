@@ -5,7 +5,7 @@ import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
 import { currentTeam } from '../flow.js';
 import { play } from '../audio/sfx.js';
-import { RARITIES, CHARM_TYPES, charmText, charmName, applyCharm } from '../data/charms.js';
+import { RARITIES, CHARM_TYPES, charmText, charmName, applyCharm, charmStatIcon } from '../data/charms.js';
 import { saveFrom } from '../save.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
@@ -86,7 +86,8 @@ export class PrepScene extends Phaser.Scene {
     // the unit as it will fight: base stats plus any worn charm
     const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0 };
     if (allyId) { const bag = this.registry.get('bag') || []; applyCharm(u, bag.find(c => c.id === (this.registry.get('gear') || {})[allyId])); }
-    add(this.add.text(330, PANEL_TOP + 20, def.atk ? `ขวัญ ${u.maxHp}  กำลัง ${u.atk}` : `ขวัญ ${u.maxHp}`, { ...FONT, fontSize: '15px', color: '#88dd99' }).setOrigin(1, 0.5));
+    // stats as small pictures: heart = ขวัญ, fist = กำลัง (right-aligned)
+    this.iconNums(330, PANEL_TOP + 20, def.atk ? [['mini_hp', u.maxHp], ['mini_atk', u.atk]] : [['mini_hp', u.maxHp]], add);
     add(this.add.rectangle(180, PANEL_TOP + 62, 300, 2, 0x44445e));
     if (allyId) {
       // retainers: two tabs — their skills, or the charm they wear
@@ -106,9 +107,9 @@ export class PrepScene extends Phaser.Scene {
       const s = SKILLS[sid];
       // enemy skills stay unknown (???) until witnessed in a fight
       const known = !!allyId || seen.has(sid);
-      add(this.add.text(84, ry, known ? s.name : '???', { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0));
-      if (known && s.cooldown) add(this.add.text(330, ry + 2, `พักฤทธิ์ ${s.cooldown} ตา`, { ...FONT, fontSize: '12px', color: '#9999bb' }).setOrigin(1, 0));
-      const text = known ? s.desc : 'ยังไม่เคยเห็นฤทธิ์นี้';
+      add(this.add.text(84, ry, known ? s.name : '?', { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0));
+      if (known && s.cooldown) this.iconNums(330, ry + 10, [['mini_cd', s.cooldown]], add);
+      const text = known ? s.desc : '';
       const facts = add(this.add.text(84, ry + 22, text, { ...FONT, fontSize: '12px', color: known ? '#ccccee' : '#7777aa', wordWrap: { width: 240 }, lineSpacing: 2 }).setOrigin(0, 0));
       const rowH = Math.max(54, 26 + facts.height);
       const icon = add(this.add.image(50, ry + 26, s.icon).setScale(PX));
@@ -125,7 +126,8 @@ export class PrepScene extends Phaser.Scene {
     if (worn) {
       add(this.add.image(50, top + 18, CHARM_TYPES[worn.type].icon).setScale(PX));
       add(this.add.text(84, top + 6, charmName(worn), { ...FONT, fontSize: '15px', fontStyle: 'bold', color: RARITIES[worn.rarity].color }).setOrigin(0, 0.5));
-      add(this.add.text(84, top + 28, charmText(worn), { ...FONT, fontSize: '13px', color: '#ffffff' }).setOrigin(0, 0.5));
+      if (charmStatIcon(worn)) { add(this.add.image(96, top + 28, charmStatIcon(worn)).setScale(PX)); add(this.add.text(114, top + 28, `+${worn.value}`, { ...FONT, fontSize: '14px' }).setOrigin(0, 0.5)); }
+      else add(this.add.text(84, top + 28, charmText(worn), { ...FONT, fontSize: '13px', color: '#ffffff' }).setOrigin(0, 0.5));
     } else {
       add(this.add.text(30, top + 16, bag.length ? 'ยังไม่สวมของขลัง แตะของในย่ามเพื่อสวม' : 'ย่ามยังว่าง ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#a8a8c8' }).setOrigin(0, 0.5));
     }
@@ -148,6 +150,17 @@ export class PrepScene extends Phaser.Scene {
       }));
     });
     if (bag.length > 12) add(this.add.text(330, PANEL_BOTTOM - 14, `+${bag.length - 12} ชิ้น`, { ...FONT, fontSize: '12px', color: '#8888aa' }).setOrigin(1, 0.5));
+  }
+
+  // Right-aligned row of [8x8 icon, number] pairs, e.g. ❤ 28  ✊ 4.
+  iconNums(right, y, pairs, add) {
+    let x = right;
+    for (const [key, n] of [...pairs].reverse()) {
+      const t = add(this.add.text(x, y, String(n), { ...FONT, fontSize: '15px', color: '#ffffff' }).setOrigin(1, 0.5));
+      x -= t.width + 4;
+      add(this.add.image(x - 12, y, key).setScale(PX));
+      x -= 34;
+    }
   }
 
   panel(g, x, y, w, h, fill, border, u = PX) {

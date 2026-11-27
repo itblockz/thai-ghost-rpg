@@ -5,7 +5,7 @@ import { registerSprites, pixelDisc, pixelRing } from '../art/sprites.js';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, pixelBob } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, currentTeam } from '../flow.js';
-import { rollCharm, applyCharm, charmText, charmName, RARITIES, CHARM_TYPES } from '../data/charms.js';
+import { rollCharm, applyCharm, charmText, charmName, charmStatIcon, RARITIES, CHARM_TYPES } from '../data/charms.js';
 import { saveFrom } from '../save.js';
 
 // How each unit travels to its target: dash (default), hop, float.
@@ -243,7 +243,7 @@ export class BattleScene extends Phaser.Scene {
       }
       if (e.block) { target.block = true; target.shieldIcon.setVisible(true); }
       const warded = k => target.wards?.has(k);
-      if ((e.stun && warded('stun')) || (e.blind && warded('blind'))) this.popup(target.x, target.y + 24, 'ผ้ายันต์คุ้มกัน!', '#ffe08a', 15);
+      if ((e.stun && warded('stun')) || (e.blind && warded('blind'))) this.iconPop(target.x, target.y + 10, 'charm_yant');
       if (e.stun && !missed && !blocked && !warded('stun')) target.stunned = (target.stunned || 0) + e.stun;
       if (e.blind && !missed && !blocked && !warded('blind')) target.blind = true;
       if (e.heal) { const h = Math.min(amount(e, 'heal', user), target.maxHp - target.hp); target.hp += h; healed += h; }
@@ -302,11 +302,11 @@ export class BattleScene extends Phaser.Scene {
 
   // Popups/sounds/flash for one target's result.
   feedback(target, r) {
-    if (r.missed) { this.popup(target.x, target.y - 30, 'ตาพร่า พลาดเป้า!', '#bbbbcc', 22); return; }
+    if (r.missed) { this.iconPop(target.x, target.y - 20, 'icon_miss'); return; }
     if (r.healed) { this.popup(target.x, target.y - 20, `+${r.healed}`, '#66ee88', 26); play('ward'); }
     if (!r.dealt && !r.blocked) return;
     {
-      if (r.blocked) { this.popup(target.x, target.y - 30, 'กันไว้!', '#ffe066', 22); play('block'); }
+      if (r.blocked) { this.iconPop(target.x, target.y - 20, 'icon_shield'); play('block'); }
       else if (r.dealt) {
         const heavy = r.dealt >= 12;
         this.popup(target.x, target.y - 20, `-${r.dealt}`, target.side === 'ally' ? '#ff5566' : r.mult > 1 ? '#ff7733' : '#ffdd55', heavy ? 34 : 26);
@@ -338,7 +338,9 @@ export class BattleScene extends Phaser.Scene {
       this.add.text(180, 102, 'ได้ของขลัง', { ...FONT, fontSize: '13px', color: '#bbbbdd' }).setOrigin(0.5).setDepth(9),
       this.add.image(70, 148, CHARM_TYPES[c.type].icon).setScale(PX).setDepth(9),
       this.add.text(106, 132, charmName(c), { ...FONT, fontSize: '17px', fontStyle: 'bold', color: r.color }).setOrigin(0, 0.5).setDepth(9),
-      this.add.text(106, 160, charmText(c), { ...FONT, fontSize: '14px', color: '#ffffff' }).setOrigin(0, 0.5).setDepth(9),
+      ...(charmStatIcon(c)
+        ? [this.add.image(118, 160, charmStatIcon(c)).setScale(PX).setDepth(9), this.add.text(136, 160, `+${c.value}`, { ...FONT, fontSize: '15px', color: '#ffffff' }).setOrigin(0, 0.5).setDepth(9)]
+        : [this.add.text(106, 160, charmText(c), { ...FONT, fontSize: '14px', color: '#ffffff' }).setOrigin(0, 0.5).setDepth(9)]),
     ];
     objs.forEach(o => o.setAlpha(0));
     this.tweens.add({ targets: objs, alpha: 1, duration: 400, delay: 500, ease: 'Stepped', easeParams: [4] });
@@ -383,7 +385,7 @@ export class BattleScene extends Phaser.Scene {
     u.stunned--;
     this.busy = true;
     this.buildButtons();
-    this.popup(u.x, u.y - 20, 'จมน้ำ! เสียตา', '#88bbff', 18);
+    this.iconPop(u.x, u.y - 20, 'icon_drag');
     this.tweens.add({ targets: u.sprite, y: u.y + 9, yoyo: true, duration: 260, ease: 'Stepped', easeParams: [3] });
     this.refresh();
     this.time.delayedCall(700, then);
@@ -428,7 +430,7 @@ export class BattleScene extends Phaser.Scene {
     const s = SKILLS[this.selected];
     // only a first-time hint; the gold glow shows whose turn it is
     // one line under the buttons: what the chosen skill does, and whom to tap
-    this.turnText.setText(`${s.desc} — ${s.target === 'ally' ? 'แตะบริวาร' : 'แตะศัตรู'}`);
+    this.turnText.setText(s.desc);
   }
 
   // Panel with notched (pixel-style) corners.
@@ -538,6 +540,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   hideCard() { this.card.setVisible(false); this.card.removeAll(true); }
+
+  // A status shown as a picture that rises and fades (blocked, missed, dragged under, warded).
+  iconPop(x, y, key) {
+    const img = this.add.image(x, y, key).setScale(PX).setDepth(8);
+    this.tweens.add({ targets: img, y: y - 36, alpha: 0, duration: 1000, delay: 250, ease: 'Stepped', easeParams: [6], onComplete: () => img.destroy() });
+  }
 
   popup(x, y, text, color = '#fff', size = 26) {
     const t = this.add.text(x, y, text, { ...FONT, fontSize: `${size}px`, fontStyle: 'bold', color, stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(8);

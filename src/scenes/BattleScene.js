@@ -924,18 +924,25 @@ export class BattleScene extends Phaser.Scene {
         return;
       }
       if (kind === 'hair') {
-        // wet hair snakes across in a wave, wraps the target, squeezes
+        // three wet strands snake across, then coil twice round the target and squeeze
         play('splash');
-        const g = this.add.graphics().setDepth(6), n = 16;
-        for (let i = 0; i <= n; i++) this.time.delayedCall(i * 14, () => {
-          const t = i / n, px = user.x + (target.x - user.x) * t, py = user.y + (target.y - user.y) * t + Math.sin(t * Math.PI * 3) * 10;
-          g.fillStyle(i % 3 ? 0x8a7aa0 : 0x5d4d6e).fillRect(Math.round(px / 2) * 2 - 2, Math.round(py / 2) * 2 - 2, 4, 4);
+        const g = this.add.graphics().setDepth(6), n = 28, px2 = v => Math.round(v / 2) * 2;
+        for (let i = 0; i <= n; i++) this.time.delayedCall(i * 8, () => {
+          const t = i / n;
+          [-6, 0, 6].forEach((o, k) => {
+            const px = user.x + (target.x - user.x) * t + o, py = user.y + (target.y - user.y) * t + Math.sin(t * Math.PI * 3 + k) * 10;
+            g.fillStyle(k === 1 ? 0x8a7aa0 : 0x5d4d6e).fillRect(px2(px) - 2, px2(py) - 2, 4, 4);
+          });
         });
-        this.time.delayedCall(n * 14 + 40, () => {
+        this.time.delayedCall(n * 8 + 30, () => {
+          [-12, 10].forEach(dy => { for (let a = 0; a < 24; a++) {
+            const th = a / 24 * Math.PI * 2;
+            g.fillStyle(a % 2 ? 0x8a7aa0 : 0x5d4d6e).fillRect(px2(target.x + Math.cos(th) * 30) - 2, px2(target.y + dy + Math.sin(th) * 8) - 2, 4, 4);
+          } });
+          play('hit');
           this.tweens.add({ targets: target.sprite, scaleX: target.sprite.scaleX * 0.8, duration: 90, yoyo: true, repeat: 1, ease: 'Stepped', easeParams: [2] });
-          this.fxClaw(target);
           onHit();
-          this.tweens.add({ targets: g, alpha: 0, duration: 300, delay: 120, onComplete: () => g.destroy() });
+          this.tweens.add({ targets: g, alpha: 0, duration: 300, delay: 260, onComplete: () => g.destroy() });
           this.pose(user, 'idle');
         });
         return;

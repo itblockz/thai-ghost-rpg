@@ -28,7 +28,7 @@ export class TitleScene extends Phaser.Scene {
     this.add.text(180, 52, 'ประตูหิมพานต์', { ...FONT, fontSize: '40px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
     this.add.text(180, 92, 'บทที่ ๑ — คืนเดือนดับ', { ...FONT, fontSize: '17px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
     const t = this.add.text(180, 618, 'แตะเพื่อเริ่มเดินทาง', { ...FONT, fontSize: '20px', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
-    this.tweens.add({ targets: t, alpha: 0.3, yoyo: true, repeat: -1, duration: 700, ease: 'Stepped', easeParams: [1] });
+    this.tweens.add({ targets: t, alpha: 0.3, yoyo: true, repeat: -1, duration: 700, ease: 'Sine.inOut' });
     this.input.once('pointerdown', () => {
       unlockAudio();
       play('click');

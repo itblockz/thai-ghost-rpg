@@ -36,7 +36,7 @@ export class BattleScene extends Phaser.Scene {
     this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(4);
     this.add.rectangle(180, 540, 360, 200, 0x0b0b1a);
     this.reticle = this.add.graphics().setDepth(4);
-    this.tweens.add({ targets: this.reticle, alpha: 0.35, yoyo: true, repeat: -1, duration: 500, ease: 'Stepped', easeParams: [1] });
+    this.tweens.add({ targets: this.reticle, alpha: 0.35, yoyo: true, repeat: -1, duration: 500, ease: 'Sine.inOut' });
 
     // ----- units -----
     const ex = slots(stage.enemies.length);

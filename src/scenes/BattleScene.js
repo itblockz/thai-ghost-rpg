@@ -84,6 +84,18 @@ export class BattleScene extends Phaser.Scene {
     const speedOf = () => { try { return localStorage.getItem('himmapan-speed') === '2' ? 2 : 1; } catch { return 1; } };
     const applySpeed = v => { this.time.timeScale = v; this.tweens.timeScale = v; };
     applySpeed(speedOf());
+    // ออโต้ (only on stages already cleared): retainers fight on their own; remembered
+    if (!this.first) {
+      const autoOn = () => { try { return localStorage.getItem('himmapan-auto') === '1'; } catch { return false; } };
+      this.auto = autoOn();
+      const au = this.add.text(254, 26, 'ออโต้', { ...FONT, fontSize: '13px', fontStyle: 'bold', color: this.auto ? '#88dd99' : '#77779a', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setPadding(6, 6, 6, 6).setDepth(10)
+        .setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+          this.auto = !this.auto;
+          try { localStorage.setItem('himmapan-auto', this.auto ? '1' : '0'); } catch { /* ignore */ }
+          au.setColor(this.auto ? '#88dd99' : '#77779a'); play('click');
+          if (this.auto && this.active && !this.busy) this.autoAct(this.active);
+        });
+    }
     const spd = this.add.text(302, 26, `×${speedOf()}`, numFont(16, '#ffe08a')).setOrigin(0.5).setPadding(8, 6, 8, 6).setDepth(10)
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => {
         const v = speedOf() === 2 ? 1 : 2;
@@ -305,6 +317,43 @@ export class BattleScene extends Phaser.Scene {
     this.buildButtons();
     this.busy = false;
     this.refresh();
+    if (this.auto) this.time.delayedCall(350, () => { if (this.active === u && !this.busy && this.auto) this.autoAct(u); });
+  }
+
+  // ออโต้: choose a sensible skill and target for a retainer, then use it as if tapped
+  autoAct(u) {
+    const ready = u.skills.filter(id => !u.cd[id]);
+    const allies = this.alive(this.allies), foes = this.alive(this.enemies);
+    const has = (id, k) => SKILLS[id].effects.some(e => e[k] != null && e[k] !== false);
+    let pick = null;
+    // 1) shield whoever an enemy is winding up at, if that enemy moves before this retainer's next turn
+    const guard = ready.find(id => has(id, 'block'));
+    const marked = foes.filter(e => e.pending && e.next < u.next).map(e => e.pending.target).find(t => t?.alive && !t.block);
+    if (guard && marked) pick = [guard, marked];
+    // 2) heal the poisoned, or anyone low
+    const heal = ready.find(id => has(id, 'heal'));
+    if (!pick && heal) {
+      const low = [...allies].sort((a, b) => (b.poison ? 1 : 0) - (a.poison ? 1 : 0) || a.hp / a.maxHp - b.hp / b.maxHp)[0];
+      if (low && (low.poison || low.hp / low.maxHp < 0.6)) pick = [heal, low];
+    }
+    // 3) dazzle the most dangerous foe (boss or elite) if it can still see
+    const blind = ready.find(id => has(id, 'blind'));
+    const big = foes.find(e => (e.def.boss || e.elite) && !e.blind);
+    if (!pick && blind && big) pick = [blind, big];
+    // 4) otherwise the hardest hit on whoever is winding up, else the weakest foe
+    if (!pick) {
+      const hits = ready.filter(id => SKILLS[id].target !== 'ally' && has(id, 'damage'))
+        .sort((a, b) => SKILLS[b].effects.reduce((t, e) => t + (e.damage != null ? amount(e, 'damage', u) : 0), 0) - SKILLS[a].effects.reduce((t, e) => t + (e.damage != null ? amount(e, 'damage', u) : 0), 0));
+      const t = [...foes].sort((a, b) => (b.pending ? 1 : 0) - (a.pending ? 1 : 0) || a.hp - b.hp)[0];
+      if (hits[0] && t) pick = [hits[0], t];
+    }
+    if (!pick) { // nothing useful: use whatever is ready on a fitting target
+      const id = ready[0] ?? u.skills[0];
+      pick = [id, SKILLS[id].target === 'ally' ? allies[0] : foes[0]];
+    }
+    this.selected = pick[0];
+    this.buildButtons();
+    this.useSelectedOn(pick[1]);
   }
 
   // end of a unit's own turn: its cooldowns tick (not the one it just started)

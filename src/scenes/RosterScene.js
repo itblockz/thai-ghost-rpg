@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, BG_PX, idleFrames, numFont } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, numFont } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { ALLIES } from '../data/units.js';
 import { SKILLS } from '../data/skills.js';
@@ -30,7 +30,7 @@ export class RosterScene extends Phaser.Scene {
     this.confirmDrop = null; // charm id awaiting a second tap to throw away
 
     this.add.rectangle(180, 320, 360, 640, 0x0b0b1a);
-    this.add.image(180, 0, 'art_map').setOrigin(0.5, 0).setScale(BG_PX).setAlpha(0.25);
+    this.add.image(180, 0, 'art_map').setOrigin(0.5, 0).setScale(PX).setAlpha(0.25);
     this.add.text(180, 26, 'บริวาร', { ...FONT, fontSize: '20px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0.5);
     this.add.text(14, 26, '‹ กลับ', { ...FONT, fontSize: '15px', color: '#ccccee' }).setOrigin(0, 0.5).setPadding(6, 6, 6, 6)
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start(this.back.scene, this.back.data); });

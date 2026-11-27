@@ -1787,47 +1787,64 @@ export const SPRITES = {
   ],
 };
 
-/** Battle backdrops on the shared grid: 120x214 art px, shown at PX (3) = full 360 width. */
-const BG_W = 120, BG_H = 214, HORIZON = 107; // full screen height; ground runs under the buttons
+/** Battle backdrops on the shared 2pt grid: 180x320 art px = the whole 360x640 screen. */
+const BG_W = 180, BG_H = 320, HORIZON = 160; // ground runs under the buttons
+// the old 120-wide layouts, re-placed on the finer grid (shapes are then drawn at full detail)
+const k = v => Math.round(v * 1.5);
 function sky(px, W, bands, until) {
   for (let y = 0; y < until; y++) for (let x = 0; x < W; x++) {
     const f = y / until * (bands.length - 1), i = Math.floor(f);
     px(x, y, bands[Math.min(bands.length - 1, f - i + ((x + y) % 2 ? 0.25 : -0.25) > 0.5 ? i + 1 : i)]);
   }
 }
-const STARS = [[10, 8], [27, 19], [44, 5], [63, 15], [83, 4], [100, 21], [112, 9], [19, 32], [73, 27], [54, 38], [6, 47]];
+const STARS = [[15, 12], [40, 28], [66, 7], [94, 22], [124, 6], [150, 31], [168, 13], [28, 48], [110, 40], [81, 57], [9, 70], [136, 60], [57, 84]];
+// a star: one pixel, or a tiny cross for the bright ones
+const star = (px, [x, y], col, i) => { px(x, y, col); if (i % 4 === 0) { px(x - 1, y, col); px(x + 1, y, col); px(x, y - 1, col); px(x, y + 1, col); px(x, y, '#ffffff'); } };
+// filled disc with a rim colour
+function disc(px, cx, cy, r, fill, rim) {
+  for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+    const d = x * x + y * y;
+    if (d <= r * r) px(cx + x, cy + y, d > (r - 1.5) ** 2 ? rim : fill);
+  }
+}
+// glow: solid core, dithered falloff
+function glow(px, cx, cy, r, core, cols) {
+  for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+    const d = Math.sqrt(x * x + y * y);
+    if (d < r && (d < core || (x + y) % 2 === 0)) px(cx + x, cy + y, cols[Math.min(cols.length - 1, Math.floor(d / r * cols.length))]);
+  }
+}
 
 /** Night forest by an old pavilion: moon, roof silhouette, pines, fog, grass. */
 function drawBackdrop(scene) {
   canvasArt(scene, 'bg_night', BG_W, BG_H, (px, rect, W, H) => {
     sky(px, W, ['#0b0820', '#120b2c', '#1a1036', '#221440', '#2a1846'], HORIZON);
-    STARS.forEach(([x, y]) => px(x, y, '#8a86b0'));
-    // moon with soft rim and two craters
-    for (let y = -9; y <= 9; y++) for (let x = -9; x <= 9; x++) {
-      const d = x * x + y * y;
-      if (d <= 81) px(101 + x, 40 + y, d > 64 ? '#bdb48a' : '#e8e0b0');
-    }
-    px(98, 37, '#cfc596'); px(99, 37, '#cfc596'); px(104, 44, '#cfc596');
+    STARS.forEach((s, i) => star(px, s, '#8a86b0', i));
+    // moon with soft rim and craters
+    disc(px, 152, 60, 14, '#e8e0b0', '#bdb48a');
+    [[147, 55, 2], [156, 66, 1], [150, 64, 1]].forEach(([x, y, r]) => disc(px, x, y, r, '#cfc596', '#cfc596'));
     // pavilion (ศาลา): stacked roof, spire, posts
-    const roof = '#07050f';
-    for (let y = 0; y < 19; y++) rect(24 - y - 5, 70 + y, 2 * (y + 5) + 1, 1, roof);
-    rect(24, 64, 1, 6, roof);
-    rect(5, 89, 39, 3, roof);
-    for (let x = 6; x <= 42; x += 9) rect(x, 92, 2, HORIZON - 92, roof);
-    // pines
+    const roof = '#07050f', edge = '#120c1e';
+    for (let y = 0; y < 28; y++) rect(36 - y - 7, 105 + y, 2 * (y + 7) + 1, 1, y === 27 ? edge : roof);
+    rect(35, 94, 2, 11, roof); px(36, 93, roof);
+    rect(7, 133, 59, 4, roof); rect(7, 133, 59, 1, edge);
+    for (let x = 9; x <= 63; x += 13) rect(x, 137, 3, HORIZON - 137, roof);
+    // pines with branch tiers
     const tree = (cx, top, w) => {
       for (let y = top; y < HORIZON; y++) {
-        const t = y - top, half = t < w * 2.4 ? Math.floor(t / 2.4) + 1 : 1;
-        rect(cx - half, y, 2 * half + 1, 1, (t % 6 === 5 && half > 2) ? '#0c0818' : '#060410');
+        const t = y - top, half = t < w * 3.6 ? Math.floor(t / 2.4) + 1 : 1;
+        const tier = t % 9;
+        rect(cx - half + (tier > 6 ? 2 : 0), y, 2 * half + 1 - (tier > 6 ? 4 : 0), 1, (tier === 8 && half > 3) ? '#0c0818' : '#060410');
       }
     };
-    tree(85, 53, 11); tree(107, 61, 10); tree(64, 75, 9);
-    // ground with grass flecks
+    tree(128, 80, 11); tree(160, 92, 10); tree(96, 112, 9); tree(176, 120, 6);
+    // ground with grass flecks and blades
     for (let y = HORIZON; y < H; y++) for (let x = 0; x < W; x++)
-      px(x, y, (x * 7 + y * 3) % 11 === 0 ? '#1c2a1c' : (x * 5 + y * 11) % 23 === 0 ? '#233523' : y < HORIZON + 5 ? '#0d140f' : '#111a13');
+      px(x, y, (x * 7 + y * 3) % 17 === 0 ? '#1c2a1c' : (x * 5 + y * 11) % 31 === 0 ? '#233523' : y < HORIZON + 8 ? '#0d140f' : '#111a13');
+    for (let x = 3; x < W; x += 7) { const y = HORIZON + 10 + (x * 13) % 140; px(x, y, '#2a402a'); px(x, y - 1, '#2a402a'); px(x + 1, y - 2, '#22361f'); }
     // fog band
-    for (let y = 99; y < 118; y++) for (let x = 0; x < W; x++)
-      if (Math.sin(x / 8 + y * 0.75) + Math.sin(x / 15) > 0.6 && (x + y) % 2 === 0) px(x, y, '#3a3a55');
+    for (let y = 148; y < 177; y++) for (let x = 0; x < W; x++)
+      if (Math.sin(x / 12 + y * 0.5) + Math.sin(x / 22) > 0.6 && (x + y) % 2 === 0) px(x, y, '#3a3a55');
   });
 }
 
@@ -1835,67 +1852,71 @@ function drawBackdrop(scene) {
 function drawVillageBackdrop(scene) {
   canvasArt(scene, 'bg_village', BG_W, BG_H, (px, rect, W, H) => {
     sky(px, W, ['#0b0820', '#160a26', '#22102c', '#2e1430', '#3a1830'], HORIZON);
-    STARS.slice(0, 7).forEach(([x, y]) => px(x, y, '#7a6a90'));
-    // red glow over the treetops
-    for (let y = -21; y <= 21; y++) for (let x = -21; x <= 21; x++) {
-      const d = Math.sqrt(x * x + y * y);
-      if (d < 21 && (d < 6 || (x + y) % 2 === 0)) px(93 + x, 35 + y, d < 4 ? '#ff6688' : d < 10 ? '#8a1830' : '#3a0c22');
-    }
-    const tree = (cx, top) => { for (let y = top; y < 88; y++) { const h = Math.min(9, Math.floor((y - top) / 2) + 1); rect(cx - h, y, 2 * h + 1, 1, '#08040e'); } };
-    tree(13, 48); tree(48, 56); tree(83, 51); tree(112, 45);
+    STARS.slice(0, 9).forEach((s, i) => star(px, s, '#7a6a90', i));
+    // red glow over the treetops (the krasue's light)
+    glow(px, 140, 52, 32, 9, ['#ff6688', '#8a1830', '#5a1028', '#3a0c22']);
+    const tree = (cx, top) => { for (let y = top; y < 132; y++) { const h = Math.min(14, Math.floor((y - top) / 2) + 1); rect(cx - h, y, 2 * h + 1, 1, (y - top) % 8 === 7 ? '#0d0714' : '#08040e'); } };
+    tree(20, 72); tree(72, 84); tree(124, 76); tree(168, 68);
     // stilt houses: roof, wall with plank lines, shut windows, stilts
     const house = (x, w, top) => {
-      for (let y = 0; y < 11; y++) rect(x - y, top + y, w + 2 * y, 1, y === 10 ? '#1c1022' : '#0e0814');
-      rect(x - 7, top + 11, w + 14, 13, '#150c1a');
-      for (let yy = top + 13; yy < top + 24; yy += 3) rect(x - 7, yy, w + 14, 1, '#120a16');
-      rect(x + 1, top + 15, 5, 5, '#050208'); rect(x + w - 6, top + 15, 5, 5, '#050208');
-      for (let i = 0; i < 4; i++) rect(x - 5 + i * Math.floor((w + 10) / 3), top + 24, 2, HORIZON - top - 24, '#0e0814');
+      for (let y = 0; y < 16; y++) rect(x - y, top + y, w + 2 * y, 1, y === 15 ? '#1c1022' : '#0e0814');
+      rect(x - 10, top + 16, w + 20, 20, '#150c1a');
+      for (let yy = top + 19; yy < top + 36; yy += 4) rect(x - 10, yy, w + 20, 1, '#120a16');
+      rect(x + 2, top + 22, 7, 7, '#050208'); rect(x + w - 9, top + 22, 7, 7, '#050208');
+      rect(x + 5, top + 22, 1, 7, '#150c1a'); rect(x + w - 6, top + 22, 1, 7, '#150c1a');
+      for (let i = 0; i < 4; i++) rect(x - 8 + i * Math.floor((w + 16) / 3), top + 36, 3, HORIZON - top - 36, '#0e0814');
+      rect(x - 6, top + 46, w + 12, 2, '#0e0814'); // cross-brace under the floor
     };
-    house(11, 18, 66); house(53, 21, 61); house(96, 16, 69);
+    house(17, 27, 99); house(80, 31, 92); house(144, 24, 104);
     for (let y = HORIZON; y < H; y++) for (let x = 0; x < W; x++)
-      px(x, y, (x * 5 + y * 3) % 13 === 0 ? '#2e2220' : (x * 3 + y * 7) % 29 === 0 ? '#3a2a26' : y < HORIZON + 5 ? '#151010' : '#1c1414');
-    for (let y = 99; y < 115; y++) for (let x = 0; x < W; x++)
-      if (Math.sin(x / 7 + y * 0.75) + Math.sin(x / 12) > 0.7 && (x + y) % 2 === 0) px(x, y, '#3a1a2a');
+      px(x, y, (x * 5 + y * 3) % 19 === 0 ? '#2e2220' : (x * 3 + y * 7) % 41 === 0 ? '#3a2a26' : y < HORIZON + 8 ? '#151010' : '#1c1414');
+    for (let y = 148; y < 172; y++) for (let x = 0; x < W; x++)
+      if (Math.sin(x / 10 + y * 0.5) + Math.sin(x / 18) > 0.7 && (x + y) % 2 === 0) px(x, y, '#3a1a2a');
   });
 }
 
-/** Title art (90x160, shown at 4x): a cracked Thai gate leaking light from the other side. */
-
-/** Chapter 2 backdrops (120x214): a pier at night, the open river, the naga's water palace. */
+/** Chapter 2 backdrops: a pier at night, the open river, the naga's water palace. */
 function water(px, W, H, top, deep = '#0e1e3a', mid = '#16305a', hi = '#3a6ab0') {
   for (let y = top; y < H; y++) for (let x = 0; x < W; x++) {
-    const ripple = Math.sin(x / 5 + y * 1.3) + Math.sin(x / 11 - y * 0.7);
-    px(x, y, ripple > 1.4 && (x + y) % 2 === 0 ? hi : y < top + 6 || (x * 3 + y) % 7 === 0 ? mid : deep);
+    const ripple = Math.sin(x / 7 + y * 0.9) + Math.sin(x / 16 - y * 0.5);
+    px(x, y, ripple > 1.4 && (x + y) % 2 === 0 ? hi : y < top + 9 || (x * 3 + y) % 11 === 0 ? mid : deep);
   }
 }
 function drawRiverBackdrops(scene) {
   canvasArt(scene, 'bg_pier', BG_W, BG_H, (px, rect, W, H) => {
-    sky(px, W, ['#0b0820', '#120b2c', '#1a1036', '#1c1a40'], 96);
-    STARS.forEach(([x, y]) => px(x, y, '#8a86b0'));
-    for (let y = -8; y <= 8; y++) for (let x = -8; x <= 8; x++) if (x * x + y * y <= 64) px(30 + x, 30 + y, x * x + y * y > 49 ? '#bdb48a' : '#e8e0b0');
+    sky(px, W, ['#0b0820', '#120b2c', '#1a1036', '#1c1a40'], 144);
+    STARS.forEach((s, i) => star(px, s, '#8a86b0', i));
+    disc(px, 45, 45, 12, '#e8e0b0', '#bdb48a');
+    disc(px, 41, 42, 2, '#cfc596', '#cfc596');
     // far bank treeline
-    for (let x = 0; x < W; x++) { const h = 6 + Math.round(3 * Math.sin(x / 4) + 2 * Math.sin(x / 9)); rect(x, 96 - h, 1, h, '#07060f'); }
-    water(px, W, H, 96);
+    for (let x = 0; x < W; x++) { const h = 9 + Math.round(4 * Math.sin(x / 6) + 3 * Math.sin(x / 13)); rect(x, 144 - h, 1, h, '#07060f'); }
+    water(px, W, H, 144);
     // moon's reflection
-    for (let y = 100; y < 150; y += 3) rect(26 + ((y * 7) % 5), y, 8 - ((y * 3) % 4), 1, '#8a8a70');
+    for (let y = 150; y < 225; y += 4) rect(39 + ((y * 7) % 7), y, 12 - ((y * 3) % 6), 1, '#8a8a70');
     // pier: planks on posts, reaching out from the right
-    rect(66, 120, 54, 6, '#3a2a1c'); rect(66, 120, 54, 1, '#5a4430');
-    for (let x = 68; x < W; x += 7) rect(x, 120, 1, 6, '#2a1e14');
-    for (let x = 70; x < W; x += 14) rect(x, 126, 3, 30, '#2a1e14');
+    rect(99, 180, 81, 9, '#3a2a1c'); rect(99, 180, 81, 1, '#5a4430'); rect(99, 188, 81, 1, '#2a1e14');
+    for (let x = 102; x < W; x += 10) rect(x, 180, 1, 9, '#2a1e14');
+    for (let x = 105; x < W; x += 21) { rect(x, 189, 4, 45, '#2a1e14'); rect(x, 189, 1, 45, '#3a2a1c'); }
     // lantern post at the pier's end
-    rect(72, 98, 2, 22, '#2a1e14'); rect(69, 92, 8, 7, '#d08a30'); rect(70, 93, 6, 5, '#ffd070');
+    rect(108, 147, 3, 33, '#2a1e14');
+    glow(px, 109, 143, 14, 0, ['#4a3018', '#2a1c14']);
+    rect(104, 138, 12, 10, '#d08a30'); rect(106, 140, 8, 6, '#ffd070'); rect(103, 137, 14, 1, '#7a4a20'); rect(103, 148, 14, 1, '#7a4a20');
   });
   canvasArt(scene, 'bg_river', BG_W, BG_H, (px, rect, W, H) => {
-    sky(px, W, ['#07101e', '#0b1628', '#101e34', '#14243c'], 90);
-    STARS.slice(0, 8).forEach(([x, y]) => px(x, y, '#7a8ab0'));
-    for (let x = 0; x < W; x++) { const h = 4 + Math.round(2 * Math.sin(x / 6)); rect(x, 90 - h, 1, h, '#050a12'); }
-    water(px, W, H, 90, '#0a1a30', '#12284a', '#2a5a90');
+    sky(px, W, ['#07101e', '#0b1628', '#101e34', '#14243c'], 135);
+    STARS.slice(0, 10).forEach((s, i) => star(px, s, '#7a8ab0', i));
+    for (let x = 0; x < W; x++) { const h = 6 + Math.round(3 * Math.sin(x / 9)); rect(x, 135 - h, 1, h, '#050a12'); }
+    water(px, W, H, 135, '#0a1a30', '#12284a', '#2a5a90');
     // drifting mist bands
-    for (let y = 84; y < 120; y++) for (let x = 0; x < W; x++) if (Math.sin(x / 9 + y * 0.6) + Math.sin(x / 17) > 1.1 && (x + y) % 2 === 0) px(x, y, '#3a4a66');
-    // ghost-fires flickering over the water
-    [[20, 70], [52, 62], [96, 74], [80, 58]].forEach(([x, y]) => { rect(x - 1, y - 1, 3, 3, '#b8400e'); px(x, y, '#ffe066'); });
+    for (let y = 126; y < 180; y++) for (let x = 0; x < W; x++) if (Math.sin(x / 13 + y * 0.4) + Math.sin(x / 25) > 1.1 && (x + y) % 2 === 0) px(x, y, '#3a4a66');
+    // ghost-fires flickering over the water, each with a dim reflection
+    [[30, 105], [78, 93], [144, 111], [120, 87]].forEach(([x, y]) => {
+      glow(px, x, y, 6, 0, ['#4a2a1a', '#2a1a1a']);
+      rect(x - 2, y - 2, 5, 5, '#b8400e'); rect(x - 1, y - 3, 3, 1, '#b8400e'); rect(x - 1, y - 1, 3, 3, '#ff8a30'); px(x, y, '#ffe066');
+      for (let r = 0; r < 3; r++) rect(x - 2 + r, y + 40 + r * 4, 5 - r * 2, 1, '#5a3020');
+    });
     // reeds at the edges
-    for (let x = 0; x < W; x++) if (x < 14 || x > 106) for (let y = 150 + ((x * 7) % 12); y < H; y++) if ((x * 5) % 3 === 0) px(x, y, '#1a3a22');
+    for (let x = 0; x < W; x++) if (x < 21 || x > 159) for (let y = 225 + ((x * 7) % 18); y < H; y++) if ((x * 5) % 3 === 0) px(x, y, (y + x) % 9 === 0 ? '#2a5a32' : '#1a3a22');
   });
   canvasArt(scene, 'bg_naga', BG_W, BG_H, (px, rect, W, H) => {
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -1903,104 +1924,113 @@ function drawRiverBackdrops(scene) {
       px(x, y, (x + y) % 2 && f < 0.5 ? '#06161a' : f < 0.25 ? '#071a1e' : f < 0.55 ? '#0a2226' : '#0c2a2a');
     }
     // light falling from the surface
-    for (let y = 0; y < 120; y++) for (let x = 0; x < W; x++) if (Math.sin(x / 6 + y / 25) > 0.85 && (x + y) % 3 === 0) px(x, y, '#1a4a4a');
-    // palace silhouette: tiered roofs
-    const C = 60;
-    for (let t = 0; t < 3; t++) { const top = 30 + t * 12, half = 10 + t * 9; for (let y = 0; y < 12; y++) rect(C - half - Math.floor(y / 2), top + y, 2 * (half + Math.floor(y / 2)), 1, '#041012'); rect(C - half - 8, top + 11, 2 * half + 16, 1, '#8a6a30'); }
-    rect(C - 1, 22, 2, 8, '#8a6a30');
-    rect(C - 30, 66, 60, 40, '#041012');
-    rect(C - 6, 80, 12, 26, '#1a4a3a');
-    // naga stair rails, gold and green
-    for (const dir of [-1, 1]) for (let i = 0; i < 30; i++) {
-      const x = C + dir * (14 + i), y = 106 + i;
-      rect(Math.min(x, x + dir * 2), y, 3, 2, i % 4 ? '#2e8a3a' : '#e8c050');
+    for (let y = 0; y < 180; y++) for (let x = 0; x < W; x++) if (Math.sin(x / 9 + y / 37) > 0.85 && (x + y) % 3 === 0) px(x, y, '#1a4a4a');
+    // rising bubbles
+    [[20, 150], [24, 120], [22, 90], [158, 170], [162, 132], [156, 100], [70, 40], [112, 60]].forEach(([x, y]) => { px(x, y, '#3a7a7a'); px(x + 1, y, '#3a7a7a'); px(x, y - 1, '#5a9a9a'); });
+    // palace silhouette: tiered roofs with gold eaves
+    const C = 90;
+    for (let t = 0; t < 3; t++) {
+      const top = 45 + t * 18, half = 15 + t * 13;
+      for (let y = 0; y < 18; y++) rect(C - half - Math.floor(y / 2), top + y, 2 * (half + Math.floor(y / 2)), 1, '#041012');
+      rect(C - half - 12, top + 17, 2 * half + 24, 1, '#8a6a30');
+      px(C - half - 13, top + 16, '#e8c050'); px(C + half + 12, top + 16, '#e8c050');
+    }
+    rect(C - 1, 33, 3, 12, '#8a6a30'); px(C, 32, '#e8c050');
+    rect(C - 45, 99, 90, 60, '#041012');
+    for (let x = C - 40; x < C + 40; x += 12) rect(x, 104, 2, 55, '#06181a');
+    rect(C - 9, 120, 18, 39, '#1a4a3a'); rect(C - 9, 120, 18, 2, '#2a6a4a');
+    // naga stair rails, gold and green scales
+    for (const dir of [-1, 1]) for (let i = 0; i < 45; i++) {
+      const x = C + dir * (21 + i), y = 159 + i;
+      rect(Math.min(x, x + dir * 3), y, 4, 3, i % 6 ? (i % 2 ? '#2e8a3a' : '#257a30') : '#e8c050');
     }
     // floor
-    for (let y = 136; y < H; y++) for (let x = 0; x < W; x++) px(x, y, (x * 7 + y * 3) % 11 === 0 ? '#16302a' : '#0c2220');
+    for (let y = 204; y < H; y++) for (let x = 0; x < W; x++) px(x, y, (x * 7 + y * 3) % 17 === 0 ? '#16302a' : '#0c2220');
   });
   // chapter 2 map: the river winding down the middle
   canvasArt(scene, 'art_map2', BG_W, BG_H, (px, rect, W, H) => {
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const n = Math.sin(x / 9 + y / 13) + Math.sin(x / 5 - y / 7) * 0.5;
-      px(x, y, n > 0.9 ? '#132016' : n > 0.2 ? '#0f1a12' : (x + y) % 2 ? '#0c140e' : '#0d1610');
-    }
+    land(px, W, H);
     for (let y = 0; y < H; y++) {
-      const cx = 60 + Math.round(Math.sin(y / 22) * 26), w = 14 + Math.round(Math.sin(y / 9) * 2);
-      for (let x = cx - w; x <= cx + w; x++) px(x, y, Math.abs(x - cx) > w - 2 ? '#1a2a3a' : (x + y) % 6 ? '#16223a' : '#243a5a');
+      const cx = 90 + Math.round(Math.sin(y / 33) * 39), w = 21 + Math.round(Math.sin(y / 13) * 3);
+      for (let x = cx - w; x <= cx + w; x++) px(x, y, Math.abs(x - cx) > w - 3 ? '#1a2a3a' : (x + y) % 9 ? '#16223a' : '#243a5a');
     }
   });
-  // story crops (sky-and-shore part) for picture-book pages
-  for (const [key, src] of [['art_pier', 'bg_pier'], ['art_river', 'bg_river'], ['art_naga', 'bg_naga']]) {
-    if (scene.textures.exists(key)) continue;
-    const t = scene.textures.createCanvas(key, BG_W, 118);
-    t.getContext().drawImage(scene.textures.get(src).getSourceImage(), 0, 40, BG_W, 118, 0, 0, BG_W, 118);
-    t.refresh(); t.setFilter(1);
+  // story crops (sky-and-shore part) for picture-book pages: 171x132, the story frame's size
+  for (const [key, src, top] of [['art_pier', 'bg_pier', 80], ['art_river', 'bg_river', 60], ['art_naga', 'bg_naga', 30]]) storyCrop(scene, key, src, top);
+}
+function storyCrop(scene, key, src, top) {
+  if (scene.textures.exists(key)) return;
+  const t = scene.textures.createCanvas(key, 171, 132);
+  t.getContext().drawImage(scene.textures.get(src).getSourceImage(), 4, top, 171, 132, 0, 0, 171, 132);
+  t.refresh(); t.setFilter(1);
+}
+// night countryside seen from above
+function land(px, W, H) {
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const n = Math.sin(x / 13 + y / 19) + Math.sin(x / 7 - y / 10) * 0.5;
+    px(x, y, n > 0.9 ? '#132016' : n > 0.2 ? '#0f1a12' : (x + y) % 2 ? '#0c140e' : '#0d1610');
   }
 }
 
-/** Chapter map: night countryside seen from above, 120x214 art px. */
+/** Chapter map: night countryside seen from above. */
 function drawMapArt(scene) {
   canvasArt(scene, 'art_map', BG_W, BG_H, (px, rect, W, H) => {
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const n = Math.sin(x / 9 + y / 13) + Math.sin(x / 5 - y / 7) * 0.5;
-      px(x, y, n > 0.9 ? '#132016' : n > 0.2 ? '#0f1a12' : (x + y) % 2 ? '#0c140e' : '#0d1610');
-    }
+    land(px, W, H);
     // a river winding down the right side
     for (let y = 0; y < H; y++) {
-      const cx = 100 + Math.round(Math.sin(y / 18) * 8);
-      for (let x = cx - 4; x <= cx + 4; x++) px(x, y, Math.abs(x - cx) > 3 ? '#1a2a3a' : (x + y) % 5 ? '#16223a' : '#243a5a');
+      const cx = 150 + Math.round(Math.sin(y / 27) * 12);
+      for (let x = cx - 6; x <= cx + 6; x++) px(x, y, Math.abs(x - cx) > 4 ? '#1a2a3a' : (x + y) % 7 ? '#16223a' : '#243a5a');
     }
     // scattered pines
-    const pine = (cx, cy) => { for (let t = 0; t < 7; t++) rect(cx - Math.floor(t / 2), cy + t, 2 * Math.floor(t / 2) + 1, 1, t % 3 === 2 ? '#0a1a0e' : '#06120a'); px(cx, cy + 7, '#2a1a10'); };
-    [[8, 20], [20, 40], [12, 70], [30, 100], [6, 130], [18, 170], [44, 20], [70, 40], [80, 120], [60, 150], [40, 190], [84, 186], [66, 70], [12, 200]].forEach(([x, y]) => pine(x, y));
+    const pine = (cx, cy) => { for (let t = 0; t < 10; t++) rect(cx - Math.floor(t / 2), cy + t, 2 * Math.floor(t / 2) + 1, 1, t % 4 === 3 ? '#0a1a0e' : '#06120a'); rect(cx, cy + 10, 1, 2, '#2a1a10'); };
+    [[12, 30], [30, 60], [18, 105], [45, 150], [9, 195], [27, 255], [66, 30], [105, 60], [120, 180], [90, 225], [60, 285], [126, 279], [99, 105], [18, 300]].forEach(([x, y]) => pine(x, y));
   });
 }
 
 function drawTitleArt(scene) {
-  // drawn natively on the shared grid: 120x213 art px = full screen at PX
-  canvasArt(scene, 'art_gate', 120, 213, (px, rect, W, H) => {
-    const C = 60, GROUND = 173;
+  canvasArt(scene, 'art_gate', BG_W, BG_H, (px, rect, W, H) => {
+    const C = 90, GROUND = 260;
     sky(px, W, ['#06051a', '#0b0820', '#120b2c', '#1a1036', '#221440'], GROUND);
-    [[8, 5], [24, 16], [93, 8], [112, 20], [13, 40], [107, 45], [40, 4], [76, 12], [5, 67], [115, 69], [28, 58], [98, 90]].forEach(([x, y]) => px(x, y, '#8a86b0'));
+    [[12, 8], [36, 24], [140, 12], [168, 30], [20, 60], [160, 68], [60, 6], [114, 18], [8, 100], [172, 104], [42, 87], [147, 135], [90, 20]].forEach((s, i) => star(px, s, '#8a86b0', i));
     // light from the other side, haloing the gate
-    for (let y = -54; y <= 54; y++) for (let x = -46; x <= 46; x++) {
+    for (let y = -81; y <= 81; y++) for (let x = -69; x <= 69; x++) {
       const d = Math.sqrt(x * x + (y * 0.8) ** 2);
-      if (d < 46 && (d < 19 || (x + y) % 2 === 0)) px(C + x, 131 + y, d < 19 ? '#3a2850' : d < 32 ? '#261a40' : '#1a1232');
+      if (d < 69 && (d < 28 || (x + y) % 2 === 0)) px(C + x, 197 + y, d < 28 ? '#3a2850' : d < 48 ? '#261a40' : '#1a1232');
     }
     const dark = '#0a0612', trim = '#3a2a40', gold = '#8a6a30', goldHi = '#c8a050';
     // tiered spire (ยอดปราสาท) with gold eaves and upturned corner finials
-    rect(C - 1, 38, 2, 9, gold); px(C - 1, 37, goldHi);
+    rect(C - 1, 57, 3, 14, gold); px(C, 56, goldHi); px(C, 55, goldHi);
     for (let t = 0; t < 4; t++) {
-      const top = 47 + t * 11, half = 5 + t * 5;
-      for (let y = 0; y < 11; y++) { const h = half + Math.floor(y / 2); rect(C - h, top + y, 2 * h, 1, dark); }
-      const eave = half + 5;
-      rect(C - eave - 1, top + 10, 2 * eave + 2, 1, gold);
-      px(C - eave - 2, top + 9, goldHi); px(C + eave + 1, top + 9, goldHi); // ช่อฟ้า-like tips
-      for (let x = C - half + 2; x < C + half - 2; x += 4) px(x, top + 6, trim);
+      const top = 71 + t * 16, half = 7 + t * 8;
+      for (let y = 0; y < 16; y++) { const h = half + Math.floor(y / 2); rect(C - h, top + y, 2 * h + 1, 1, dark); }
+      const eave = half + 8;
+      rect(C - eave - 1, top + 15, 2 * eave + 3, 1, gold);
+      rect(C - eave - 3, top + 13, 2, 2, goldHi); rect(C + eave + 2, top + 13, 2, 2, goldHi); // ช่อฟ้า-like tips
+      for (let x = C - half + 3; x < C + half - 2; x += 5) { px(x, top + 9, trim); px(x, top + 10, trim); }
     }
     // lintel and pillars
-    rect(26, 91, 68, 7, dark); rect(26, 91, 68, 1, goldHi); rect(26, 97, 68, 1, gold);
-    for (let x = 30; x < 92; x += 6) px(x, 94, gold);
-    rect(30, 98, 10, GROUND - 98, dark); rect(80, 98, 10, GROUND - 98, dark);
-    rect(31, 98, 1, GROUND - 98, trim); rect(88, 98, 1, GROUND - 98, trim);
-    rect(29, GROUND - 4, 12, 4, trim); rect(79, GROUND - 4, 12, 4, trim);
+    rect(39, 137, 103, 10, dark); rect(39, 137, 103, 1, goldHi); rect(39, 146, 103, 1, gold);
+    for (let x = 45; x < 138; x += 8) { px(x, 141, gold); px(x + 1, 142, gold); }
+    rect(45, 147, 15, GROUND - 147, dark); rect(121, 147, 15, GROUND - 147, dark);
+    rect(47, 147, 1, GROUND - 147, trim); rect(133, 147, 1, GROUND - 147, trim);
+    rect(43, GROUND - 6, 19, 6, trim); rect(119, GROUND - 6, 19, 6, trim);
     // door panels with studs
-    rect(40, 98, 19, GROUND - 98, '#140c1c'); rect(61, 98, 19, GROUND - 98, '#140c1c');
-    for (let y = 104; y < GROUND - 3; y += 13) { rect(43, y, 13, 1, '#22162a'); rect(64, y, 13, 1, '#22162a'); }
-    for (let y = 110; y < GROUND - 6; y += 13) { px(44, y, gold); px(54, y, gold); px(65, y, gold); px(75, y, gold); }
+    rect(60, 147, 30, GROUND - 147, '#140c1c'); rect(91, 147, 30, GROUND - 147, '#140c1c');
+    for (let y = 156; y < GROUND - 4; y += 19) { rect(64, y, 22, 1, '#22162a'); rect(95, y, 22, 1, '#22162a'); }
+    for (let y = 165; y < GROUND - 9; y += 19) [66, 82, 97, 113].forEach(x => { px(x, y, gold); px(x + 1, y, goldHi); });
     // jagged crack of light between the doors
     let cx = C;
-    for (let y = 98; y < GROUND; y++) {
-      if (y % 5 === 0) cx += ((y * 7) % 3) - 1;
-      cx = Math.max(C - 2, Math.min(C + 2, cx));
+    for (let y = 147; y < GROUND; y++) {
+      if (y % 7 === 0) cx += ((y * 7) % 3) - 1;
+      cx = Math.max(C - 3, Math.min(C + 3, cx));
       rect(cx - 1, y, 3, 1, '#c8a8ff'); px(cx, y, '#ffffff');
-      if (y === 112 || y === 135 || y === 156) { rect(cx + 2, y, 5, 1, '#a080e0'); px(cx + 7, y - 1, '#a080e0'); }
-      if (y === 123 || y === 147) { rect(cx - 6, y, 5, 1, '#a080e0'); px(cx - 7, y + 1, '#a080e0'); }
+      if (y === 168 || y === 202 || y === 234) { rect(cx + 2, y, 8, 1, '#a080e0'); px(cx + 10, y - 1, '#a080e0'); }
+      if (y === 184 || y === 220) { rect(cx - 9, y, 8, 1, '#a080e0'); px(cx - 10, y + 1, '#a080e0'); }
     }
     // ground and a stone path leading to the gate
-    for (let y = GROUND; y < H; y++) for (let x = 0; x < W; x++) px(x, y, (x * 7 + y * 3) % 11 === 0 ? '#1c2a1c' : (x * 5 + y * 11) % 23 === 0 ? '#233523' : '#0d140f');
-    for (let y = GROUND; y < H; y++) { const h = 11 + Math.floor((y - GROUND) / 2); rect(C - h, y, 2 * h, 1, (y % 4) ? '#1c1626' : '#241c30'); }
-    for (let y = GROUND; y < GROUND + 14; y++) for (let x = C - 7; x < C + 8; x++) if ((x + y) % 2 === 0) px(x, y, '#5a4880');
+    for (let y = GROUND; y < H; y++) for (let x = 0; x < W; x++) px(x, y, (x * 7 + y * 3) % 17 === 0 ? '#1c2a1c' : (x * 5 + y * 11) % 31 === 0 ? '#233523' : '#0d140f');
+    for (let y = GROUND; y < H; y++) { const h = 16 + Math.floor((y - GROUND) / 2); rect(C - h, y, 2 * h + 1, 1, (y % 6) ? '#1c1626' : '#241c30'); }
+    for (let y = GROUND; y < GROUND + 21; y++) for (let x = C - 10; x < C + 11; x++) if ((x + y) % 2 === 0) px(x, y, '#5a4880');
   });
 }
 
@@ -2027,33 +2057,31 @@ function canvasArt(scene, key, W, H, draw, outW = W) {
 
 function drawStoryArt(scene) {
   // Empty temple pavilion at night, a lantern still glowing, an empty mat.
-  // story scenes drawn natively on the shared grid: 114x88 art px (342x264 pt)
-  canvasArt(scene, 'art_shrine', 114, 88, (px, rect, W, H) => {
+  // story scenes drawn natively on the shared 2pt grid: 171x132 art px (342x264 pt)
+  canvasArt(scene, 'art_shrine', 171, 132, (px, rect, W, H) => {
     rect(0, 0, W, H, '#0a0814');
-    for (let y = 0; y < 38; y++) for (let x = 0; x < W; x++) if ((x * 13 + y * 7) % 53 === 0) px(x, y, '#3a3660');
+    for (let y = 0; y < 57; y++) for (let x = 0; x < W; x++) if ((x * 13 + y * 7) % 71 === 0) px(x, y, (x + y) % 3 ? '#3a3660' : '#6a669a');
     // lantern glow
-    for (let y = -28; y <= 28; y++) for (let x = -28; x <= 28; x++) {
-      const d = Math.sqrt(x * x + y * y);
-      if (d < 28 && (d < 13 || (x + y) % 2 === 0)) px(57 + x, 43 + y, d < 13 ? '#3a2a18' : '#22180f');
-    }
+    glow(px, 85, 64, 42, 19, ['#3a2a18', '#2e2216', '#22180f']);
     // roof with a lighter eave line and rafter ends
-    for (let y = 0; y < 13; y++) rect(13 - y, 7 + y, W - 26 + 2 * y, 1, '#1a1020');
-    rect(0, 20, W, 4, '#2a1a24'); rect(0, 20, W, 1, '#3a2632');
-    for (let x = 4; x < W; x += 9) rect(x, 24, 2, 2, '#2a1a24');
+    for (let y = 0; y < 19; y++) rect(19 - y, 10 + y, W - 38 + 2 * y, 1, y % 5 === 4 ? '#22142a' : '#1a1020');
+    rect(0, 29, W, 6, '#2a1a24'); rect(0, 29, W, 1, '#3a2632'); rect(0, 34, W, 1, '#1e1218');
+    for (let x = 5; x < W; x += 13) rect(x, 35, 3, 3, '#2a1a24');
     // pillars
-    rect(10, 24, 6, 50, '#2a1a24'); rect(W - 16, 24, 6, 50, '#2a1a24');
-    rect(11, 24, 1, 50, '#3a2632'); rect(W - 15, 24, 1, 50, '#3a2632');
+    rect(15, 35, 9, 76, '#2a1a24'); rect(W - 24, 35, 9, 76, '#2a1a24');
+    rect(16, 35, 1, 76, '#3a2632'); rect(W - 23, 35, 1, 76, '#3a2632');
     // floor boards
-    rect(0, 74, W, 14, '#1c1418');
-    for (let x = 0; x < W; x += 8) rect(x, 74, 1, 14, '#140e12');
-    // empty mat
-    rect(40, 68, 34, 6, '#4a3a22'); rect(40, 68, 34, 1, '#5e4a2c');
-    for (let x = 42; x < 72; x += 4) px(x, 71, '#3e3020');
+    rect(0, 111, W, 21, '#1c1418'); rect(0, 111, W, 1, '#2a1e22');
+    for (let x = 0; x < W; x += 12) rect(x, 111, 1, 21, '#140e12');
+    // empty mat with woven pattern
+    rect(60, 102, 51, 9, '#4a3a22'); rect(60, 102, 51, 1, '#5e4a2c');
+    for (let x = 62; x < 109; x += 3) px(x, 106 + (x % 2), '#3e3020');
     // lantern on its cord
-    rect(56, 24, 1, 10, '#555');
-    rect(53, 34, 7, 9, '#d08a30'); rect(54, 35, 5, 7, '#ffd070'); rect(53, 43, 7, 1, '#7a4a20'); rect(53, 33, 7, 1, '#7a4a20');
+    rect(84, 35, 1, 15, '#555566');
+    rect(79, 50, 11, 14, '#d08a30'); rect(81, 52, 7, 10, '#ffd070'); rect(83, 54, 3, 6, '#fff0b0');
+    rect(79, 64, 11, 1, '#7a4a20'); rect(79, 49, 11, 1, '#7a4a20'); rect(84, 65, 1, 3, '#7a4a20');
     // fallen note on the mat
-    rect(61, 65, 7, 4, '#d8c8a0'); px(62, 66, '#5a4a3a'); px(64, 66, '#5a4a3a'); px(66, 67, '#5a4a3a');
+    rect(91, 97, 11, 6, '#d8c8a0'); [[93, 99], [95, 99], [97, 99], [99, 100], [93, 101], [96, 101]].forEach(([x, y]) => px(x, y, '#5a4a3a'));
   });
 
   // Torn paper note with scribbled lines (64x48 on the shared 2pt grid).
@@ -2076,27 +2104,23 @@ function drawStoryArt(scene) {
     }
   });
 
-  // Silent village on stilts; a red light glowing above the trees.
-  canvasArt(scene, 'art_village', 114, 88, (px, rect, W, H) => {
-    sky(px, W, ['#0b0820', '#140c2a', '#1a1030'], 71);
-    // red glow
-    for (let y = -18; y <= 18; y++) for (let x = -18; x <= 18; x++) {
-      const d = Math.sqrt(x * x + y * y);
-      if (d < 18 && (d < 5 || (x + y) % 2 === 0)) px(86 + x, 18 + y, d < 4 ? '#ff6688' : d < 9 ? '#a01830' : '#4a0c20');
-    }
-    const tree = (cx, top) => { for (let y = top; y < 66; y++) { const h = Math.min(8, Math.floor((y - top) / 2) + 1); rect(cx - h, y, 2 * h + 1, 1, '#06040c'); } };
-    tree(10, 23); tree(38, 30); tree(71, 28); tree(102, 25);
+  // Silent village on stilts; a red light glowing above the trees (171x132).
+  canvasArt(scene, 'art_village', 171, 132, (px, rect, W, H) => {
+    sky(px, W, ['#0b0820', '#140c2a', '#1a1030'], 107);
+    glow(px, 129, 27, 27, 8, ['#ff6688', '#a01830', '#6a1028', '#4a0c20']);
+    const tree = (cx, top) => { for (let y = top; y < 99; y++) { const h = Math.min(12, Math.floor((y - top) / 2) + 1); rect(cx - h, y, 2 * h + 1, 1, (y - top) % 8 === 7 ? '#0b0712' : '#06040c'); } };
+    tree(15, 34); tree(57, 45); tree(106, 42); tree(153, 37);
     // stilt houses: roof, plank wall, shut windows, stilts
     const house = (x, w) => {
-      for (let y = 0; y < 10; y++) rect(x - y, 38 + y, w + 2 * y, 1, y === 9 ? '#1a1020' : '#0d0912');
-      rect(x - 5, 48, w + 10, 13, '#120d18');
-      for (let yy = 50; yy < 61; yy += 3) rect(x - 5, yy, w + 10, 1, '#0f0a14');
-      rect(x + 2, 52, 5, 5, '#05030a'); rect(x + w - 7, 52, 5, 5, '#05030a');
-      for (let i = 0; i < 4; i++) rect(x - 4 + i * Math.floor((w + 8) / 3), 61, 2, 10, '#0d0912');
+      for (let y = 0; y < 15; y++) rect(x - y, 57 + y, w + 2 * y, 1, y === 14 ? '#1a1020' : '#0d0912');
+      rect(x - 8, 72, w + 16, 20, '#120d18');
+      for (let yy = 75; yy < 92; yy += 4) rect(x - 8, yy, w + 16, 1, '#0f0a14');
+      rect(x + 3, 78, 7, 7, '#05030a'); rect(x + w - 10, 78, 7, 7, '#05030a');
+      for (let i = 0; i < 4; i++) rect(x - 6 + i * Math.floor((w + 12) / 3), 92, 3, 15, '#0d0912');
     };
-    house(15, 18); house(56, 20); house(92, 15);
-    rect(0, 71, W, 17, '#0c140e');
-    for (let y = 71; y < H; y++) for (let x = 0; x < W; x++) if ((x * 7 + y * 3) % 13 === 0) px(x, y, '#1c2a1c');
+    house(22, 27); house(84, 30); house(138, 22);
+    rect(0, 107, W, 25, '#0c140e');
+    for (let y = 107; y < H; y++) for (let x = 0; x < W; x++) if ((x * 7 + y * 3) % 19 === 0) px(x, y, '#1c2a1c');
   });
 }
 
@@ -2174,12 +2198,7 @@ function scale2x(rows) {
 export function registerSprites(scene) {
   drawBackdrop(scene);
   // story's forest page: the sky-and-treeline part of the battle backdrop
-  if (!scene.textures.exists('art_forest')) {
-    const src = scene.textures.get('bg_night').getSourceImage();
-    const t = scene.textures.createCanvas('art_forest', BG_W, 118);
-    t.getContext().drawImage(src, 0, 0, BG_W, 118, 0, 0, BG_W, 118);
-    t.refresh(); t.setFilter(1);
-  }
+  storyCrop(scene, 'art_forest', 'bg_night', 40);
   drawStoryArt(scene);
   drawVillageBackdrop(scene);
   drawTitleArt(scene);

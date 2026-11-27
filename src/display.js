@@ -49,7 +49,5 @@ export function idleFrames(scene, img, key) {
   } });
 }
 
-// One art pixel = PX screen points, for every sprite, icon and effect.
+// One art pixel = PX screen points, for every sprite, icon, effect and background.
 export const PX = 2;
-// Backgrounds are still drawn on the old 120-wide grid and shown at 3pt per pixel until they are redrawn at 180 wide.
-export const BG_PX = 3;

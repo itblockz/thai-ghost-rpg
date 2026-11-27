@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillDamage, skillFacts, amount } from '../data/skills.js';
 import { registerSprites, pixelDisc, pixelRing } from '../art/sprites.js';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, BG_PX, pixelBob, numFont } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, pixelBob, numFont } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, currentTeam } from '../flow.js';
 import { charmTitle, charmEffect } from '../ui/charmUi.js';
@@ -39,7 +39,7 @@ export class BattleScene extends Phaser.Scene {
     this.ended = false;
     this.active = null;
 
-    this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(BG_PX);
+    this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(PX);
     // the backdrop runs the full screen; a dark veil keeps the button area readable
     this.add.rectangle(180, 540, 360, 200, 0x0b0b1a, 0.72);
     this.reticle = this.add.graphics().setDepth(4);

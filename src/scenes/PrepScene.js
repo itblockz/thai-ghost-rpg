@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, BG_PX, idleFrames, numFont } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, numFont } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
@@ -24,7 +24,7 @@ export class PrepScene extends Phaser.Scene {
     this.startData = data;
     const stage = STAGES[this.stage];
 
-    this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(BG_PX);
+    this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(PX);
     this.add.rectangle(180, 320, 360, 640, 0x07060f, 0.35);
     this.add.text(180, 24, 'ศัตรูเบื้องหน้า', { ...FONT, fontSize: '16px', color: '#ff99aa', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
 

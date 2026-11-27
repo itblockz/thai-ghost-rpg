@@ -7,7 +7,7 @@ export const ALLIES = {
   },
   kongkoi: {
     name: 'ผีกองกอย', sprite: 'kongkoi', hp: 20, atk: 4, spd: 13, skills: ['rake', 'frenzy'],
-    lore: 'ผีป่าขาเดียว ว่องไว ขี้แกล้ง',
+    lore: 'ผีป่าขาเดียว ว่องไว แอบดูดเลือดหัวแม่เท้าคนหลับ',
   },
   krahang: {
     name: 'ผีกระหัง', sprite: 'krahang', hp: 20, atk: 3, spd: 14, skills: ['flap', 'whack'],

@@ -840,7 +840,6 @@ export class BattleScene extends Phaser.Scene {
       this.growFx(target.x, target.y, [30, 38, 46, 54], 0xffd860, 0.5, 500, pixelDisc);
       return this.time.delayedCall(200, onHit);
     }
-    if (kind === 'spit') return this.animSpit(user, target, onHit);
     if (kind === 'lash') return this.animLash(user, target, onHit);
     if (kind === 'hair' || kind === 'siphon') return this.animRanged(user, target, kind, onHit);
     if (kind === 'ram') return this.animRam(user, target, onHit);
@@ -885,19 +884,19 @@ export class BattleScene extends Phaser.Scene {
             const k = { x: target.x + dx / len * 16, y: target.y + dy / len * 16 };
             if (kind === 'frenzy') {
               this.fxFrenzy(target, onHit);
-            } else if (kind === 'suck') {
-              this.fxSuck(user, target, onHit);
+            } else if (kind === 'kickrush') {
+              this.fxKickRush(target, onHit);
             } else {
               if (kind === 'bite') this.fxBite(target);
               else if (kind === 'claw') this.fxClaw(target);
-              else if (kind === 'kick') this.fxKick(target);
+              else if (kind === 'kick' || kind === 'thud') this.fxKick(target);
               else this.fxSlash(target);
               if (target.side === 'ally') play('hurt');
               this.tweens.add({ targets: target.sprite, x: k.x, y: k.y, duration: 70, yoyo: true, ease: 'Quad.out', onComplete: () => target.sprite.setPosition(target.x, target.y) });
               onHit();
             }
             // 4) recovery: hold for a beat, then hop home and settle
-            this.time.delayedCall(kind === 'frenzy' || kind === 'suck' ? 440 : 90, () => this.tweens.add({
+            this.time.delayedCall(kind === 'frenzy' || kind === 'kickrush' ? 440 : 90, () => this.tweens.add({
               targets: sp, x: user.x, y: user.y, duration: 260, ease: 'Back.out', onComplete: () => this.pose(user, 'idle'),
             }));
           },
@@ -978,16 +977,13 @@ export class BattleScene extends Phaser.Scene {
     this.pixelShake(120, 3);
   }
 
-  // ดูดเลือดหัวแม่เท้า: clings at the feet, three gulps of red rising; damage on the last
-  fxSuck(user, t, onHit) {
+  // ถีบรัว: three thuds in quick succession; damage lands on the last
+  fxKickRush(t, onHit) {
     [0, 1, 2].forEach(i => this.time.delayedCall(i * 140, () => {
-      play('scratch');
-      for (let j = 0; j < 3; j++) {
-        const d = this.add.rectangle(t.x + Phaser.Math.Between(-10, 10), t.y + 30, 4, 4, 0xd01030).setDepth(6);
-        this.tweens.add({ targets: d, x: user.sprite.x, y: user.sprite.y, duration: 200, delay: j * 30, onComplete: () => d.destroy() });
-      }
-      this.tweens.add({ targets: t.sprite, scaleY: t.sprite.scaleY * 0.92, duration: 60, yoyo: true });
-      if (i === 2) { if (t.side === 'ally') play('hurt'); onHit(); }
+      play('hit');
+      this.growFx(t.x + (i - 1) * 12, t.y + 8, [10, 16, 22], 0xffffff, 0.8, 200, pixelDisc);
+      this.tweens.add({ targets: t.sprite, x: t.x + (i % 2 ? -6 : 6), duration: 50, yoyo: true });
+      if (i === 2) { this.pixelShake(120, 3); if (t.side === 'ally') play('hurt'); onHit(); }
     }));
   }
 
@@ -1053,33 +1049,6 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // Rear back, then hurl glowing guts at the target; splats drip off.
-  animSpit(user, target, onHit) {
-    this.tweens.add({
-      targets: user.sprite, y: user.y - 15, duration: 220, ease: 'Sine.out', onStart: () => this.pose(user, 'wind'),
-      onComplete: () => {
-        play('splash');
-        this.pose(user, 'atk');
-        this.tweens.add({ targets: user.sprite, y: user.y + 20, duration: 120, yoyo: true, onComplete: () => { user.sprite.setY(user.y); this.time.delayedCall(250, () => user.alive && this.pose(user, 'idle')); } });
-        for (let i = 0; i < 12; i++) {
-          const gut = this.add.image(user.x, user.y + 30, 'fx_gut').setScale(PX).setDepth(5);
-          this.tweens.add({
-            targets: gut, x: target.x + Phaser.Math.Between(-40, 40), y: target.y + Phaser.Math.Between(-40, 40), 
-            duration: 260, delay: i * 12, ease: 'Quad.in', onComplete: () => gut.destroy(),
-          });
-        }
-        this.time.delayedCall(280, () => {
-          play('hurt');
-          onHit();
-          for (let i = 0; i < 4; i++) {
-            const sp = this.add.image(target.x + Phaser.Math.Between(-45, 45), target.y + Phaser.Math.Between(-45, 30), Phaser.Math.RND.pick(['fx_splat', 'fx_splat@2']))
-              .setScale(PX).setDepth(5).setAlpha(0.9);
-            this.tweens.add({ targets: sp, y: sp.y + 30, alpha: 0, duration: 1200, delay: 200, onComplete: () => sp.destroy() });
-          }
-        });
-      },
-    });
-  }
-
   // กระสือ's ฟาดไส้: rises, then the entrails whip out in an arc of links and crack down on the target
   animLash(user, target, onHit) {
     this.tweens.add({

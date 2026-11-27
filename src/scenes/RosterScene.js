@@ -65,24 +65,28 @@ export class RosterScene extends Phaser.Scene {
       m.fillRect(cx - (sx > 0 ? 3 : 0), Math.min(cy, cy - sy * 12), 3, 12);
     });
 
-    // ---- the retainer ----
+    // ---- the retainer: name & stats, lore, skills (icon over name), and one charm slot ----
     const worn = bag.find(c => c.id === gear[id]);
     const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0 };
     applyCharm(u, worn);
     add(this.panel(this.add.graphics(), 180, 252, 332, 160, 0x161424, 0xb89a50));
     add(this.add.text(30, 190, def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
     this.iconNums(330, 190, [['mini_hp', u.maxHp], ['mini_atk', u.atk]], add);
-    add(this.add.text(30, 214, def.lore, { ...FONT, fontSize: '12px', color: '#a8a8c8', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
-    def.skills.forEach((sid, i) => add(this.add.image(54 + i * 56, 256, SKILLS[sid].icon).setScale(PX)));
-    add(this.add.text(30 + def.skills.length * 56 + 8, 256, def.skills.map(s => SKILLS[s].name).join('\n'), { ...FONT, fontSize: '12px', color: '#ccccee', lineSpacing: 2 }).setOrigin(0, 0.5));
-    // charm slot
+    add(this.add.text(30, 213, def.lore, { ...FONT, fontSize: '12px', color: '#a8a8c8', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
+    def.skills.forEach((sid, i) => {
+      const x = 58 + i * 66;
+      add(this.add.image(x, 262, SKILLS[sid].icon).setScale(PX));
+      add(this.add.text(x, 300, SKILLS[sid].name, { ...FONT, fontSize: '11px', color: '#ccccee' }).setOrigin(0.5));
+    });
+    // the single charm slot: its frame says "one" without words; empty shows +
+    const sx = 288, sy = 268;
+    add(this.add.text(sx, 228, 'ของขลัง', { ...FONT, fontSize: '11px', color: '#9999bb' }).setOrigin(0.5));
+    add(this.panel(this.add.graphics(), sx, sy, 62, 62, worn ? 0x2a2418 : 0x121020, worn ? RARITIES[worn.rarity].hex : 0x44445e));
     if (worn) {
-      add(this.add.image(54, 306, CHARM_TYPES[worn.type].icon).setScale(PX));
-      add(this.add.text(86, 298, charmName(worn), { ...FONT, fontSize: '14px', fontStyle: 'bold', color: RARITIES[worn.rarity].color }).setOrigin(0, 0.5));
-      this.effect(86, 318, worn, add);
-      this.button(add, 290, 306, 70, 32, 'ถอด', 0x2a2a3a, 0x8888aa, () => { const g = this.gear(); delete g[id]; this.setGear(g); this.redraw(); });
+      add(this.add.image(sx, sy, CHARM_TYPES[worn.type].icon).setScale(PX));
+      add(this.add.zone(sx, sy, 62, 62).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.picked = worn.id; this.confirmDrop = null; this.redraw(); }));
     } else {
-      add(this.add.text(30, 306, 'ยังไม่สวมของขลัง', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0, 0.5));
+      add(this.add.text(sx, sy, '+', { ...FONT, fontSize: '28px', color: '#55557a' }).setOrigin(0.5));
     }
 
     // ---- the bag ----
@@ -96,7 +100,6 @@ export class RosterScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.page = (this.page + d + pages) % pages; this.picked = null; this.redraw(); }));
       flip('‹', 250, -1); flip('›', 290, 1);
     }
-    if (!bag.length) add(this.add.text(180, 420, 'ย่ามยังว่าง ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0.5));
     const wornBy = Object.fromEntries(Object.entries(gear).map(([k, v]) => [v, k]));
     list.slice(this.page * PER_PAGE, (this.page + 1) * PER_PAGE).forEach((c, i) => {
       const x = 46 + (i % 6) * 54, y = 400 + Math.floor(i / 6) * 56;
@@ -115,6 +118,7 @@ export class RosterScene extends Phaser.Scene {
       this.effect(30, 556, c, add);
       const owner = wornBy[c.id];
       add(this.add.text(30, 578, owner ? `${ALLIES[owner].name}สวมอยู่` : 'ยังไม่มีผู้ใดสวม', { ...FONT, fontSize: '12px', color: '#9999bb' }).setOrigin(0, 0.5));
+      if (owner === id) this.button(add, 250, 540, 90, 34, 'ถอด', 0x2a2a3a, 0x8888aa, () => { const g = this.gear(); delete g[id]; this.setGear(g); this.redraw(); });
       if (owner !== id) this.button(add, 250, 540, 90, 34, 'สวม', 0x3d3d5e, 0xffdd55, () => {
         const g = this.gear(); for (const k in g) if (g[k] === c.id) delete g[k]; g[id] = c.id; this.setGear(g); this.redraw();
       });
@@ -125,8 +129,9 @@ export class RosterScene extends Phaser.Scene {
         this.registry.set('bag', this.bag().filter(b => b.id !== c.id));
         this.picked = null; this.confirmDrop = null; this.setGear(g); this.redraw();
       });
-    } else if (bag.length) {
-      add(this.add.text(180, 556, 'แตะของขลังเพื่อดูก่อนสวม', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0.5));
+    } else {
+      add(this.panel(this.add.graphics(), 180, 556, 332, 82, 0x121020, 0x33334a));
+      add(this.add.text(180, 556, bag.length ? 'แตะของขลังในย่ามเพื่อดูก่อนสวม' : 'ย่ามยังว่าง ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0.5));
     }
   }
 

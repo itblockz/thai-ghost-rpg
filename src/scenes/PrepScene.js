@@ -9,7 +9,7 @@ import { play } from '../audio/sfx.js';
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const TEAM_SLOTS = 3;
 const ENEMY_Y = 112, TEAM_Y = 488, PANEL_TOP = 178, PANEL_BOTTOM = 424, BTN_Y = 588;
-const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : [70, 180, 290]);
+const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : [65, 180, 295]);
 
 // Before each fight. Laid out like the battlefield (enemies above, team below);
 // tap anyone to read them in the middle panel. No pop-ups.
@@ -36,14 +36,10 @@ export class PrepScene extends Phaser.Scene {
     const ex = slots(stage.enemies.length);
     const picks = stage.enemies.map((id, i) => this.figure(ex[i], ENEMY_Y, ENEMIES[id], () => this.show(ENEMIES[id], counts[id], ex[i], ENEMY_Y, 'enemy')));
 
-    // team row, same places as in the fight; empty slots are only a faint dotted outline
-    const team = currentTeam(this);
-    const tx = slots(TEAM_SLOTS);
-    for (let i = 0; i < TEAM_SLOTS; i++) {
-      const id = team[i];
-      if (id) this.figure(tx[i], TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally'));
-      else this.dotted(tx[i], TEAM_Y, 84);
-    }
+    // team row: one place per retainer you have (up to 3), positioned exactly as in the fight
+    const team = currentTeam(this).slice(0, TEAM_SLOTS);
+    const tx = slots(team.length);
+    team.forEach((id, i) => this.figure(tx[i], TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally')));
 
     // start (same style as the battle buttons)
     this.panel(this.add.graphics(), 180, BTN_Y, 332, 80, 0x3d3d5e, 0xffdd55);
@@ -91,14 +87,6 @@ export class PrepScene extends Phaser.Scene {
       const rowH = Math.max(54, 26 + facts.height);
       add(this.add.image(50, ry + 26, s.icon).setScale(PX));
       ry += rowH;
-    }
-  }
-
-  dotted(x, y, size) {
-    const g = this.add.graphics().fillStyle(0x8888aa, 0.35), l = x - size / 2, t = y - size / 2;
-    for (let i = 0; i < size; i += 12) {
-      g.fillRect(l + i, t, 6, 3).fillRect(l + i, t + size - 3, 6, 3);
-      g.fillRect(l, t + i, 3, 6).fillRect(l + size - 3, t + i, 3, 6);
     }
   }
 

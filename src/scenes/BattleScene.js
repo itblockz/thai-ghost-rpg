@@ -613,14 +613,16 @@ export class BattleScene extends Phaser.Scene {
   intro(short) {
     const veil = this.add.rectangle(180, 320, 360, 640, 0x000000, 1).setDepth(20);
     let done = false;
+    const timers = [];
+    const later = (ms, fn) => timers.push(this.time.delayedCall(ms, fn));
     const raised = this.enemies.map(e => e.sprite); // glows keep their own faint alpha (set in refresh)
     const finish = () => {
       if (done) return;
       done = true;
-      this.time.removeAllEvents();
+      timers.forEach(t => t.remove()); // only the intro's own timers — the idle beat keeps running
       this.tweens.killTweensOf([veil, this.banner, this.bannerSub].filter(Boolean));
       raised.forEach(o => o.setDepth(0).setAlpha(1));
-            this.banner?.destroy(); this.bannerSub?.destroy();
+      this.banner?.destroy(); this.bannerSub?.destroy();
       this.banner = this.bannerSub = null;
       this.tweens.add({ targets: veil, alpha: 0, duration: 350, ease: 'Stepped', easeParams: [4], onComplete: () => veil.destroy() });
       this.startRound();
@@ -631,8 +633,8 @@ export class BattleScene extends Phaser.Scene {
     this.enemies.forEach(e => {
       this.tweens.add({ targets: e.sprite, alpha: 1, duration: 900, ease: 'Stepped', easeParams: [5] });
     });
-    this.time.delayedCall(350, () => play('laugh'));
-    this.time.delayedCall(700, () => {
+    later(350, () => play('laugh'));
+    later(700, () => {
       const counts = {};
       this.enemies.forEach(e => { counts[e.def.name] = (counts[e.def.name] || 0) + 1; });
       const title = Object.entries(counts).map(([n, c]) => (c > 1 ? `${n} ×${c}` : n)).join(' · ');
@@ -641,7 +643,7 @@ export class BattleScene extends Phaser.Scene {
       this.tweens.add({ targets: [this.banner, this.bannerSub], alpha: 1, duration: 400, ease: 'Stepped', easeParams: [4] });
       play('growl');
     });
-    this.time.delayedCall(2600, finish);
+    later(2600, finish);
     this.input.once('pointerdown', finish);
   }
 

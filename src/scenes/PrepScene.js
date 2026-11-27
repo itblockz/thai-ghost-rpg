@@ -13,7 +13,7 @@ import { gems } from '../ui/charmUi.js';
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const TEAM_SLOTS = 8; // retainers shown (three of them can go in)
 const ENEMY_Y = 100, TEAM_Y = 492, PANEL_TOP = 160, PANEL_BOTTOM = 430, BTN_Y = 588;
-const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : n === 3 ? [65, 180, 295] : n === 4 ? [48, 136, 224, 312] : [36, 108, 180, 252, 324]);
+const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : n === 3 ? [65, 180, 295] : n === 4 ? [48, 136, 224, 312] : Array.from({ length: n }, (_, i) => Math.round((i + 0.5) * 360 / n / 2) * 2));
 
 // Before each fight. Laid out like the battlefield (enemies above, team below);
 // tap anyone to read them in the middle panel. No pop-ups.
@@ -95,7 +95,7 @@ export class PrepScene extends Phaser.Scene {
   figure(x, y, def, onPick) {
     const img = this.lastFigure = this.add.image(x, y, def.sprite).setScale(PX);
     idleFrames(this, img, def.sprite);
-    this.add.zone(x, y, 72, 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onPick(); });
+    this.add.zone(x, y, Math.min(100, 360 / Math.max(3, this.teamIds?.length || 3)), 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onPick(); });
     return onPick;
   }
 
@@ -109,7 +109,7 @@ export class PrepScene extends Phaser.Scene {
 
     // selection brackets, like target brackets in battle
     const m = this.marker.clear().fillStyle(enemy ? 0xff7790 : 0xffdd55);
-    const h = !enemy && this.teamIds.length > 4 ? 34 : 40, k = 10;
+    const h = enemy ? 40 : this.teamIds.length > 5 ? 28 : this.teamIds.length > 4 ? 34 : 40, k = 10;
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
       const cx = x + sx * h, cy = y + sy * h;
       m.fillRect(Math.min(cx, cx - sx * k), cy - (sy > 0 ? 3 : 0), k, 3);

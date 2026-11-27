@@ -30,6 +30,7 @@ export function continueGame(scene) {
   scene.registry.set('offer', p.offer);
   // saves already past the temple gate (where ผีกระหัง joins) but without him: he joins now
   if (p.cleared >= 6 && !p.team.includes('krahang')) scene.registry.set('team', [...p.team, 'krahang']);
+  if (p.cleared >= 3 && !scene.registry.get('team').includes('phrai')) scene.registry.set('team', [...scene.registry.get('team'), 'phrai']);
   if (p.cleared >= 8 && !scene.registry.get('team').includes('pop')) scene.registry.set('team', [...scene.registry.get('team'), 'pop']);
   // saves from before the ??? system: foes of stages already cleared count as known
   const known = new Set(p.seen);

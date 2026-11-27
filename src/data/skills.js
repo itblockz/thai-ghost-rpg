@@ -4,6 +4,7 @@
 //   { block: true } – the target ignores all damage for the rest of this round
 //   { wait: n, takenMult?: x } – wind up: stop here and finish the remaining effects next turn.
 //                    takenMult (optional, per skill) multiplies damage the user takes while winding up.
+//   weakMult: x on a damage effect – × x when the target is below half its ขวัญ (ผีพราย's ฉุดจม)
 //   { stun: n }    – the target loses its next n turns (dragged under water)
 //   { blind: true } – the target's next damaging skill misses
 //   { heal: n, scale?: k, stat?: 'atk'|'hp' } – restore n + k × stat ขวัญ (never above max)
@@ -18,29 +19,31 @@ export const SKILLS = {
   // retainers
   ram: { name: 'วิ่งชน', desc: 'พุ่งตัวชนศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งชนแรง', icon: 'icon_ram', anim: 'ram', cooldown: 0, effects: [{ damage: 2, scale: 1 }] },
   guard: { name: 'กางกันภัย', desc: 'กางอาคมคุ้มบริวารหนึ่งตน ไม่ให้ถูกทำร้ายจนถึงตาถัดไปของผู้กาง', icon: 'icon_shield', cooldown: 3, target: 'ally', anim: 'shield', effects: [{ block: true }] },
-  rake: { name: 'ตะกุย', desc: 'ข่วนศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งข่วนลึก', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 0, scale: 1 }] },
-  frenzy: { name: 'ตะกุยรัว', desc: 'ข่วนรัวใส่ศัตรูหนึ่งตนอย่างแรง ยิ่งมีกำลังยิ่งรุนแรงทวีคูณ', icon: 'icon_frenzy', anim: 'frenzy', cooldown: 2, effects: [{ damage: 2, scale: 2 }] },
-  khamotEmber: { name: 'ไฟลวก', desc: 'ปล่อยไฟลวกศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งร้อน', icon: 'icon_heal', anim: 'wisp', cooldown: 0, effects: [{ damage: 1, scale: 1 }] },
+  rake: { name: 'กระโดดถีบ', desc: 'กระโดดขาเดียวถีบศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งถีบแรง', icon: 'icon_kick', anim: 'kick', cooldown: 0, effects: [{ damage: 0, scale: 1 }] },
+  frenzy: { name: 'ดูดเลือดหัวแม่เท้า', desc: 'เกาะหัวแม่เท้าศัตรูหนึ่งตนแล้วดูดเลือดอย่างแรง ยิ่งมีกำลังยิ่งรุนแรงทวีคูณ', icon: 'icon_toe', anim: 'suck', cooldown: 2, effects: [{ damage: 2, scale: 2 }] },
+  khamotEmber: { name: 'ไฟลวก', desc: 'ปล่อยไฟลวกศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งร้อน', icon: 'icon_fire', anim: 'wisp', cooldown: 0, effects: [{ damage: 1, scale: 1 }] },
   khamotBlind: { name: 'ไฟหลอกตา', desc: 'ล่อไฟวูบวาบใส่ศัตรูหนึ่งตนจนตาพร่า การโจมตีครั้งถัดไปของมันจะพลาด', icon: 'icon_blind', anim: 'wisp', cooldown: 3, effects: [{ damage: 2 }, { blind: true }] },
   khamotHeal: { name: 'ไฟอุ่นใจ', desc: 'ส่องไฟอุ่นปลอบขวัญ และถอนพิษบริวารหนึ่งตน ยิ่งมีขวัญมากยิ่งปลอบได้มาก', icon: 'icon_heal', anim: 'heal', cooldown: 2, target: 'ally', effects: [{ heal: 2, scale: 0.4, stat: 'hp' }] },
   gnaw: { name: 'แทะ', desc: 'แทะศัตรูหนึ่งตน แล้วฟื้นขวัญตนเองเท่าที่แทะได้ ยิ่งมีกำลังยิ่งแทะได้มาก', icon: 'icon_devour', anim: 'bite', cooldown: 0, effects: [{ damage: 1, scale: 1, drain: true }] },
   gorge: { name: 'ตะกละ', desc: 'ขย้ำศัตรูหนึ่งตนอย่างตะกละ ฟื้นขวัญตนเองเท่าที่กินได้ ยิ่งมีกำลังยิ่งกินมาก', icon: 'icon_devour', anim: 'bite', cooldown: 3, effects: [{ damage: 3, scale: 2, drain: true }] },
+  hairBind: { name: 'ผมรัด', desc: 'สะบัดผมเปียกพันรัดศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งรัดแน่น', icon: 'icon_hair', anim: 'hair', cooldown: 0, effects: [{ damage: 0, scale: 1 }] },
+  drown: { name: 'ฉุดจม', desc: 'ฉุดศัตรูหนึ่งตนลงใต้น้ำ ถ้ามันเหลือขวัญไม่ถึงครึ่ง จะแรงขึ้นสองเท่า ยิ่งมีกำลังยิ่งฉุดแรง', icon: 'icon_drag', anim: 'water', cooldown: 3, effects: [{ damage: 2, scale: 1.5, weakMult: 2 }] },
   // enemies
   flap: { name: 'กระพือกระด้ง', desc: 'กระพือกระด้งเป็นลมแรงใส่ศัตรูทุกตน ยิ่งมีกำลังยิ่งแรง', icon: 'icon_flap', anim: 'flap', cooldown: 0, area: true, effects: [{ damage: 1, scale: 0.8 }] },
   whack: { name: 'ฟาดกระด้ง', desc: 'ฟาดกระด้งใส่ศัตรูหนึ่งตนอย่างแรง ยิ่งมีกำลังยิ่งฟาดแรง', icon: 'icon_whack', anim: 'ram', cooldown: 2, effects: [{ damage: 3, scale: 2 }] },
   swoop: { name: 'โฉบ', desc: 'โฉบลงตีบริวารหนึ่งตน', icon: 'icon_whack', anim: 'claw', cooldown: 0, effects: [{ damage: 5 }] },
   devour: { name: 'กินขวัญ', desc: 'กัดกินบริวารหนึ่งตน แล้วฟื้นขวัญตนเองเท่าที่กินได้', icon: 'icon_devour', anim: 'bite', cooldown: 0, effects: [{ damage: 5, drain: true }] },
   smash: { name: 'ทุบ', desc: 'ทุบบริวารหนึ่งตนด้วยมือมหึมา', icon: 'icon_smash', anim: 'claw', cooldown: 0, effects: [{ damage: 13 }] },
-  hunger: { name: 'หิวโหย', desc: 'กลืนอาคมของขลังที่บริวารหนึ่งตนสวม ของขลังนั้นไร้ผลจนจบศึก', icon: 'icon_hunger', anim: 'bite', cooldown: 3, useChance: 0.5, effects: [{ damage: 8 }, { seal: true }] },
-  scratch: { name: 'ตะกุย', desc: 'ข่วนบริวารหนึ่งตน', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 3 }] },
+  hunger: { name: 'ดูดอาคม', desc: 'ดูดอาคมของขลังที่บริวารหนึ่งตนสวมผ่านปากรูเข็ม ของขลังนั้นไร้ผลจนจบศึก', icon: 'icon_hunger', anim: 'siphon', cooldown: 3, useChance: 0.5, effects: [{ damage: 8 }, { seal: true }] },
+  scratch: { name: 'กระโดดถีบ', desc: 'กระโดดขาเดียวถีบบริวารหนึ่งตน', icon: 'icon_kick', anim: 'kick', cooldown: 0, effects: [{ damage: 3 }] },
   bite: { name: 'กัด', desc: 'งับบริวารหนึ่งตนจนเจ็บ', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 10 }] },
-  grab: { name: 'ข่วน', desc: 'ข่วนบริวารหนึ่งตนด้วยเล็บเปียกน้ำ', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 5 }] },
+  grab: { name: 'ผมรัด', desc: 'สะบัดผมเปียกพันรัดบริวารหนึ่งตน', icon: 'icon_hair', anim: 'hair', cooldown: 0, effects: [{ damage: 5 }] },
   drag: { name: 'ดึงลงน้ำ', desc: 'ฉุดบริวารหนึ่งตนลงน้ำ ผู้ที่ถูกฉุดจะจมน้ำเสียตาถัดไป', icon: 'icon_drag', anim: 'water', cooldown: 3, useChance: 0.45, effects: [{ damage: 5 }, { stun: 1 }] },
   lure: { name: 'ไฟหลอกทาง', desc: 'ล่อไฟใส่บริวารหนึ่งตนจนตาพร่า การโจมตีครั้งถัดไปจะพลาด', icon: 'icon_blind', anim: 'wisp', cooldown: 2, useChance: 0.6, effects: [{ damage: 2 }, { blind: true }] },
-  ember: { name: 'ไฟลวก', desc: 'ปล่อยไฟลวกบริวารหนึ่งตน', icon: 'icon_heal', anim: 'wisp', cooldown: 0, effects: [{ damage: 4 }] },
+  ember: { name: 'ไฟลวก', desc: 'ปล่อยไฟลวกบริวารหนึ่งตน', icon: 'icon_fire', anim: 'wisp', cooldown: 0, effects: [{ damage: 4 }] },
   strike: { name: 'ฉก', desc: 'ฉกบริวารหนึ่งตนอย่างแรง', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 10 }] },
   venom: { name: 'พ่นพิษ', desc: 'พ่นพิษใส่บริวารทุกตน ผู้ที่ถูกพิษจะเจ็บต่อไปอีกหลายตา', icon: 'icon_venom', anim: 'venom', cooldown: 3, useChance: 0.55, area: true, effects: [{ damage: 5 }, { poison: { turns: 3, damage: 3 } }] },
-  spit: { name: 'พ่นไส้', desc: 'สูดลมหนึ่งตา แล้วพ่นไส้ใส่บริวารที่จ้องไว้อย่างแรง ระหว่างสูดลมจะถูกตีเจ็บกว่าปกติ', icon: 'icon_spit', anim: 'spit', cooldown: 3, useChance: 0.5, effects: [{ wait: 1, takenMult: 2 }, { damage: 22 }] },
+  spit: { name: 'ฟาดไส้', desc: 'ม้วนไส้หนึ่งตา แล้วฟาดใส่บริวารที่จ้องไว้อย่างแรง ระหว่างม้วนไส้จะถูกตีเจ็บกว่าปกติ', icon: 'icon_lash', anim: 'lash', cooldown: 3, useChance: 0.5, effects: [{ wait: 1, takenMult: 2 }, { damage: 22 }] },
 };
 
 // base + scale × stat, for a unit ({ atk, maxHp }); without a unit, just the base.
@@ -59,6 +62,7 @@ export function skillFacts(skill, u) {
     if (e.block) out.push('กันภัยให้บริวาร 1 ตา');
     if (e.stun) out.push(`เป้าเสียตา ${e.stun} ตา`);
     if (e.blind) out.push('เป้าตาพร่า ตีครั้งหน้าพลาด');
+    if (e.weakMult) out.push(`แรงขึ้น ${e.weakMult} เท่าเมื่อเป้าเหลือขวัญไม่ถึงครึ่ง`);
     if (e.drain) out.push('ฟื้นขวัญตนเองเท่าที่ทำได้');
     if (e.heal) out.push(`ฟื้นขวัญ ${amount(e, 'heal', u)}${formula(e, 'heal')}`);
   }

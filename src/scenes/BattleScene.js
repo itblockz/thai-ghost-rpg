@@ -464,7 +464,7 @@ export class BattleScene extends Phaser.Scene {
       if (e.damage != null) {
         if (blindNow) missed = true;
         else if (target.block) blocked = true;
-        else { mult = target.takenMult; const d = Math.round(amount(e, 'damage', user) * mult * (user.dmgMult || 1)); target.hp -= d; dealt += d;
+        else { mult = target.takenMult * (e.weakMult && target.hp * 2 < target.maxHp ? e.weakMult : 1); const d = Math.round(amount(e, 'damage', user) * mult * (user.dmgMult || 1)); target.hp -= d; dealt += d;
           // ผีปอบ: what it bites off, it takes back as its own life
           if (e.drain) { const h = Math.min(d, user.maxHp - user.hp); user.hp += h; if (h) this.popup(user.x, user.y - 20, `+${h}`, '#66ee88', 22); } }
       }
@@ -743,9 +743,12 @@ export class BattleScene extends Phaser.Scene {
     const g = this.reticle.clear();
     if (!show) return;
     const list = SKILLS[this.selected].target === 'ally' ? this.allies : this.enemies;
-    g.fillStyle(0xffdd55);
+    // ผีพราย's ฉุดจม: targets below half ขวัญ (where it hits twice as hard) get red, longer brackets
+    const weak = SKILLS[this.selected].effects.some(e => e.weakMult);
     for (const u of this.alive(list)) {
-      const h = Math.max(36, u.half + 6), k = 12;
+      const low = weak && u.hp * 2 < u.maxHp;
+      g.fillStyle(low ? 0xff4433 : 0xffdd55);
+      const h = Math.max(36, u.half + 6), k = low ? 18 : 12;
       const l = u.x - h, r = u.x + h, t = u.y - h, b = u.y + h;
       [[l, t, 1, 1], [r, t, -1, 1], [l, b, 1, -1], [r, b, -1, -1]].forEach(([x, y, sx, sy]) => {
         g.fillRect(Math.min(x, x + sx * k), y - (sy < 0 ? 3 : 0), k, 3);
@@ -838,6 +841,8 @@ export class BattleScene extends Phaser.Scene {
       return this.time.delayedCall(200, onHit);
     }
     if (kind === 'spit') return this.animSpit(user, target, onHit);
+    if (kind === 'lash') return this.animLash(user, target, onHit);
+    if (kind === 'hair' || kind === 'siphon') return this.animRanged(user, target, kind, onHit);
     if (kind === 'ram') return this.animRam(user, target, onHit);
     if (kind === 'water' || kind === 'wisp' || kind === 'heal') return this.animRanged(user, target, kind, onHit);
     const sp = user.sprite, enemy = user.side === 'enemy';
@@ -880,16 +885,19 @@ export class BattleScene extends Phaser.Scene {
             const k = { x: target.x + dx / len * 16, y: target.y + dy / len * 16 };
             if (kind === 'frenzy') {
               this.fxFrenzy(target, onHit);
+            } else if (kind === 'suck') {
+              this.fxSuck(user, target, onHit);
             } else {
               if (kind === 'bite') this.fxBite(target);
               else if (kind === 'claw') this.fxClaw(target);
+              else if (kind === 'kick') this.fxKick(target);
               else this.fxSlash(target);
               if (target.side === 'ally') play('hurt');
               this.tweens.add({ targets: target.sprite, x: k.x, y: k.y, duration: 70, yoyo: true, ease: 'Quad.out', onComplete: () => target.sprite.setPosition(target.x, target.y) });
               onHit();
             }
             // 4) recovery: hold for a beat, then hop home and settle
-            this.time.delayedCall(kind === 'frenzy' ? 380 : 90, () => this.tweens.add({
+            this.time.delayedCall(kind === 'frenzy' || kind === 'suck' ? 440 : 90, () => this.tweens.add({
               targets: sp, x: user.x, y: user.y, duration: 260, ease: 'Back.out', onComplete: () => this.pose(user, 'idle'),
             }));
           },
@@ -916,6 +924,34 @@ export class BattleScene extends Phaser.Scene {
         this.time.delayedCall(250, () => { onHit(); this.pose(user, 'idle'); });
         return;
       }
+      if (kind === 'hair') {
+        // wet hair snakes across in a wave, wraps the target, squeezes
+        play('splash');
+        const g = this.add.graphics().setDepth(6), n = 16;
+        for (let i = 0; i <= n; i++) this.time.delayedCall(i * 14, () => {
+          const t = i / n, px = user.x + (target.x - user.x) * t, py = user.y + (target.y - user.y) * t + Math.sin(t * Math.PI * 3) * 10;
+          g.fillStyle(i % 3 ? 0x8a7aa0 : 0x5d4d6e).fillRect(Math.round(px / 2) * 2 - 2, Math.round(py / 2) * 2 - 2, 4, 4);
+        });
+        this.time.delayedCall(n * 14 + 40, () => {
+          this.tweens.add({ targets: target.sprite, scaleX: target.sprite.scaleX * 0.8, duration: 90, yoyo: true, repeat: 1, ease: 'Stepped', easeParams: [2] });
+          this.fxClaw(target);
+          onHit();
+          this.tweens.add({ targets: g, alpha: 0, duration: 300, delay: 120, onComplete: () => g.destroy() });
+          this.pose(user, 'idle');
+        });
+        return;
+      }
+      if (kind === 'siphon') {
+        // the charm's power drawn out of the target as specks of light, into the needle mouth
+        play('ward');
+        for (let i = 0; i < 8; i++) {
+          const w = this.add.image(target.x + Phaser.Math.Between(-24, 24), target.y + Phaser.Math.Between(-24, 24), 'fx_soul').setScale(PX).setTint(0x9ad8ff).setDepth(6);
+          this.tweens.add({ targets: w, x: user.x, y: user.y - 40, alpha: 0.3, duration: 380, delay: i * 40, ease: 'Quad.in', onComplete: () => w.destroy() });
+        }
+        this.time.delayedCall(200, () => { play('hurt'); onHit(); });
+        this.time.delayedCall(700, () => user.alive && this.pose(user, 'idle'));
+        return;
+      }
       // wisp
       play('slash');
       const w = this.add.image(user.x, user.y, 'fx_soul').setScale(PX).setTint(0xffaa44).setDepth(6);
@@ -933,6 +969,26 @@ export class BattleScene extends Phaser.Scene {
     const img = this.add.image(x, y, make(this, sizes[0])).setScale(PX).setTint(tint).setAlpha(alpha).setDepth(depth);
     sizes.forEach((n, i) => this.time.delayedCall(duration * i / sizes.length, () => img.setTexture(make(this, n)).setAlpha(alpha * (1 - i / sizes.length))));
     this.time.delayedCall(duration, () => img.destroy());
+  }
+
+  // กระโดดถีบ: a heavy thud — ring burst and a hard shove
+  fxKick(t) {
+    play('hit');
+    this.growFx(t.x, t.y + 8, [12, 20, 28], 0xffffff, 0.8, 260, pixelDisc);
+    this.pixelShake(120, 3);
+  }
+
+  // ดูดเลือดหัวแม่เท้า: clings at the feet, three gulps of red rising; damage on the last
+  fxSuck(user, t, onHit) {
+    [0, 1, 2].forEach(i => this.time.delayedCall(i * 140, () => {
+      play('scratch');
+      for (let j = 0; j < 3; j++) {
+        const d = this.add.rectangle(t.x + Phaser.Math.Between(-10, 10), t.y + 30, 4, 4, 0xd01030).setDepth(6);
+        this.tweens.add({ targets: d, x: user.sprite.x, y: user.sprite.y, duration: 200, delay: j * 30, onComplete: () => d.destroy() });
+      }
+      this.tweens.add({ targets: t.sprite, scaleY: t.sprite.scaleY * 0.92, duration: 60, yoyo: true });
+      if (i === 2) { if (t.side === 'ally') play('hurt'); onHit(); }
+    }));
   }
 
   fxSlash(t) {
@@ -1019,6 +1075,34 @@ export class BattleScene extends Phaser.Scene {
               .setScale(PX).setDepth(5).setAlpha(0.9);
             this.tweens.add({ targets: sp, y: sp.y + 30, alpha: 0, duration: 1200, delay: 200, onComplete: () => sp.destroy() });
           }
+        });
+      },
+    });
+  }
+
+  // กระสือ's ฟาดไส้: rises, then the entrails whip out in an arc of links and crack down on the target
+  animLash(user, target, onHit) {
+    this.tweens.add({
+      targets: user.sprite, y: user.y - 15, duration: 200, ease: 'Sine.out', onStart: () => this.pose(user, 'wind'),
+      onComplete: () => {
+        this.pose(user, 'atk');
+        play('slash');
+        const n = 12, links = [];
+        for (let i = 1; i <= n; i++) this.time.delayedCall(i * 16, () => {
+          const t = i / n, bend = Math.sin(t * Math.PI) * 60;
+          const gut = this.add.image(user.x + (target.x - user.x) * t + bend, user.y + 30 + (target.y - user.y - 30) * t, 'fx_gut').setScale(PX).setDepth(5);
+          links.push(gut);
+        });
+        this.time.delayedCall(n * 16 + 40, () => {
+          play('hurt');
+          onHit();
+          this.pixelShake(200, 6);
+          for (let i = 0; i < 3; i++) {
+            const sp = this.add.image(target.x + Phaser.Math.Between(-30, 30), target.y + Phaser.Math.Between(-30, 20), 'fx_splat').setScale(PX).setDepth(5);
+            this.tweens.add({ targets: sp, y: sp.y + 24, alpha: 0, duration: 900, delay: 150, onComplete: () => sp.destroy() });
+          }
+          this.tweens.add({ targets: links, alpha: 0, duration: 250, delay: 120, onComplete: () => links.forEach(l => l.destroy()) });
+          this.tweens.add({ targets: user.sprite, y: user.y, duration: 200, delay: 150, onComplete: () => user.alive && this.pose(user, 'idle') });
         });
       },
     });

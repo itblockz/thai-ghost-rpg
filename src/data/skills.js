@@ -30,8 +30,8 @@ export const SKILLS = {
   drag: { name: 'ดึงลงน้ำ', desc: 'ฉุดบริวารหนึ่งตนลงน้ำ ผู้ที่ถูกฉุดจะจมน้ำเสียตาถัดไป', icon: 'icon_drag', anim: 'water', cooldown: 3, useChance: 0.45, effects: [{ damage: 5 }, { stun: 1 }] },
   lure: { name: 'ไฟหลอกทาง', desc: 'ล่อไฟใส่บริวารหนึ่งตนจนตาพร่า การโจมตีครั้งถัดไปจะพลาด', icon: 'icon_blind', anim: 'wisp', cooldown: 2, useChance: 0.6, effects: [{ damage: 2 }, { blind: true }] },
   ember: { name: 'ไฟลวก', desc: 'ปล่อยไฟลวกบริวารหนึ่งตน', icon: 'icon_heal', anim: 'wisp', cooldown: 0, effects: [{ damage: 4 }] },
-  strike: { name: 'ฉก', desc: 'ฉกบริวารหนึ่งตนอย่างแรง', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 8 }] },
-  venom: { name: 'พ่นพิษ', desc: 'พ่นพิษใส่บริวารทุกตน ผู้ที่ถูกพิษจะเจ็บต่อไปอีกหลายตา', icon: 'icon_venom', anim: 'venom', cooldown: 3, useChance: 0.55, area: true, effects: [{ damage: 4 }, { poison: { turns: 3, damage: 2 } }] },
+  strike: { name: 'ฉก', desc: 'ฉกบริวารหนึ่งตนอย่างแรง', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 10 }] },
+  venom: { name: 'พ่นพิษ', desc: 'พ่นพิษใส่บริวารทุกตน ผู้ที่ถูกพิษจะเจ็บต่อไปอีกหลายตา', icon: 'icon_venom', anim: 'venom', cooldown: 3, useChance: 0.55, area: true, effects: [{ damage: 5 }, { poison: { turns: 3, damage: 3 } }] },
   spit: { name: 'พ่นไส้', desc: 'สูดลมหนึ่งตา แล้วพ่นไส้ใส่บริวารที่จ้องไว้อย่างแรง ระหว่างสูดลมจะถูกตีเจ็บกว่าปกติ', icon: 'icon_spit', anim: 'spit', cooldown: 3, useChance: 0.5, effects: [{ wait: 1, takenMult: 2 }, { damage: 22 }] },
 };
 

@@ -49,7 +49,9 @@ export class BattleScene extends Phaser.Scene {
     const team = currentTeam(this);
     const ax = slots(team.length);
     this.time.addEvent({ delay: 420, loop: true, callback: () => {
-      for (const u of [...this.allies, ...this.enemies]) if (u.alive && (u.pose === 'idle' || u.pose === 'idle2')) this.pose(u, u.pose === 'idle' ? 'idle2' : 'idle');
+      // one shared beat, so every standing unit breathes in sync
+      this.idlePhase = !this.idlePhase;
+      for (const u of [...this.allies, ...this.enemies]) if (u.alive && (u.pose === 'idle' || u.pose === 'idle2')) this.pose(u, 'idle');
     } });
     this.allies = team.map((id, i) => this.makeUnit('ally', id, ALLIES[id], ALLIES[id].name, ax[i], ALLY_Y, 5));
 
@@ -69,6 +71,8 @@ export class BattleScene extends Phaser.Scene {
   // ---------- units ----------
   // Swap to a drawn animation frame: idle | idle2 | wind | atk (falls back to the base sprite).
   pose(u, name) {
+    // 'idle' always lands on the shared beat's frame
+    if (name === 'idle' && this.idlePhase) name = 'idle2';
     u.pose = name;
     const key = name === 'idle' ? u.def.sprite : `${u.def.sprite}_${name}`;
     u.sprite.setTexture(this.textures.exists(key) ? key : u.def.sprite);

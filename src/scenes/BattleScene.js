@@ -6,7 +6,7 @@ import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, pixelBob, nu
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, fightingTeam } from '../flow.js';
 import { charmTitle, charmEffect } from '../ui/charmUi.js';
-import { rollCharm, applyCharm, RARITIES, CHARM_TYPES } from '../data/charms.js';
+import { rollCharm, applyWorn, RARITIES, CHARM_TYPES } from '../data/charms.js';
 import { saveFrom } from '../save.js';
 
 // How each unit travels to its target: dash (default), hop, float.
@@ -62,7 +62,7 @@ export class BattleScene extends Phaser.Scene {
     this.allies = team.map((id, i) => this.makeUnit('ally', id, ALLIES[id], ALLIES[id].name, ax[i], ALLY_Y, 5));
     // worn charms
     const bag = this.registry.get('bag') || [], gear = this.registry.get('gear') || {};
-    this.allies.forEach(u => applyCharm(u, bag.find(c => c.id === gear[u.id])));
+    this.allies.forEach(u => applyWorn(u, bag, gear, u.id));
     // ประคำ: warded from the very start, renewed on the wearer's first turns
     this.allies.forEach(u => { if (u.openBlock > 0) { u.block = true; u.blockBy = u; u.shieldIcon.setVisible(true); } });
     this.initTimeline();

@@ -3,7 +3,8 @@ import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, numFont }
 import { registerSprites } from '../art/sprites.js';
 import { ALLIES } from '../data/units.js';
 import { SKILLS } from '../data/skills.js';
-import { RARITIES, CHARM_TYPES, applyCharm } from '../data/charms.js';
+import { RARITIES, CHARM_TYPES, applyWorn, wornIds, slotsOpen, SLOTS } from '../data/charms.js';
+import { cleared } from '../flow.js';
 import { charmTitle, charmEffect } from '../ui/charmUi.js';
 import { currentTeam } from '../flow.js';
 import { saveFrom } from '../save.js';
@@ -52,7 +53,10 @@ export class RosterScene extends Phaser.Scene {
   }
 
   bag() { return this.registry.get('bag') || []; }
-  gear() { return { ...(this.registry.get('gear') || {}) }; }
+  // gear as { retainer: [slot0, slot1] } (copied, normalised)
+  gear() { const g = this.registry.get('gear') || {}; return Object.fromEntries(this.ids.map(k => [k, wornIds(g, k)])); }
+  // take a charm off whoever wears it
+  strip(g, cid) { for (const k in g) g[k] = g[k].map(x => (x === cid ? null : x)); return g; }
   setGear(g) { this.registry.set('gear', g); saveFrom(this); }
 
   redraw() {
@@ -70,12 +74,14 @@ export class RosterScene extends Phaser.Scene {
     });
 
     // ---- the retainer: name & stats, lore, skills (icon over name), and one charm slot ----
-    const worn = bag.find(c => c.id === gear[id]);
-    const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0 };
-    applyCharm(u, worn);
+    const open = slotsOpen(cleared(this));
+    const worn = gear[id].map(cid => bag.find(c => c.id === cid) || null);
+    if (this.slot == null || this.slot >= open) this.slot = Math.max(0, Math.min(open - 1, worn.findIndex((w, i) => !w && i < open)));
+    const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0, spd: def.spd || 10 };
+    applyWorn(u, bag, gear, id);
     add(this.panel(this.add.graphics(), 180, 252, 332, 160, 0x161424, 0xb89a50));
     add(this.add.text(30, 190, def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
-    this.iconNums(330, 190, [['icon_hp', u.maxHp], ['icon_atk', u.atk], ['icon_spd', def.spd || 10]], add);
+    this.iconNums(330, 190, [['icon_hp', u.maxHp], ['icon_atk', u.atk], ['icon_spd', u.spd]], add);
     add(this.add.text(30, 213, def.lore, { ...FONT, fontSize: '12px', color: '#a8a8c8', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
     def.skills.forEach((sid, i) => {
       const x = 58 + i * 66;
@@ -84,14 +90,20 @@ export class RosterScene extends Phaser.Scene {
       // tap a skill to read it in the panel below
       add(this.add.zone(x, 272, 62, 76).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.pickedSkill = sid; this.picked = null; this.redraw(); }));
     });
-    // the single charm slot: its frame says "one" without words; empty shows +
-    const sx = 288, sy = 268;
-    add(this.panel(this.add.graphics(), sx, sy, 62, 62, worn ? 0x2a2418 : 0x121020, worn ? RARITIES[worn.rarity].hex : 0x44445e));
-    if (worn) {
-      add(this.add.image(sx, sy, CHARM_TYPES[worn.type].icon).setScale(PX));
-      add(this.add.zone(sx, sy, 62, 62).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.picked = worn.id; this.pickedSkill = null; this.confirmDrop = null; this.redraw(); }));
-    } else {
-      add(this.add.text(sx, sy, '+', { ...FONT, fontSize: '28px', color: '#55557a' }).setOrigin(0.5));
+    // charm slots: one at first, the second opens in chapter 2 (a lock until then). The chosen slot is
+    // outlined; 'สวม' puts the inspected charm there. Tap a worn charm to inspect it.
+    for (let i = 0; i < SLOTS; i++) {
+      const sx = 254 + i * 56, sy = 268, w = worn[i];
+      const chosen = i === this.slot && i < open;
+      add(this.panel(this.add.graphics(), sx, sy, 52, 52, w ? 0x2a2418 : 0x121020, chosen ? 0xffffff : w ? RARITIES[w.rarity].hex : 0x44445e));
+      if (i >= open) { add(this.add.image(sx, sy, 'node_lock').setScale(PX).setAlpha(0.6)); continue; }
+      if (w) add(this.add.image(sx, sy, CHARM_TYPES[w.type].icon).setScale(PX));
+      else add(this.add.text(sx, sy, '+', { ...FONT, fontSize: '24px', color: '#55557a' }).setOrigin(0.5));
+      add(this.add.zone(sx, sy, 54, 54).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+        play('click'); this.slot = i;
+        if (w) { this.picked = w.id; this.pickedSkill = null; this.confirmDrop = null; }
+        this.redraw();
+      }));
     }
 
     // ---- the bag ----
@@ -110,7 +122,8 @@ export class RosterScene extends Phaser.Scene {
       const x = 40 + (i % 6) * 56, y = 400 + Math.floor(i / 6) * 56;
       add(this.panel(this.add.graphics(), x, y, 52, 52, 0x100e1a, 0x26263a));
     }
-    const wornBy = Object.fromEntries(Object.entries(gear).map(([k, v]) => [v, k]));
+    const wornBy = {};
+    for (const k in gear) gear[k].forEach(cid => { if (cid) wornBy[cid] = k; });
     list.slice(this.page * PER_PAGE, (this.page + 1) * PER_PAGE).forEach((c, i) => {
       const x = 40 + (i % 6) * 56, y = 400 + Math.floor(i / 6) * 56;
       const g = add(this.add.graphics());
@@ -127,14 +140,16 @@ export class RosterScene extends Phaser.Scene {
       charmTitle(this, 30, 540, c).forEach(add);
       charmEffect(this, 30, 574, c).forEach(add);
       const owner = wornBy[c.id];
-      if (owner === id) this.button(add, 290, 540, 80, 26, 'ถอด', 0x2a2a3a, 0x8888aa, () => { const g = this.gear(); delete g[id]; this.setGear(g); this.redraw(); });
+      if (owner === id) this.button(add, 290, 540, 80, 26, 'ถอด', 0x2a2a3a, 0x8888aa, () => { this.setGear(this.strip(this.gear(), c.id)); this.redraw(); });
       if (owner !== id) this.button(add, 290, 540, 80, 26, 'สวม', 0x3d3d5e, 0xffdd55, () => {
-        const g = this.gear(); for (const k in g) if (g[k] === c.id) delete g[k]; g[id] = c.id; this.setGear(g); this.redraw();
+        const g = this.strip(this.gear(), c.id);
+        g[id][this.slot] = c.id;
+        this.setGear(g); this.redraw();
       });
       const confirming = this.confirmDrop === c.id;
       this.button(add, 290, 572, 80, 26, confirming ? 'ทิ้งแน่?' : 'ทิ้ง', confirming ? 0x5a2d3a : 0x2a2a3a, confirming ? 0xff7790 : 0x8888aa, () => {
         if (!confirming) { this.confirmDrop = c.id; return this.redraw(); }
-        const g = this.gear(); for (const k in g) if (g[k] === c.id) delete g[k];
+        const g = this.strip(this.gear(), c.id);
         this.registry.set('bag', this.bag().filter(b => b.id !== c.id));
         this.picked = null; this.confirmDrop = null; this.setGear(g); this.redraw();
       });

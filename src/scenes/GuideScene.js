@@ -27,29 +27,29 @@ export class GuideScene extends Phaser.Scene {
     const reached = cleared(this);
     const known = i => i <= reached; // the next stage counts: it is on the map already
 
-    let y = 52;
+    let y = 50;
     for (const [type, t] of Object.entries(CHARM_TYPES)) {
-      const h = 112;
+      const h = 100;
       this.panel(180, y + h / 2, 332, h - 6, 0x161424, 0x44445e);
-      this.add.image(48, y + 26, t.icon).setScale(PX);
-      const name = this.add.text(76, y + 26, t.name, { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0.5);
+      this.add.image(48, y + 24, t.icon).setScale(PX);
+      const name = this.add.text(76, y + 24, t.name, { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0.5);
       // the stat it raises, once, beside the name (rows below are just numbers)
       const stat = charmStatIcon({ type });
-      if (stat) this.add.image(76 + name.width + 22, y + 26, stat).setScale(PX);
+      if (stat) this.add.image(76 + name.width + 22, y + 24, stat).setScale(PX);
       // what each rarity gives
       RANKS.forEach((rk, i) => {
-        const ry = y + 52 + i * 20;
+        const ry = y + 46 + i * 18;
         gems(this, 30, ry, rk);
         this.value(102, ry, type, t.range[rk], rk);
       });
       // where it drops most
       const si = STAGES.findIndex(s => s.drop === type);
-      this.add.text(326, y + 26, 'ออกบ่อยที่', { ...FONT, fontSize: '11px', color: '#9999bb' }).setOrigin(1, 0.5);
+      this.add.text(326, y + 22, 'ออกบ่อยที่', { ...FONT, fontSize: '11px', color: '#9999bb' }).setOrigin(1, 0.5);
       if (si >= 0 && known(si)) {
-        this.add.image(290, y + 64, STAGES[si].node).setScale(PX);
-        this.add.text(290, y + 92, STAGES[si].name, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0.5);
+        this.add.image(290, y + 56, STAGES[si].node).setScale(PX);
+        this.add.text(290, y + 82, STAGES[si].name, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0.5);
       } else {
-        this.add.text(290, y + 66, '?', { ...FONT, fontSize: '26px', color: '#55557a' }).setOrigin(0.5);
+        this.add.text(290, y + 58, '?', { ...FONT, fontSize: '26px', color: '#55557a' }).setOrigin(0.5);
       }
       y += h;
     }
@@ -60,11 +60,10 @@ export class GuideScene extends Phaser.Scene {
     if (bi >= 0 && known(bi)) {
       this.add.image(48, y + 36, STAGES[bi].node).setScale(PX);
       this.add.text(76, y + 26, STAGES[bi].name, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5);
-      this.add.text(76, y + 48, 'ของทุกชนิดออกเท่ากัน แต่ได้ของวิเศษบ่อยกว่าที่อื่น', { ...FONT, fontSize: '12px', color: '#ccccee' }).setOrigin(0, 0.5);
+      this.add.text(76, y + 48, 'ได้ของวิเศษบ่อยกว่าที่อื่น', { ...FONT, fontSize: '12px', color: '#ccccee' }).setOrigin(0, 0.5);
     } else {
       this.add.text(180, y + 36, 'ยังมีที่ที่ได้ของวิเศษบ่อยกว่านี้ รอผู้กล้าไปพบ', { ...FONT, fontSize: '12px', color: '#9999bb' }).setOrigin(0.5);
     }
-    this.add.text(180, 618, 'ชนะศึกหนึ่งครั้ง ได้ของขลังหนึ่งชิ้น', { ...FONT, fontSize: '12px', color: '#8888aa' }).setOrigin(0.5);
   }
 
   // one rarity's value: stat charms as icon + range, others in words

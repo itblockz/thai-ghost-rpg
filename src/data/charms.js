@@ -14,6 +14,7 @@ export const CHARM_TYPES = {
   fang: { name: 'เขี้ยวเสือ', icon: 'charm_fang', range: { common: [1, 1], rare: [2, 2], mythic: [3, 3] } },
   prakam: { name: 'ประคำไม้', icon: 'charm_prakam', range: { common: [1, 1], rare: [1, 1], mythic: [2, 2] } },
   yant: { name: 'ผ้ายันต์', icon: 'charm_yant', range: { common: [1, 1], rare: [1, 1], mythic: [2, 2] } },
+  feather: { name: 'ขนนกการเวก', icon: 'charm_feather', range: { common: [1, 1], rare: [1, 2], mythic: [2, 2] } },
 };
 
 const pick = (weights) => {
@@ -36,13 +37,27 @@ export function rollCharm(stage = {}) {
 }
 
 // For stat charms, the 8x8 icon that goes with the number (scenes draw icon + '+N').
-export const charmStatIcon = c => (c.type === 'takrut' ? 'icon_hp' : c.type === 'fang' ? 'icon_atk' : null);
+export const charmStatIcon = c => ({ takrut: 'icon_hp', fang: 'icon_atk', feather: 'icon_spd' }[c.type] || null);
 
 // What a worn charm changes on a unit at the start of a fight.
 export function applyCharm(u, c) {
   if (!c) return;
   if (c.type === 'takrut') { u.hp += c.value; u.maxHp += c.value; }
   if (c.type === 'fang') u.atk = (u.atk || 0) + c.value;
-  if (c.type === 'prakam') u.openBlock = c.value;
-  if (c.type === 'yant') u.wards = new Set(c.wards);
+  if (c.type === 'feather') u.spd = (u.spd || 10) + c.value;
+  if (c.type === 'prakam') u.openBlock = (u.openBlock || 0) + c.value;
+  if (c.type === 'yant') u.wards = new Set([...(u.wards || []), ...c.wards]);
+}
+
+// Charm slots: one at first, a second once chapter 2 is reached. The same kind may be worn twice.
+export const SLOTS = 2;
+export const slotsOpen = cleared => (cleared >= 2 ? 2 : 1);
+// what a retainer wears, always as [slot0, slot1] (older saves stored a single id)
+export function wornIds(gear, id) {
+  const w = gear?.[id];
+  const a = Array.isArray(w) ? w : w ? [w] : [];
+  return [a[0] || null, a[1] || null];
+}
+export function applyWorn(u, bag, gear, id) {
+  for (const cid of wornIds(gear, id)) if (cid) applyCharm(u, bag.find(c => c.id === cid));
 }

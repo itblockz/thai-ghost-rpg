@@ -6,7 +6,7 @@ import { SKILLS, skillFacts } from '../data/skills.js';
 import { currentTeam } from '../flow.js';
 import { saveFrom } from '../save.js';
 import { play } from '../audio/sfx.js';
-import { applyCharm, CHARM_TYPES } from '../data/charms.js';
+import { applyWorn, CHARM_TYPES } from '../data/charms.js';
 import { gems } from '../ui/charmUi.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
@@ -102,10 +102,10 @@ export class PrepScene extends Phaser.Scene {
     add(this.panel(this.add.graphics(), 180, (PANEL_TOP + PANEL_BOTTOM) / 2, 332, PANEL_BOTTOM - PANEL_TOP, 0x161424, enemy ? 0xaa6677 : 0xb89a50));
     add(this.add.text(30, PANEL_TOP + 20, count > 1 ? `${def.name} ×${count}` : def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
     // the unit as it will fight: base stats plus any worn charm
-    const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0 };
-    if (allyId) { const bag = this.registry.get('bag') || []; applyCharm(u, bag.find(c => c.id === (this.registry.get('gear') || {})[allyId])); }
+    const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0, spd: def.spd || 10 };
+    if (allyId) applyWorn(u, this.registry.get('bag') || [], this.registry.get('gear') || {}, allyId);
     // stats as small pictures: heart = ขวัญ, fist = กำลัง (right-aligned)
-    this.iconNums(330, PANEL_TOP + 20, [['icon_hp', u.maxHp], ...(def.atk ? [['icon_atk', u.atk]] : []), ['icon_spd', def.spd || 10]], add);
+    this.iconNums(330, PANEL_TOP + 20, [['icon_hp', u.maxHp], ...(def.atk ? [['icon_atk', u.atk]] : []), ['icon_spd', u.spd]], add);
     add(this.add.rectangle(180, PANEL_TOP + 62, 300, 2, 0x44445e));
     if (allyId) {
       // charms are managed on the roster screen

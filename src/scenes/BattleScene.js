@@ -182,11 +182,8 @@ export class BattleScene extends Phaser.Scene {
     got.forEach(k => { offer[k] = (offer[k] || 0) + 1; });
     this.registry.set('offer', offer);
     saveFrom(this);
-    // the offerings found, as small pictures under the charm panel
-    const objs = got.map((k, i) => this.add.image(180 + (i - (got.length - 1) / 2) * 40, 214, OFFERINGS[k].icon).setScale(PX).setDepth(9).setAlpha(0));
-    this.tweens.add({ targets: objs, alpha: 1, duration: 300, delay: 700, ease: 'Stepped', easeParams: [3] });
-    if (!keep) this.time.delayedCall(1700, () => objs.forEach(o => o.destroy()));
-    return objs;
+    this.lastOfferings = got; // shown in the drop panel, under the charm
+    return got;
   }
 
   nextWave() {
@@ -581,13 +578,26 @@ export class BattleScene extends Phaser.Scene {
     saveFrom(this);
     const r = RARITIES[c.rarity];
     const g = this.add.graphics().setDepth(9);
-    this.pixelPanel(g, 180, 140, 300, 112, 0x1a1626, r.hex);
+    // one panel for everything found: the charm on top, the offerings (ของเซ่น) in a row below
+    const off = this.lastOfferings || [];
+    this.lastOfferings = null;
+    const H = off.length ? 172 : 112, top = 84;
+    this.pixelPanel(g, 180, top + H / 2, 300, H, 0x1a1626, r.hex);
     const objs = [g,
       this.add.text(180, 102, 'ได้ของขลัง', { ...FONT, fontSize: '13px', color: '#bbbbdd' }).setOrigin(0.5).setDepth(9),
       this.add.image(70, 148, CHARM_TYPES[c.type].icon).setScale(PX).setDepth(9),
       ...charmTitle(this, 106, 132, c, 17).map(o => o.setDepth(9)),
       ...charmEffect(this, 106, 160, c).map(o => o.setDepth(9)),
     ];
+    if (off.length) {
+      objs.push(this.add.rectangle(180, 188, 260, 2, 0x44445e).setDepth(9));
+      objs.push(this.add.text(52, 216, 'ของเซ่น', { ...FONT, fontSize: '13px', color: '#bbbbdd' }).setOrigin(0, 0.5).setDepth(9));
+      off.forEach((k, i) => {
+        const x = 150 + i * 64;
+        objs.push(this.add.image(x, 208, OFFERINGS[k].icon).setScale(PX).setDepth(9));
+        objs.push(this.add.text(x, 234, OFFERINGS[k].name, { ...FONT, fontSize: '11px', color: '#ffe08a' }).setOrigin(0.5).setDepth(9));
+      });
+    }
     objs.forEach(o => o.setAlpha(0));
     this.tweens.add({ targets: objs, alpha: 1, duration: 400, delay: 500, ease: 'Stepped', easeParams: [4] });
     this.time.delayedCall(500, () => play(c.rarity === 'mythic' ? 'win' : 'ward'));
@@ -1068,7 +1078,7 @@ export class BattleScene extends Phaser.Scene {
     // a vanquished foe holds no more secrets
     if (won) this.see(this.enemies.flatMap(e => e.skills));
     if (won) { this.rewardWin(STAGES[this.stage].enemies.some(id => ENEMIES[id].boss) ? 'boss' : this.hunt ? 'w3' : 'plain', true); this.dropCharm(); if (this.hunt) { this.wave = this.waves.length; this.drawWaveStars(); } } else saveFrom(this);
-    this.add.text(180, 250, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
+    this.add.text(180, won ? 292 : 250, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
     const next = won ? () => afterVictory(this, this.stage, this.first) : () => this.scene.start('Prep', { stage: this.stage, first: this.first, retry: true });
     // farming: after a replayed win, fight the same stage again straight away (same team, same charms)

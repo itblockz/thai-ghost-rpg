@@ -88,11 +88,16 @@ export class BattleScene extends Phaser.Scene {
     if (!this.first) {
       const autoOn = () => { try { return localStorage.getItem('himmapan-auto') === '1'; } catch { return false; } };
       this.auto = autoOn();
-      const au = this.add.text(254, 26, 'ออโต้', { ...FONT, fontSize: '13px', fontStyle: 'bold', color: this.auto ? '#88dd99' : '#77779a', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setPadding(6, 6, 6, 6).setDepth(10)
-        .setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      const au = this.add.image(254, 26, 'icon_auto').setScale(PX).setDepth(10);
+      // off: grey and still; on: gold, the arrows circling
+      let spin = false;
+      this.time.addEvent({ delay: 300, loop: true, callback: () => { spin = !spin; au.setTexture(this.auto && spin ? 'icon_auto2' : 'icon_auto'); } });
+      const show = () => (this.auto ? au.clearTint().setAlpha(1) : au.setTintFill(0x55557a).setAlpha(0.8));
+      show();
+      this.add.zone(254, 26, 44, 44).setInteractive({ useHandCursor: true }).setDepth(10).on('pointerdown', () => {
           this.auto = !this.auto;
           try { localStorage.setItem('himmapan-auto', this.auto ? '1' : '0'); } catch { /* ignore */ }
-          au.setColor(this.auto ? '#88dd99' : '#77779a'); play('click');
+          show(); play('click');
           if (this.auto && this.active && !this.busy) this.autoAct(this.active);
         });
     }

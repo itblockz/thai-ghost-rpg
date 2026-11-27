@@ -4,6 +4,10 @@
 //   { block: true } – the target ignores all damage for the rest of this round
 //   { wait: n, takenMult?: x } – wind up: stop here and finish the remaining effects next turn.
 //                    takenMult (optional, per skill) multiplies damage the user takes while winding up.
+//   { stun: n }    – the target loses its next n turns (dragged under water)
+//   { blind: true } – the target's next damaging skill misses
+//   { heal: n }    – restore n ขวัญ (never above max)
+// area: true — the skill hits every living unit on the target's side.
 // target: 'enemy' (default) or 'ally' — decides what the player taps to use it.
 // anim: attack animation — 'slash' (default for retainers), 'claw', 'bite', 'spit', 'shield'.
 // useChance (enemies only): when ready, chance per turn that the enemy starts this skill.
@@ -13,9 +17,18 @@ export const SKILLS = {
   guard: { name: 'กางกันภัย', icon: 'icon_shield', cooldown: 3, target: 'ally', anim: 'shield', effects: [{ block: true }] },
   rake: { name: 'ตะกุย', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 4 }] },
   frenzy: { name: 'ตะกุยรัว', icon: 'icon_frenzy', anim: 'frenzy', cooldown: 2, effects: [{ damage: 10 }] },
+  khamotEmber: { name: 'ไฟลวก', icon: 'icon_heal', anim: 'wisp', cooldown: 0, effects: [{ damage: 3 }] },
+  khamotBlind: { name: 'ไฟหลอกตา', icon: 'icon_blind', anim: 'wisp', cooldown: 3, effects: [{ damage: 2 }, { blind: true }] },
+  khamotHeal: { name: 'ไฟอุ่นใจ', icon: 'icon_heal', anim: 'heal', cooldown: 2, target: 'ally', effects: [{ heal: 9 }] },
   // enemies
   scratch: { name: 'ตะกุย', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 3 }] },
   bite: { name: 'กัด', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 10 }] },
+  grab: { name: 'ข่วน', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 5 }] },
+  drag: { name: 'ดึงลงน้ำ', icon: 'icon_drag', anim: 'water', cooldown: 3, useChance: 0.45, effects: [{ damage: 5 }, { stun: 1 }] },
+  lure: { name: 'ไฟหลอกทาง', icon: 'icon_blind', anim: 'wisp', cooldown: 2, useChance: 0.6, effects: [{ damage: 2 }, { blind: true }] },
+  ember: { name: 'ไฟลวก', icon: 'icon_heal', anim: 'wisp', cooldown: 0, effects: [{ damage: 4 }] },
+  strike: { name: 'ฉก', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 9 }] },
+  venom: { name: 'พ่นพิษ', icon: 'icon_venom', anim: 'venom', cooldown: 3, useChance: 0.55, area: true, effects: [{ wait: 1, takenMult: 2 }, { damage: 12 }] },
   spit: { name: 'พ่นไส้', icon: 'icon_spit', anim: 'spit', cooldown: 3, useChance: 0.5, effects: [{ wait: 1, takenMult: 2 }, { damage: 22 }] },
 };
 
@@ -29,7 +42,11 @@ export function skillFacts(skill) {
     if (e.takenMult > 1) out.push(`ระหว่างตั้งท่าโดนตี x${e.takenMult}`);
     if (e.damage != null) out.push(`อานุภาพ ${e.damage}`);
     if (e.block) out.push('กันการโจมตีให้พวกเดียวกัน 1 ตา');
+    if (e.stun) out.push(`เป้าเสียตา ${e.stun} ตา`);
+    if (e.blind) out.push('การโจมตีครั้งถัดไปของเป้าพลาด');
+    if (e.heal) out.push(`ฟื้นขวัญ ${e.heal}`);
   }
+  if (skill.area) out.push('โดนทุกตัว');
   out.push(skill.cooldown ? `พัก ${skill.cooldown} ตา` : 'ใช้ได้ทุกตา');
   return out;
 }

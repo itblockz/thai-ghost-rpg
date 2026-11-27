@@ -1,14 +1,14 @@
 import Phaser from 'phaser';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, pixelBob } from '../display.js';
 import { registerSprites, pixelDisc } from '../art/sprites.js';
-import { STAGES } from '../data/units.js';
+import { STAGES, CHAPTERS, chapterOf } from '../data/units.js';
 import { cleared, currentTeam, playStage } from '../flow.js';
 import { saveProgress } from '../save.js';
 import { play } from '../audio/sfx.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 const START = [180, 140];          // the master's shrine, where the journey began
-const NEXT_CHAPTER = [180, 500];   // locked until chapter 2 exists
+const NEXT_CHAPTER = [210, 540];   // the way on to the next chapter
 
 // Chapter map: the path from the shrine through each stage. Cleared stages can be replayed;
 // the next one is open; anything beyond is hidden. Reaching the map is the save point.
@@ -21,15 +21,26 @@ export class MapScene extends Phaser.Scene {
     const done = cleared(this);
     saveProgress(done, currentTeam(this));
 
-    this.add.image(180, 0, 'art_map').setOrigin(0.5, 0).setScale(PX);
-    this.add.text(180, 30, 'บทที่ ๑ — คืนเดือนดับ', { ...FONT, fontSize: '18px', fontStyle: 'bold', color: '#ffccd5', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5);
+    // which chapter to show: the one with the next stage to play (or the one asked for)
+    const reached = chapterOf(Math.min(done, STAGES.length - 1));
+    const ch = this.ch = Math.min(data?.chapter ?? (data?.arrived != null ? chapterOf(data.arrived) : reached), reached);
+    const idx = STAGES.map((s, i) => i).filter(i => chapterOf(i) === ch);
+    const chapter = CHAPTERS[ch];
+
+    this.add.image(180, 0, chapter.map).setOrigin(0.5, 0).setScale(PX);
+    this.add.text(180, 30, chapter.title, { ...FONT, fontSize: '18px', fontStyle: 'bold', color: '#ffccd5', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5);
+    // flip between chapters already reached
+    const flip = (label, x, to) => this.add.text(x, 30, label, { ...FONT, fontSize: '26px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5)
+      .setPadding(8, 4, 8, 4).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.restart({ chapter: to }); });
+    if (ch > 0) flip('‹', 22, ch - 1);
+    if (ch < reached) flip('›', 338, ch + 1);
 
     // the path, as dotted pixel steps between stops
-    const stops = [START, ...STAGES.map(s => s.map), NEXT_CHAPTER];
+    const stops = [START, ...idx.map(i => STAGES[i].map), NEXT_CHAPTER];
     const path = this.add.graphics();
-    for (let i = 0; i < stops.length - 1; i++) {
-      const [x1, y1] = stops[i], [x2, y2] = stops[i + 1];
-      const lit = i <= done; // walked or walkable
+    for (let k0 = 0; k0 < stops.length - 1; k0++) {
+      const [x1, y1] = stops[k0], [x2, y2] = stops[k0 + 1];
+      const lit = k0 === 0 || (idx[k0 - 1] ?? Infinity) < done; // walked or walkable
       const n = Math.floor(Math.hypot(x2 - x1, y2 - y1) / 12);
       for (let k = 1; k < n; k++) {
         const x = Math.round((x1 + (x2 - x1) * k / n) / PX) * PX, y = Math.round((y1 + (y2 - y1) * k / n) / PX) * PX;
@@ -38,16 +49,19 @@ export class MapScene extends Phaser.Scene {
     }
 
     // stops
-    this.node(START, 'node_shrine', 'ศาลาอาจารย์', 'done');
-    STAGES.forEach((s, i) => {
-      const state = i < done ? 'done' : i === done ? 'next' : 'locked';
+    this.node(START, chapter.start.node, chapter.start.name, 'done');
+    idx.forEach(i => {
+      const s = STAGES[i], state = i < done ? 'done' : i === done ? 'next' : 'locked';
       this.node(s.map, state === 'locked' ? 'node_lock' : s.node, state === 'locked' ? '' : s.name, state, () => this.go(i));
     });
-    const chapterDone = done >= STAGES.length;
-    this.node(NEXT_CHAPTER, 'node_lock', chapterDone ? 'บทที่ ๒ · เร็ว ๆ นี้' : '', 'locked');
+    const chapterDone = idx.every(i => i < done);
+    const nextCh = CHAPTERS[ch + 1];
+    if (nextCh && chapterDone) this.node(NEXT_CHAPTER, CHAPTERS[ch + 1].start.node, `ไป${nextCh.title.split(' — ')[0]}`, 'next', () => { play('click'); this.scene.restart({ chapter: ch + 1 }); });
+    else this.node(NEXT_CHAPTER, 'node_lock', chapterDone ? 'บทต่อไป · เร็ว ๆ นี้' : '', 'locked');
 
     // only the heir travels the map (retainers are seen on the prep screen); stands where the journey has reached
-    const here = data?.arrived != null ? STAGES[data.arrived].map : done === 0 ? START : STAGES[Math.min(done, STAGES.length) - 1].map;
+    const last = idx.filter(i => i < done).pop();
+    const here = data?.arrived != null && chapterOf(data.arrived) === ch ? STAGES[data.arrived].map : last == null ? START : STAGES[last].map;
     this.party = ['heir'].map((key, i) => {
       const [ox, oy] = this.offset(i);
       const img = this.add.image(here[0] + ox, here[1] + oy, key).setScale(PX).setDepth(5 - i * 0.1);
@@ -56,7 +70,7 @@ export class MapScene extends Phaser.Scene {
     });
     this.walker = this.party[0];
 
-    this.add.text(180, 610, chapterDone ? 'ผ่านบทที่ ๑ แล้ว · แตะด่านเพื่อเล่นซ้ำ' : 'แตะด่านเพื่อออกเดินทาง', { ...FONT, fontSize: '13px', color: '#bbbbdd', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+    this.add.text(180, 610, chapterDone ? 'ผ่านบทนี้แล้ว · แตะด่านเพื่อเล่นซ้ำ' : 'แตะด่านเพื่อออกเดินทาง', { ...FONT, fontSize: '13px', color: '#bbbbdd', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
     this.busy = false;
   }
 

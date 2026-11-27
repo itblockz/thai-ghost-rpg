@@ -130,6 +130,7 @@ export class BattleScene extends Phaser.Scene {
     // enemy skills are studied on the prep screen; the field shows only the fight itself
     u.tiles = [];
     u.marker = this.add.image(x, y - u.half - 10, 'icon_target').setScale(PX).setVisible(false).setDepth(6);
+    u.statusIcon = this.add.image(x - u.half * 0.7, y - u.half * 0.7, 'icon_drag').setScale(PX).setVisible(false).setDepth(6);
     u.shieldIcon = this.add.image(x + u.half * 0.7, y - u.half * 0.7, 'icon_shield').setScale(PX).setVisible(false).setDepth(6);
 
     // tap the unit = use the selected skill on it
@@ -152,6 +153,7 @@ export class BattleScene extends Phaser.Scene {
     this.active = this.queue.shift();
     while (this.active && !this.active.alive) this.active = this.queue.shift();
     if (!this.active) return this.enemyPhase();
+    if (this.active.stunned) return this.loseTurn(this.active, () => this.nextAllyTurn());
     const ready = this.active.skills.filter(id => !this.active.cd[id]);
     this.selected = ready[0] ?? this.active.skills[0];
     this.buildButtons();
@@ -216,7 +218,9 @@ export class BattleScene extends Phaser.Scene {
   // user's next turn (user.pending). Cooldown starts when the skill finishes.
   applySkill(user, target, skillId, from = 0) {
     const skill = SKILLS[skillId];
-    let dealt = 0, blocked = false, mult = 1;
+    let dealt = 0, blocked = false, mult = 1, healed = 0, missed = false;
+    const blindNow = user.blind && skill.effects.slice(from).some(e => e.damage != null);
+    if (blindNow) user.blind = false; // a blinded unit's next attack misses entirely
     for (let i = from; i < skill.effects.length; i++) {
       const e = skill.effects[i];
       if (e.wait) {
@@ -225,21 +229,26 @@ export class BattleScene extends Phaser.Scene {
         return { skill, waiting: true };
       }
       if (e.damage != null) {
-        if (target.block) blocked = true;
+        if (blindNow) missed = true;
+        else if (target.block) blocked = true;
         else { mult = target.takenMult; const d = e.damage * mult; target.hp -= d; dealt += d; }
       }
       if (e.block) { target.block = true; target.shieldIcon.setVisible(true); }
+      if (e.stun && !missed && !blocked) target.stunned = (target.stunned || 0) + e.stun;
+      if (e.blind && !missed && !blocked) target.blind = true;
+      if (e.heal) { const h = Math.min(e.heal, target.maxHp - target.hp); target.hp += h; healed += h; }
     }
     // show the real rest count right away; the end-of-round tick skips skills used this round
     if (skill.cooldown) { user.cd[skillId] = skill.cooldown; (user.fresh ||= new Set()).add(skillId); }
-    return { skill, dealt, blocked, mult, waiting: false };
+    return { skill, dealt, blocked, mult, healed, missed, waiting: false };
   }
 
   // Animate + apply + feedback, then call done().
   perform(user, target, skillId, from, done) {
     const skill = SKILLS[skillId];
+    if (skill.area && !skill.effects[from]?.wait) return this.performArea(user, target, skillId, from, done);
     if (skill.effects[from]?.wait) {
-      return this.animWindup(user, target, () => {
+      return this.animWindup(user, skill.area ? this.alive(target.side === 'ally' ? this.allies : this.enemies) : [target], () => {
         this.applySkill(user, target, skillId, from);
         this.refresh();
         done();
@@ -248,6 +257,42 @@ export class BattleScene extends Phaser.Scene {
     const kind = skill.anim || (user.side === 'ally' ? 'slash' : 'claw');
     this.animAttack(user, target, kind, () => {
       const r = this.applySkill(user, target, skillId, from);
+      this.feedback(target, r);
+      if (target.hp <= 0 && target.alive) this.knockOut(target);
+      this.refresh();
+      this.time.delayedCall(300, done);
+    });
+  }
+
+  // Hit every living unit on the target's side (e.g. นาค's venom). Each can be shielded separately.
+  performArea(user, target, skillId, from, done) {
+    const side = target.side === 'ally' ? this.allies : this.enemies;
+    const hit = this.alive(side);
+    play('splash');
+    this.pose(user, 'atk');
+    this.tweens.add({ targets: user.sprite, y: user.y + 16, yoyo: true, duration: 140, onComplete: () => user.sprite.setY(user.y) });
+    hit.forEach(t => this.growFx(t.x, t.y, [20, 28, 36, 44], 0x66dd55, 0.7, 450, pixelDisc));
+    this.time.delayedCall(300, () => {
+      // one shared application of the skill's cooldown/blind state, then each target separately
+      hit.forEach((t, i) => {
+        const r = this.applySkill(user, t, skillId, from);
+        if (i < hit.length - 1 && SKILLS[skillId].cooldown) delete user.cd[skillId];
+        this.feedback(t, r);
+        if (t.hp <= 0 && t.alive) this.knockOut(t);
+      });
+      if (SKILLS[skillId].cooldown) { user.cd[skillId] = SKILLS[skillId].cooldown; (user.fresh ||= new Set()).add(skillId); }
+      this.time.delayedCall(250, () => user.alive && this.pose(user, 'idle'));
+      this.refresh();
+      this.time.delayedCall(500, done);
+    });
+  }
+
+  // Popups/sounds/flash for one target's result.
+  feedback(target, r) {
+    if (r.missed) { this.popup(target.x, target.y - 30, 'พลาด!', '#bbbbcc', 22); return; }
+    if (r.healed) { this.popup(target.x, target.y - 20, `+${r.healed}`, '#66ee88', 26); play('ward'); }
+    if (!r.dealt && !r.blocked) return;
+    {
       if (r.blocked) { this.popup(target.x, target.y - 30, 'กันไว้!', '#ffe066', 22); play('block'); }
       else if (r.dealt) {
         const heavy = r.dealt >= 12;
@@ -257,10 +302,7 @@ export class BattleScene extends Phaser.Scene {
         target.sprite.setTintFill(0xffffff);
         this.time.delayedCall(90, () => target.alive && target.sprite.clearTint());
       }
-      if (target.hp <= 0 && target.alive) this.knockOut(target);
-      this.refresh();
-      this.time.delayedCall(300, done);
-    });
+    }
   }
 
   knockOut(u) {
@@ -291,18 +333,30 @@ export class BattleScene extends Phaser.Scene {
 
   // Enemies use their strongest ready skill. Skills with useChance only start on a lucky roll.
   pickEnemySkill(e) {
-    const ready = e.skills.filter(id => !e.cd[id] && Math.random() < (SKILLS[id].useChance ?? 1));
-    const pool = ready.length ? ready : e.skills.filter(id => !e.cd[id] && SKILLS[id].useChance == null);
+    const rolled = e.skills.filter(id => !e.cd[id] && SKILLS[id].useChance != null && Math.random() < SKILLS[id].useChance);
+    const pool = rolled.length ? rolled : e.skills.filter(id => !e.cd[id] && SKILLS[id].useChance == null);
     return (pool.length ? pool : e.skills).reduce((a, b) => (skillDamage(SKILLS[b]) > skillDamage(SKILLS[a]) ? b : a));
   }
 
+  // A stunned unit (dragged under) sits out this turn.
+  loseTurn(u, then) {
+    u.stunned--;
+    this.busy = true;
+    this.buildButtons();
+    this.popup(u.x, u.y - 20, 'จมน้ำ… เสียตา', '#88bbff', 18);
+    this.tweens.add({ targets: u.sprite, y: u.y + 9, yoyo: true, duration: 260, ease: 'Stepped', easeParams: [3] });
+    this.refresh();
+    this.time.delayedCall(700, then);
+  }
+
   enemyAct(e, done) {
+    if (e.stunned) return this.loseTurn(e, done);
     const targets = this.alive(this.allies);
     if (e.pending) {
       let { skillId, next, target } = e.pending;
       e.pending = null;
       e.takenMult = 1;
-      target.marker.setVisible(false);
+      this.allies.forEach(a => a.marker.setVisible(false));
       if (!target.alive) target = Phaser.Math.RND.pick(targets);
       return this.perform(e, target, skillId, next, done);
     }
@@ -315,14 +369,14 @@ export class BattleScene extends Phaser.Scene {
     this.btns = [];
     const u = this.active;
     if (!u) { this.turnText.setText(''); return; }
-    const n = u.skills.length, w = n === 1 ? 220 : 160;
+    const n = u.skills.length, w = n === 1 ? 220 : n === 2 ? 160 : 106, gap = n === 3 ? 114 : 172;
     u.skills.forEach((id, i) => {
-      const x = 180 + (i - (n - 1) / 2) * 172, y = BTN_Y, s = SKILLS[id];
+      const x = 180 + (i - (n - 1) / 2) * gap, y = BTN_Y, s = SKILLS[id];
       const cd = u.cd[id] || 0, sel = this.selected === id && !cd;
       const g = this.add.graphics();
       this.pixelPanel(g, x, y, w, 120, cd ? 0x1e1e2a : sel ? 0x3d3d5e : 0x33334d, cd ? 0x444455 : sel ? 0xffdd55 : 0x8888cc);
       const icon = this.add.image(x, y - 14, s.icon).setScale(PX);
-      const name = this.add.text(x, y + 36, s.name, { ...FONT, fontSize: '20px' }).setOrigin(0.5);
+      const name = this.add.text(x, y + 36, s.name, { ...FONT, fontSize: n === 3 ? '16px' : '20px' }).setOrigin(0.5);
       const cdText = this.add.text(x, y, cd ? String(cd) : '', { ...FONT, fontSize: '52px', fontStyle: 'bold' }).setOrigin(0.5);
       const parts = [g, icon, name, cdText];
       if (cd) [icon, name].forEach(p => p.setAlpha(0.25));
@@ -356,6 +410,10 @@ export class BattleScene extends Phaser.Scene {
   refresh() {
     for (const u of [...this.allies, ...this.enemies]) {
       this.setBar(u);
+      // lingering conditions show as a small icon on the unit's upper left
+      const st = !u.alive ? null : u.stunned ? 'icon_drag' : u.blind ? 'icon_blind' : null;
+      u.statusIcon.setVisible(!!st);
+      if (st) u.statusIcon.setTexture(st);
       if (u.side === 'enemy' && u.alive) {
         u.glow.setTint(u.pending ? 0xff1030 : 0xff3060).setAlpha(u.pending ? 0.45 : u.def.boss ? 0.28 : 0.12);
         // winding up: the body itself burns red
@@ -448,12 +506,13 @@ export class BattleScene extends Phaser.Scene {
 
   // ---------- animations ----------
   // Enemy wind-up: shudders, glows red, marks its target.
-  animWindup(user, target, onDone) {
+  animWindup(user, targets, onDone) {
     play('growl');
-    this.tweens.add({ targets: user.sprite, x: user.x + 4, duration: 40, yoyo: true, repeat: 7, onComplete: () => user.sprite.setX(user.x) });
     this.pose(user, 'wind');
-    target.marker.setVisible(true);
-    this.tweens.add({ targets: target.marker, alpha: 0.2, yoyo: true, repeat: 3, duration: 150, ease: 'Stepped', easeParams: [1], onComplete: () => target.marker.setAlpha(1) });
+    targets.forEach(t => {
+      t.marker.setVisible(true);
+      this.tweens.add({ targets: t.marker, alpha: 0.2, yoyo: true, repeat: 3, duration: 150, ease: 'Stepped', easeParams: [1], onComplete: () => t.marker.setAlpha(1) });
+    });
     this.time.delayedCall(400, onDone);
   }
 
@@ -466,6 +525,7 @@ export class BattleScene extends Phaser.Scene {
     }
     if (kind === 'spit') return this.animSpit(user, target, onHit);
     if (kind === 'ram') return this.animRam(user, target, onHit);
+    if (kind === 'water' || kind === 'wisp' || kind === 'heal') return this.animRanged(user, target, kind, onHit);
     const sp = user.sprite, enemy = user.side === 'enemy';
     const dx = (target.x - user.x) * 0.55, dy = (target.y - user.y) * 0.55;
     const len = Math.hypot(dx, dy) || 1;
@@ -521,6 +581,36 @@ export class BattleScene extends Phaser.Scene {
           },
         });
       },
+    });
+  }
+
+  // Ranged/support skills: a wisp of fire flies over, water swirls up, or a warm light settles.
+  animRanged(user, target, kind, onHit) {
+    this.pose(user, 'wind');
+    this.time.delayedCall(160, () => {
+      this.pose(user, 'atk');
+      if (kind === 'heal') {
+        play('ward');
+        this.growFx(target.x, target.y, [18, 26, 34, 42], 0x88ff99, 0.6, 500, pixelDisc);
+        this.time.delayedCall(250, () => { onHit(); this.pose(user, 'idle'); });
+        return;
+      }
+      if (kind === 'water') {
+        play('splash');
+        this.growFx(target.x, target.y + 20, [14, 22, 30, 38], 0x4488ff, 0.8, 450, pixelDisc);
+        this.tweens.add({ targets: target.sprite, y: target.y + 15, yoyo: true, duration: 180, ease: 'Stepped', easeParams: [3] });
+        this.time.delayedCall(250, () => { onHit(); this.pose(user, 'idle'); });
+        return;
+      }
+      // wisp
+      play('slash');
+      const w = this.add.image(user.x, user.y, 'fx_soul').setScale(PX).setTint(0xffaa44).setDepth(6);
+      this.tweens.add({ targets: w, x: target.x, y: target.y, duration: 300, ease: 'Stepped', easeParams: [8], onComplete: () => {
+        w.destroy();
+        this.growFx(target.x, target.y, [10, 16, 22], 0xffaa44, 0.8, 300, pixelDisc);
+        onHit();
+        this.pose(user, 'idle');
+      } });
     });
   }
 

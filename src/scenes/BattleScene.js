@@ -282,14 +282,13 @@ export class BattleScene extends Phaser.Scene {
     u.barW = bw;
     // turn gauge under the life bar: fills toward this unit's next turn (faster units fill sooner)
     u.ctBar = this.add.rectangle(x - bw / 2, by + 14, 0, 4, 0x66ccff).setOrigin(0, 0.5);
-    u.hpText = this.add.text(x, by + 19, '', numFont(12, '#ccccee')).setOrigin(0.5, 0);
-    u.hud.push(u.bar, u.ctBar, u.hpText);
+    u.hud.push(u.bar, u.ctBar); // no HP numbers: the bar and the popups tell it
 
     // enemy skills are studied on the prep screen; the field shows only the fight itself
     u.tiles = [];
     u.marker = this.add.image(x, y - u.half - 10, 'icon_target').setScale(PX).setVisible(false).setDepth(6);
-    // conditions (สถานะ): a row of small icons under the unit's numbers, each with the turns it has left
-    u.statusY = by + 50;
+    // conditions (สถานะ): a row of small icons under the unit's bars, each with the turns it has left
+    u.statusY = by + 34;
     u.statusIcons = [0, 1, 2, 3].map(() => ({
       img: this.add.image(x, u.statusY, 'icon_drag').setScale(PX).setVisible(false).setDepth(6),
       num: this.add.text(x, u.statusY + 10, '', numFont(13, '#ffffff')).setOrigin(0.5).setStroke('#000', 4).setDepth(7),
@@ -739,7 +738,6 @@ export class BattleScene extends Phaser.Scene {
     const ratio = Math.max(0, u.hp) / u.maxHp;
     this.tweens.add({ targets: u.bar, width: Math.round(u.barW * ratio / 4) * 4, duration: 250, ease: 'Stepped', easeParams: [3] });
     u.bar.setFillStyle(ratio > 0.5 ? 0x55cc66 : ratio > 0.25 ? 0xddbb33 : 0xdd4444);
-    u.hpText.setText(`${Math.max(0, u.hp)}/${u.maxHp}`);
   }
 
   refresh() {

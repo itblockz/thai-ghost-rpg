@@ -3,7 +3,7 @@ import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, numFont }
 import { registerSprites } from '../art/sprites.js';
 import { ALLIES } from '../data/units.js';
 import { SKILLS } from '../data/skills.js';
-import { RARITIES, CHARM_TYPES, applyWorn, wornIds, slotsOpen, SLOTS, enchLevel, enchPoints, ENCH_MAX } from '../data/charms.js';
+import { RARITIES, CHARM_TYPES, applyWorn, wornIds, slotsOpen, SLOTS, enchLevel, enchPoints, ENCH_MAX, effective } from '../data/charms.js';
 import { cleared } from '../flow.js';
 import { applyGrowth, levelOf, OFFERINGS, MAX_EXP, MAX_LEVEL, shownLevel } from '../data/growth.js';
 import { charmTitle, charmEffect } from '../ui/charmUi.js';
@@ -118,10 +118,11 @@ export class RosterScene extends Phaser.Scene {
     const list = [...bag].sort((a, b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity] || CHARM_TYPES[a.type].name.localeCompare(CHARM_TYPES[b.type].name) || b.value - a.value);
     const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
     this.page = Math.min(this.page, pages - 1);
-    add(this.add.text(30, 352, `ย่าม (${bag.length})`, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5));
+    if (!this.enchanting) add(this.add.text(30, 352, `ย่าม (${bag.length})`, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5));
     // ของเซ่น: tap one to feed it to the retainer above (บารมี without fighting)
     const offer = this.registry.get('offer') || {};
-    Object.entries(OFFERINGS).forEach(([k, o], i) => {
+    if (this.enchanting) this.filterBar(add);
+    else Object.entries(OFFERINGS).forEach(([k, o], i) => {
       const ox = 122 + i * 42, n = offer[k] || 0;
       add(this.add.image(ox, 352, o.icon).setScale(PX).setAlpha(n ? 1 : 0.3));
       add(this.add.text(ox + 12, 362, String(n), numFont(11, n ? '#ffffff' : '#666688')).setOrigin(0, 0.5));
@@ -148,10 +149,19 @@ export class RosterScene extends Phaser.Scene {
       const g = add(this.add.graphics());
       this.panel(g, x, y, 52, 52, this.picked === c.id ? 0x4a4020 : 0x1e1c2a, this.picked === c.id ? 0xffffff : RARITIES[c.rarity].hex);
       add(this.add.image(x, y, CHARM_TYPES[c.type].icon).setScale(PX).setAlpha(wornBy[c.id] && wornBy[c.id] !== id ? 0.45 : 1));
+      const chosen = this.enchanting && this.chosen?.has(c.id);
+      if (chosen) add(this.add.graphics().lineStyle(PX * 2, 0xffe08a).strokeRect(x - 24, y - 24, 48, 48));
+      if (chosen) add(this.add.text(x - 20, y - 18, '✓', { ...FONT, fontSize: '14px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5));
+      if (c.locked) { // a tiny padlock in the corner (drawn on the 2pt grid)
+        const lg = add(this.add.graphics()), lx = x - 22, ly = y + 10;
+        lg.fillStyle(0x000000).fillRect(lx, ly + 2, 12, 10).fillStyle(0xc8c8d8).fillRect(lx + 2, ly + 4, 8, 6).fillStyle(0x000000).fillRect(lx + 5, ly + 6, 2, 2);
+        lg.fillStyle(0xc8c8d8).fillRect(lx + 2, ly - 2, 2, 6).fillRect(lx + 8, ly - 2, 2, 6).fillRect(lx + 2, ly - 4, 8, 2);
+      }
+      if (this.enchanting === c.id) add(this.panel(this.add.graphics(), x, y, 52, 52, 0x000000, 0xffffff).setAlpha(0.3));
       const el = enchLevel(c.pts).l;
       if (el) add(this.add.text(x + 22, y + 18, `+${el}`, { ...numFont(11, '#c8a8ff'), stroke: '#000', strokeThickness: 3 }).setOrigin(1, 0.5));
       if (wornBy[c.id]) add(this.add.text(x + 20, y - 18, wornBy[c.id] === id ? '✓' : '•', { ...FONT, fontSize: '13px', fontStyle: 'bold', color: wornBy[c.id] === id ? '#88dd99' : '#ccccee', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5));
-      add(this.add.zone(x, y, 52, 52).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); if (this.enchanting) return this.feed(c, wornBy); this.picked = c.id; this.pickedSkill = null; this.confirmDrop = null; this.redraw(); }));
+      add(this.add.zone(x, y, 52, 52).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); if (this.enchanting) return this.toggleChoose(c, wornBy); this.picked = c.id; this.pickedSkill = null; this.confirmDrop = null; this.redraw(); }));
     });
 
     // ---- the charm under inspection: look first, then wear or throw away ----
@@ -183,15 +193,23 @@ export class RosterScene extends Phaser.Scene {
       charmTitle(this, 30, 514, c).forEach(add);
       const en = enchLevel(c.pts);
       if (this.enchanting) {
-        add(this.add.text(30, 542, 'แตะของในย่ามเพื่อเสกเข้า', { ...FONT, fontSize: '13px', color: '#ffe08a' }).setOrigin(0, 0.5));
+        // what the chosen charms would give, before anything is used up
+        const picks = bag.filter(b => this.chosen?.has(b.id));
+        const pts = picks.reduce((t, f) => t + enchPoints(f, c), 0), to = enchLevel((c.pts || 0) + pts).l;
+        add(this.add.text(30, 542, picks.length ? `เลือก ${picks.length} ชิ้น +${pts} แต้ม → ${to > enchLevel(c.pts).l ? `เสก ${to}` : 'ยังไม่ขึ้นขั้น'}` : 'แตะของในย่าม หรือใช้ปุ่มเลือกด่วนด้านบน', { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0, 0.5));
       } else charmEffect(this, 30, 542, c).forEach(add);
       // เสก level bar
       add(this.add.text(30, 574, en.l >= ENCH_MAX ? 'เสกเต็มแล้ว' : en.l ? `เสก ${en.l}` : 'ยังไม่เสก', { ...FONT, fontSize: '12px', color: '#ccccee' }).setOrigin(0, 0.5));
       add(this.add.rectangle(96, 574, 104, 6, 0x2a2440).setOrigin(0, 0.5));
       add(this.add.rectangle(96, 574, en.need ? Math.round(104 * en.into / en.need / 2) * 2 : 104, 6, 0xffe08a).setOrigin(0, 0.5));
       if (this.enchanting) {
-        this.button(add, 282, 516, 96, 26, 'ธรรมดาทั้งหมด', 0x3d3d5e, 0xffdd55, () => this.feedAllCommon(c, wornBy));
-        this.button(add, 282, 576, 96, 26, 'เสร็จ', 0x2a2a3a, 0x8888aa, () => { this.enchanting = null; this.redraw(); });
+        const picks = bag.filter(b => this.chosen?.has(b.id)), hasMythic = picks.some(b => b.rarity === 'mythic');
+        const sure = this.confirmEnchant;
+        if (picks.length) this.button(add, 290, 516, 80, 26, hasMythic && !sure ? 'เสกแน่?' : 'เสก', hasMythic && !sure ? 0x5a2d3a : 0x3d2d5e, hasMythic && !sure ? 0xff7790 : 0xc8a8ff, () => {
+          if (hasMythic && !sure) { this.confirmEnchant = true; return this.redraw(); }
+          this.consume(c, picks);
+        });
+        this.button(add, 290, 576, 80, 26, 'เสร็จ', 0x2a2a3a, 0x8888aa, () => { this.enchanting = null; this.chosen = null; this.redraw(); });
       } else {
         const owner = wornBy[c.id];
         if (owner === id) this.button(add, 290, 516, 80, 26, 'ถอด', 0x2a2a3a, 0x8888aa, () => { this.setGear(this.strip(this.gear(), c.id)); this.redraw(); });
@@ -200,9 +218,14 @@ export class RosterScene extends Phaser.Scene {
           g[id][this.slot] = c.id;
           this.setGear(g); this.redraw();
         });
-        if (en.l < ENCH_MAX) this.button(add, 290, 546, 80, 26, 'ปลุกเสก', 0x3d2d5e, 0xc8a8ff, () => { this.enchanting = c.id; this.confirmDrop = null; this.redraw(); });
+        if (en.l < ENCH_MAX) this.button(add, 290, 546, 80, 26, 'ปลุกเสก', 0x3d2d5e, 0xc8a8ff, () => { this.enchanting = c.id; this.chosen = new Set(); this.confirmEnchant = false; this.confirmDrop = null; this.redraw(); });
+        // lock: a locked charm can't be used for เสก or thrown away
+        add(this.add.image(232, 514, 'node_lock').setScale(PX).setAlpha(c.locked ? 1 : 0.3));
+        add(this.add.zone(232, 514, 40, 36).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+          play('click'); this.registry.set('bag', this.bag().map(b => (b.id === c.id ? { ...b, locked: !b.locked } : b))); saveFrom(this); this.redraw();
+        }));
         const confirming = this.confirmDrop === c.id;
-        this.button(add, 290, 576, 80, 26, confirming ? 'ทิ้งแน่?' : 'ทิ้ง', confirming ? 0x5a2d3a : 0x2a2a3a, confirming ? 0xff7790 : 0x8888aa, () => {
+        if (!c.locked) this.button(add, 290, 576, 80, 26, confirming ? 'ทิ้งแน่?' : 'ทิ้ง', confirming ? 0x5a2d3a : 0x2a2a3a, confirming ? 0xff7790 : 0x8888aa, () => {
           if (!confirming) { this.confirmDrop = c.id; return this.redraw(); }
           const g = this.strip(this.gear(), c.id);
           this.registry.set('bag', this.bag().filter(b => b.id !== c.id));
@@ -226,21 +249,45 @@ export class RosterScene extends Phaser.Scene {
 
   // a charm's effect: stat charms as icon + number, others as words
 
-  // ปลุกเสก: feed one charm into the one being consecrated (not itself, not one someone wears)
-  feed(f, wornBy) {
-    const main = this.bag().find(b => b.id === this.enchanting);
-    if (!main || f.id === main.id) return;
-    if (wornBy[f.id]) return this.flash('ของที่สวมอยู่ใช้เสกไม่ได้');
-    this.consume(main, [f]);
+  // ปลุกเสก: choose charms first (nothing is used up until 'เสก'); worn and locked ones can't be chosen
+  wornMap() { const g = this.gear(), m = {}; for (const k in g) g[k].forEach(cid => { if (cid) m[cid] = k; }); return m; }
+  canFeed(f, worn = this.wornMap()) { return f.id !== this.enchanting && !worn[f.id] && !f.locked; }
+  toggleChoose(f, worn) {
+    if (f.id === this.enchanting) return;
+    if (worn[f.id]) return this.flash('ของที่สวมอยู่ใช้เสกไม่ได้');
+    if (f.locked) return this.flash('ของที่ล็อกไว้ใช้เสกไม่ได้');
+    this.chosen ||= new Set();
+    if (this.chosen.has(f.id)) this.chosen.delete(f.id); else this.chosen.add(f.id);
+    this.confirmEnchant = false;
+    this.redraw();
   }
-  feedAllCommon(main, wornBy) {
-    const list = this.bag().filter(b => b.rarity === 'common' && b.id !== main.id && !wornBy[b.id]);
-    if (!list.length) return this.flash('ไม่มีของธรรมดาที่ว่างอยู่');
-    this.consume(main, list);
+  // quick choices above the bag while consecrating (they only tick; 'เสก' still has to be pressed)
+  filterBar(add) {
+    const main = this.bag().find(b => b.id === this.enchanting);
+    if (!main) return;
+    const worn = this.wornMap(), free = this.bag().filter(b => this.canFeed(b, worn));
+    // the best of each kind someone wears, to find what is no better than it
+    const best = {};
+    this.bag().filter(b => worn[b.id]).forEach(b => { const v = b.type === 'yant' ? effective(b).wards.length : effective(b).value; best[b.type] = Math.max(best[b.type] ?? -1, v); });
+    const worse = b => best[b.type] != null && (b.type === 'yant' ? effective(b).wards.length : effective(b).value) <= best[b.type];
+    const chips = [
+      ['ธรรมดา', b => b.rarity === 'common'],
+      ['หายาก', b => b.rarity === 'rare'],
+      ['ชนิดนี้', b => b.type === main.type && b.rarity !== 'mythic'],
+      ['ด้อยกว่า', b => b.rarity !== 'mythic' && worse(b)],
+    ];
+    chips.forEach(([label, test], i) => this.chip(add, 46 + i * 44, label, () => { this.chosen ||= new Set(); free.filter(test).forEach(b => this.chosen.add(b.id)); this.confirmEnchant = false; this.redraw(); }));
+    this.chip(add, 46 + 4 * 44, 'ล้าง', () => { this.chosen = new Set(); this.confirmEnchant = false; this.redraw(); });
+  }
+  chip(add, x, label, onTap) {
+    add(this.panel(this.add.graphics(), x, 352, 42, 24, 0x2a2440, 0x8a7ab0));
+    add(this.add.text(x, 352, label, { ...FONT, fontSize: '10px', color: '#e8e0ff' }).setOrigin(0.5));
+    add(this.add.zone(x, 352, 42, 30).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onTap(); }));
   }
   consume(main, feeds) {
     const pts = feeds.reduce((t, f) => t + enchPoints(f, main), 0);
     const before = enchLevel(main.pts).l;
+    this.chosen = new Set(); this.confirmEnchant = false;
     const gone = new Set(feeds.map(f => f.id));
     const bag = this.bag().filter(b => !gone.has(b.id)).map(b => (b.id === main.id ? { ...b, pts: (b.pts || 0) + pts } : b));
     this.registry.set('bag', bag);

@@ -2093,6 +2093,139 @@ function drawTitleArt(scene) {
 
 /** Story portraits drawn at 64x64 on the shared grid (128pt): richer than the 32x32 field sprites. */
 function drawPortraits(scene) {
+
+  // shared helpers for the portraits below
+  const ell = (px, cx, cy, rx, ry, col) => { for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) if ((x * x) / (rx * rx) + (y * y) / (ry * ry) <= 1) px(cx + x, cy + y, col); };
+  const outlined = (px, cx, cy, rx, ry, col, K = '#141018') => { ell(px, cx, cy, rx + 1, ry + 1, K); ell(px, cx, cy, rx, ry, col); };
+  const glowAt = (px, cx, cy, r, cols) => { for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) { const d = Math.hypot(x, y); if (d < r && (x + y) % 2 === 0) px(cx + x, cy + y, cols[Math.min(cols.length - 1, Math.floor(d / r * cols.length))]); } };
+  const eyes = (px, rect, lx, rx, y, iris, K = '#141018') => { [lx, rx].forEach(x => { rect(x, y, 4, 4, K); rect(x + 1, y + 1, 2, 2, iris); px(x + 1, y + 1, '#ffffff'); }); };
+
+  // กุมารทอง — golden child spirit: topknot (จุก) with a gold ring, round face, red cloth, sitting cross-legged.
+  for (const [key, f] of [['p_kumarn', 0], ['p_kumarn_idle2', 1]]) canvasArt(scene, key, 64, 64, (px, rect) => {
+    const K = '#141018', g = '#d4a020', gS = '#a87818', gH = '#ffe066', red = '#c0283a', redD = '#7a1020';
+    glowAt(px, 32, 34, 30, ['#3a2c10', '#2a200c', '#1c160a']);
+    // legs crossed + red cloth
+    outlined(px, 32, 56, 20, 7, g); ell(px, 32, 56, 20, 7, gS); ell(px, 32, 55, 18, 5, g);
+    outlined(px, 32, 50, 12, 7, red); for (let x = 22; x < 43; x += 3) px(x, 52, redD);
+    // body
+    outlined(px, 32, 40, 11, 10, g); ell(px, 36, 42, 6, 7, gS); ell(px, 30, 37, 5, 5, gH);
+    // arms with hands together (wai)
+    outlined(px, 24, 42, 3, 6, g); outlined(px, 40, 42, 3, 6, g); outlined(px, 32, 36 - f, 3, 4, gH);
+    // head
+    outlined(px, 32, 21, 11, 11, g); ell(px, 37, 23, 5, 7, gS); ell(px, 28, 17, 4, 3, gH);
+    // topknot with ring
+    outlined(px, 32, 7, 4, 4, '#1a1414'); rect(29, 10, 7, 2, gH); px(31, 5, '#3a2e30');
+    // face
+    eyes(px, rect, 25, 35, 19 + f * 0, '#1a1414');
+    px(32, 25, gS); rect(30, 28, 5, 1, redD); px(31, 29, red); px(32, 29, red);
+    rect(23, 24, 2, 1, '#e86a50'); rect(40, 24, 2, 1, '#e86a50');
+  });
+
+  // ผีกองกอย — one-legged forest imp: grey-violet skin, wild hair, red eyes, grin with fangs, long claws.
+  for (const [key, f] of [['p_kongkoi', 0], ['p_kongkoi_idle2', 1]]) canvasArt(scene, key, 64, 64, (px, rect) => {
+    const K = '#141018', s = '#6a5a80', sS = '#4a3e5e', sH = '#8a7aa0', hair = '#1e1626';
+    // one leg and foot (hopping)
+    outlined(px, 32, 58 - f, 4, 6, sS); outlined(px, 35, 63 - f, 6, 2, sS);
+    // body hunched
+    outlined(px, 32, 44 - f, 12, 11, s); ell(px, 37, 47 - f, 6, 7, sS); ell(px, 28, 40 - f, 5, 4, sH);
+    // arms with claws
+    outlined(px, 17, 44 - f, 4, 8, s); outlined(px, 47, 44 - f, 4, 8, s);
+    [[13, 52], [16, 53], [19, 52], [44, 52], [47, 53], [50, 52]].forEach(([x, y]) => { rect(x, y - f, 1, 4, '#e8e0d0'); px(x, y + 4 - f, K); });
+    // head + wild hair
+    for (let i = 0; i < 9; i++) { const x = 18 + i * 3.5, h = 6 + (i * 5) % 7; rect(Math.round(x), 8 - f + (i % 2) * 2, 3, h, hair); }
+    outlined(px, 32, 22 - f, 13, 11, s); ell(px, 38, 24 - f, 6, 8, sS); ell(px, 27, 18 - f, 5, 3, sH);
+    rect(19, 12 - f, 26, 4, hair);
+    // big red eyes, brows
+    eyes(px, rect, 24, 36, 18 - f, '#d01030'); rect(23, 16 - f, 6, 1, hair); rect(35, 16 - f, 6, 1, hair);
+    // grin with fangs
+    rect(25, 27 - f, 14, 4, K); rect(26, 28 - f, 12, 2, '#7a1020');
+    [[26, 27], [29, 27], [34, 27], [37, 27]].forEach(([x, y]) => rect(x, y - f, 2, 2, '#ffffff'));
+    // pointed ears
+    rect(16, 18 - f, 3, 2, s); px(15, 17 - f, s); rect(45, 18 - f, 3, 2, s); px(48, 17 - f, s);
+  });
+
+  // กระสือ — a woman's floating head, long black hair, red lips, entrails glowing beneath.
+  for (const [key, f] of [['p_krasue', 0], ['p_krasue_idle2', 1]]) canvasArt(scene, key, 64, 64, (px, rect) => {
+    const K = '#141018', skin = '#f0d8d0', skinS = '#c8a8a8', hair = '#120c14', hairH = '#2e2236';
+    glowAt(px, 32, 46, 20, ['#5a1028', '#3a0c20', '#22081a']);
+    // entrails: heart, lungs, dangling gut with red glow
+    outlined(px, 32, 40, 5, 4, '#c0283a'); ell(px, 30, 39, 2, 1, '#ff6688');
+    outlined(px, 25, 42, 3, 5, '#8a1830'); outlined(px, 39, 42, 3, 5, '#8a1830');
+    for (let y = 45; y < 62; y++) { const x = 32 + Math.round(Math.sin((y + f * 2) / 2.5) * 3); px(x, y, '#ff6688'); px(x + 1, y, '#c0283a'); px(x - 1, y, K); }
+    for (let y = 46; y < 58; y++) { const x = 26 + Math.round(Math.sin((y - f * 2) / 3) * 2); px(x, y, '#c0283a'); }
+    for (let y = 46; y < 55; y++) { const x = 38 + Math.round(Math.sin((y + f) / 3) * 2); px(x, y, '#c0283a'); }
+    // long hair framing the face
+    outlined(px, 32, 19, 15, 16, hair); for (let y = 24; y < 40; y++) { rect(17, y, 4, 1, hair); rect(43, y, 4, 1, hair); }
+    for (let y = 6; y < 30; y += 4) px(22 + (y % 3), y, hairH);
+    // face
+    outlined(px, 32, 21, 9, 12, skin); ell(px, 37, 23, 3, 8, skinS);
+    rect(23, 8, 18, 7, hair); px(27, 11, hairH);
+    // eyes: dark, red-rimmed, staring
+    eyes(px, rect, 25, 35, 18, '#d01030');
+    rect(24, 17, 6, 1, hair); rect(34, 17, 6, 1, hair);
+    // red lips, a drip of blood
+    rect(29, 28, 7, 2, '#c0283a'); px(31, 28, '#ff6688'); rect(33, 30, 1, 2 + f, '#c0283a');
+  });
+
+  // ผีพราย — drowned woman under the pier: pale, soaked hair over the face, rising from dark water.
+  for (const [key, f] of [['p_phrai', 0], ['p_phrai_idle2', 1]]) canvasArt(scene, key, 64, 64, (px, rect) => {
+    const K = '#141018', skin = '#c8d8e0', skinS = '#98acb8', hair = '#0e1218', hairH = '#22303a';
+    // body in a pale wet dress
+    outlined(px, 32, 54, 15, 12, '#a8b8c8'); ell(px, 38, 56, 6, 9, '#8898a8');
+    // reaching arms
+    outlined(px, 14, 40 + f, 3, 10, skin); outlined(px, 50, 40 + f, 3, 10, skin);
+    [11, 13, 15, 17].forEach(x => rect(x, 28 + f, 1, 4, skin)); [47, 49, 51, 53].forEach(x => rect(x, 28 + f, 1, 4, skin));
+    // head and hair hanging in wet strands
+    outlined(px, 32, 22, 10, 12, skin); ell(px, 37, 24, 4, 8, skinS);
+    // soaked hair: a crown over the head, long strands down both sides, a few wet locks across the face
+    outlined(px, 32, 15, 11, 7, hair);
+    for (let y = 15; y < 48; y++) { rect(20, y, 5, 1, (y % 5) ? hair : hairH); rect(39, y, 5, 1, (y % 4) ? hair : hairH); }
+    [[26, 20], [29, 22], [31, 18]].forEach(([x, len]) => rect(x, 14, 2, len, hair));
+    // one eye glinting between the locks, a pale downturned mouth
+    rect(34, 22, 4, 3, K); rect(35, 23, 2, 1, '#e8f0ff');
+    rect(33, 30, 4, 1, '#5a6a78'); px(32, 31, '#5a6a78');
+    // water around the waist with ripples and drips
+    for (let y = 52; y < 64; y++) for (let x = 0; x < 64; x++) if ((x + y + f) % 7 === 0 || (y > 55 && (x * 3 + y) % 5 === 0)) px(x, y, y < 55 ? '#3a6ab0' : '#16305a');
+    rect(6, 52, 52, 1, '#9ac8f0');
+    [[20, 46], [44, 48]].forEach(([x, y]) => { px(x, y + f * 2, '#9ac8f0'); px(x, y + 1 + f * 2, '#3a6ab0'); });
+  });
+
+  // ผีโขมด — will-o'-the-wisp: a living flame with a face, sparks drifting up.
+  for (const [key, f] of [['p_khamot', 0], ['p_khamot_idle2', 1]]) canvasArt(scene, key, 64, 64, (px, rect) => {
+    const K = '#141018';
+    glowAt(px, 32, 34, 28, ['#5a2a10', '#3a1c0e', '#22120a']);
+    // flame tongues (alternating heights per frame)
+    [[18, 14, 8], [26, 6, 10], [33, 2, 12], [40, 8, 10], [47, 15, 8]].forEach(([x, top, w], i) => {
+      const t = top + ((i + f) % 2) * 3;
+      for (let y = t; y < 36; y++) { const half = Math.min(w / 2, Math.floor((y - t) / 2) + 1); rect(x - half, y, half * 2, 1, '#b8400e'); }
+    });
+    outlined(px, 32, 36, 16, 16, '#d04a10'); ell(px, 32, 37, 13, 13, '#ff8a30'); ell(px, 32, 39, 9, 9, '#ffd070'); ell(px, 31, 40, 5, 5, '#fff0b0');
+    // face in the fire
+    rect(25, 34, 4, 5, K); rect(35, 34, 4, 5, K); px(26, 35, '#ffffff'); px(36, 35, '#ffffff');
+    rect(29, 43, 6, 2 + f, K);
+    // sparks
+    [[12, 10], [52, 6], [8, 30], [56, 26], [20, 4]].forEach(([x, y], i) => { const yy = y + ((i + f) % 2) * 3; rect(x, yy, 2, 2, '#ff8a30'); px(x, yy, '#ffe066'); });
+  });
+
+  // นาค — great serpent king: green scales, gold crown and crest, coiled, forked tongue.
+  for (const [key, f] of [['p_naga', 0], ['p_naga_idle2', 1]]) canvasArt(scene, key, 64, 64, (px, rect) => {
+    const K = '#141018', g = '#2e8a3a', gS = '#1f6a2a', gH = '#6ad84a', belly = '#e8c050', gold = '#e8c050', goldD = '#8a6a30';
+    // coils
+    outlined(px, 32, 56, 26, 7, gS); ell(px, 32, 55, 24, 5, g);
+    for (let x = 10; x < 56; x += 4) px(x, 54 + (x % 8 === 2 ? 1 : 0), gH);
+    outlined(px, 30, 46, 18, 6, g); ell(px, 30, 47, 15, 3, belly);
+    // neck rising in an S
+    for (let y = 22; y < 46; y++) { const cx = 34 + Math.round(Math.sin(y / 6) * 4); ell(px, cx, y, 7, 1, K); }
+    for (let y = 22; y < 46; y++) { const cx = 34 + Math.round(Math.sin(y / 6) * 4); rect(cx - 6, y, 12, 1, g); rect(cx - 2, y, 5, 1, belly); if (y % 4 === 0) px(cx - 4, y, gH); }
+    // head
+    outlined(px, 32, 18, 11, 8, g); ell(px, 37, 20, 5, 5, gS); ell(px, 27, 15, 4, 2, gH);
+    // crown (มงกุฎ) with points and crest
+    rect(23, 6, 18, 5, gold); for (let i = 0; i < 5; i++) rect(24 + i * 4, 1 + (i % 2) * 2, 2, 5, gold);
+    rect(23, 10, 18, 1, goldD); [26, 32, 38].forEach(x => px(x, 8, '#d01030'));
+    // eyes and tongue
+    eyes(px, rect, 25, 35, 15, '#d01030');
+    rect(31, 26, 2, 4 + f, '#d01030'); px(30, 30 + f, '#d01030'); px(33, 30 + f, '#d01030');
+  });
   // ทายาท — the master's young disciple: cropped hair, white shirt, red sash, holding the master's lantern.
   // Two frames: the lantern flame flickers.
   for (const [key, flame] of [['p_heir', 0], ['p_heir_idle2', 1]]) {
@@ -2330,10 +2463,7 @@ export function registerSprites(scene) {
     const rows = SPRITES[key], n = rows.length;
     SPRITES[`${key}_ko`] = rows[0].split('').map((_, x) => Array.from({ length: n }, (_, y) => rows[n - 1 - y][x]).join(''));
   }
-  // story portraits (p_<unit>): 64x64 on the shared grid, smoothed up from the 32x32 sprite and its idle frame
-  for (const key of ['kumarn', 'kongkoi', 'krasue', 'phrai', 'khamot', 'naga']) { // heir: hand-drawn in drawPortraits
-    for (const k of [key, `${key}_idle2`]) if (SPRITES[k] && !SPRITES[`p_${k}`]) SPRITES[`p_${k}`] = scale2x(SPRITES[k]);
-  }
+  // story portraits (p_<unit>) are hand-drawn at 64x64 in drawPortraits
   for (const key of Object.keys(SPRITES)) {
     // never upscale an upscale: '@2' keys used to be doubled again on every scene, exhausting phone memory
     if (key.startsWith('fx_') && !key.includes('@') && !SPRITES[`${key}@2`]) SPRITES[`${key}@2`] = scale2x(SPRITES[key]);

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, pixelBob, stepped, idleFrames, PX, FONT_FAMILY, TEXT_METRICS } from '../display.js';
+import { ZOOM, setupCamera, pixelBob, stepped, idleFrames, PX, BG_PX, FONT_FAMILY, TEXT_METRICS } from '../display.js';
 import { registerSprites, pixelOval } from '../art/sprites.js';
 import { unlockAudio, play } from '../audio/sfx.js';
 import { startNewGame, continueGame } from '../flow.js';
@@ -13,9 +13,9 @@ export class TitleScene extends Phaser.Scene {
   create() {
     setupCamera(this);
     registerSprites(this);
-    this.add.image(180, 0, 'art_gate').setOrigin(0.5, 0).setScale(PX);
+    this.add.image(180, 0, 'art_gate').setOrigin(0.5, 0).setScale(BG_PX);
     // the crack breathes
-    const glow = this.add.image(180, 405, pixelOval(this, 24, 78)).setScale(PX).setTint(0xb090ff).setAlpha(0.2).setBlendMode(Phaser.BlendModes.ADD);
+    const glow = this.add.image(180, 405, pixelOval(this, 24, 78)).setScale(BG_PX).setTint(0xb090ff).setAlpha(0.2).setBlendMode(Phaser.BlendModes.ADD);
     this.tweens.add({ targets: glow, alpha: 0.06, yoyo: true, repeat: -1, duration: 1400, ...stepped(4) });
     // things slipping out through the gap
     const ghost = (key, x, y, sc, a, d) => {

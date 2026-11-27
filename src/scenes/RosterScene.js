@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, numFont } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, BG_PX, idleFrames, numFont } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { ALLIES } from '../data/units.js';
 import { SKILLS } from '../data/skills.js';
@@ -30,7 +30,7 @@ export class RosterScene extends Phaser.Scene {
     this.confirmDrop = null; // charm id awaiting a second tap to throw away
 
     this.add.rectangle(180, 320, 360, 640, 0x0b0b1a);
-    this.add.image(180, 0, 'art_map').setOrigin(0.5, 0).setScale(PX).setAlpha(0.25);
+    this.add.image(180, 0, 'art_map').setOrigin(0.5, 0).setScale(BG_PX).setAlpha(0.25);
     this.add.text(180, 26, 'บริวาร', { ...FONT, fontSize: '20px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0.5);
     this.add.text(14, 26, '‹ กลับ', { ...FONT, fontSize: '15px', color: '#ccccee' }).setOrigin(0, 0.5).setPadding(6, 6, 6, 6)
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start(this.back.scene, this.back.data); });
@@ -72,7 +72,7 @@ export class RosterScene extends Phaser.Scene {
     applyCharm(u, worn);
     add(this.panel(this.add.graphics(), 180, 252, 332, 160, 0x161424, 0xb89a50));
     add(this.add.text(30, 190, def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
-    this.iconNums(330, 190, [['mini_hp', u.maxHp], ['mini_atk', u.atk]], add);
+    this.iconNums(330, 190, [['icon_hp', u.maxHp], ['icon_atk', u.atk]], add);
     add(this.add.text(30, 213, def.lore, { ...FONT, fontSize: '12px', color: '#a8a8c8', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
     def.skills.forEach((sid, i) => {
       const x = 58 + i * 66;
@@ -143,7 +143,7 @@ export class RosterScene extends Phaser.Scene {
       add(this.add.text(30, 534, sk.name, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5));
       if (sk.cooldown) { // same inset as the prep screen's skill cards
         const t = add(this.add.text(324, 540, String(sk.cooldown), numFont(15)).setOrigin(1, 0.5));
-        add(this.add.image(324 - t.width - 16, 540, 'mini_cd').setScale(PX));
+        add(this.add.image(324 - t.width - 20, 540, 'icon_cd').setScale(PX));
       }
       add(this.add.text(30, 552, sk.desc, { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 300 }, lineSpacing: 2 }).setOrigin(0, 0));
     } else {
@@ -165,8 +165,8 @@ export class RosterScene extends Phaser.Scene {
     for (const [key, n] of [...pairs].reverse()) {
       const t = add(this.add.text(x, y, String(n), numFont(15)).setOrigin(1, 0.5));
       x -= t.width + 4;
-      add(this.add.image(x - 12, y, key).setScale(PX));
-      x -= 34;
+      add(this.add.image(x - 16, y, key).setScale(PX));
+      x -= 42;
     }
   }
 

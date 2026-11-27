@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, pixelBob } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, BG_PX, idleFrames, pixelBob } from '../display.js';
 import { registerSprites, pixelDisc } from '../art/sprites.js';
 import { STAGES, CHAPTERS, chapterOf } from '../data/units.js';
 import { cleared, currentTeam, playStage } from '../flow.js';
@@ -27,7 +27,7 @@ export class MapScene extends Phaser.Scene {
     const idx = STAGES.map((s, i) => i).filter(i => chapterOf(i) === ch);
     const chapter = CHAPTERS[ch];
 
-    this.add.image(180, 0, chapter.map).setOrigin(0.5, 0).setScale(PX);
+    this.add.image(180, 0, chapter.map).setOrigin(0.5, 0).setScale(BG_PX);
     this.add.text(180, 30, chapter.title, { ...FONT, fontSize: '18px', fontStyle: 'bold', color: '#ffccd5', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5);
     // flip between chapters already reached
     const flip = (label, x, to) => this.add.text(x, 30, label, { ...FONT, fontSize: '26px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5)

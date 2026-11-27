@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, pixelBob, stepped, idleFrames, PX } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, pixelBob, stepped, idleFrames, PX, BG_PX } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { STORY } from '../data/story.js';
 import { ALLIES } from '../data/units.js';
@@ -48,7 +48,7 @@ export class StoryScene extends Phaser.Scene {
       const tex = this.textures.get(page.art).getSourceImage();
       const wide = tex.width >= 60;
       // scenes at the shared pixel size; single figures shown at double size so they read as portraits
-      const scale = wide ? PX : PX * 2;
+      const scale = wide ? BG_PX : PX * 3;
       this.tweens.killTweensOf(this.art);
       this.bob?.remove();
       this.art.setTexture(page.art).setScale(scale).setVisible(true).setAlpha(0).setY(210);

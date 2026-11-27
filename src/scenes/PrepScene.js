@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, numFont } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, BG_PX, idleFrames, numFont } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
@@ -24,7 +24,7 @@ export class PrepScene extends Phaser.Scene {
     this.startData = data;
     const stage = STAGES[this.stage];
 
-    this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(PX);
+    this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(BG_PX);
     this.add.rectangle(180, 320, 360, 640, 0x07060f, 0.35);
     this.add.text(180, 24, 'ศัตรูเบื้องหน้า', { ...FONT, fontSize: '16px', color: '#ff99aa', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
 
@@ -87,7 +87,7 @@ export class PrepScene extends Phaser.Scene {
     const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0 };
     if (allyId) { const bag = this.registry.get('bag') || []; applyCharm(u, bag.find(c => c.id === (this.registry.get('gear') || {})[allyId])); }
     // stats as small pictures: heart = ขวัญ, fist = กำลัง (right-aligned)
-    this.iconNums(330, PANEL_TOP + 20, def.atk ? [['mini_hp', u.maxHp], ['mini_atk', u.atk]] : [['mini_hp', u.maxHp]], add);
+    this.iconNums(330, PANEL_TOP + 20, def.atk ? [['icon_hp', u.maxHp], ['icon_atk', u.atk]] : [['icon_hp', u.maxHp]], add);
     add(this.add.rectangle(180, PANEL_TOP + 62, 300, 2, 0x44445e));
     if (allyId) {
       // charms are managed on the roster screen
@@ -111,7 +111,7 @@ export class PrepScene extends Phaser.Scene {
       if (known && s.cooldown) {
         // 6pt (two art pixels) clear of the card's inner edge on top and right, like the skill icon on the left
         const t = add(this.add.text(324, ry + 26, String(s.cooldown), numFont(15)).setOrigin(1, 0.5).setDepth(1));
-        add(this.add.image(324 - t.width - 16, ry + 26, 'mini_cd').setScale(PX).setDepth(1)); }
+        add(this.add.image(324 - t.width - 20, ry + 26, 'icon_cd').setScale(PX).setDepth(1)); }
       const icon = add(this.add.image(60, ry + rowH / 2, s.icon).setScale(PX).setDepth(1));
       if (!known) icon.setTintFill(0x2a2a3a);
       ry += rowH;
@@ -124,8 +124,8 @@ export class PrepScene extends Phaser.Scene {
     for (const [key, n] of [...pairs].reverse()) {
       const t = add(this.add.text(x, y, String(n), numFont(15)).setOrigin(1, 0.5));
       x -= t.width + 4;
-      add(this.add.image(x - 12, y, key).setScale(PX));
-      x -= 34;
+      add(this.add.image(x - 16, y, key).setScale(PX));
+      x -= 42;
     }
   }
 

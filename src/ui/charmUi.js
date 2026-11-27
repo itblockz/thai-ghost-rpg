@@ -14,29 +14,25 @@ export function charmTitle(scene, x, y, c, size = 15) {
   // each gem a small cut-gem shape (flat top, pointed bottom)
   for (let i = 0; i < GEMS[c.rarity]; i++) {
     // colour body, lighter top facet
-    [3, 5, 3, 1].forEach((w, row) => g.fillStyle(r.hex).fillRect(gx + (5 - w) / 2 * PX, y + (row - 2) * PX, w * PX, PX));
-    [3].forEach((w, row) => g.fillStyle(0xffffff, 0.45).fillRect(gx + (5 - w) / 2 * PX, y + (row - 2) * PX, w * PX, PX));
-    gx += 6 * PX;
+    [5, 7, 5, 3, 1].forEach((w, row) => g.fillStyle(r.hex).fillRect(gx + (7 - w) / 2 * PX, y + (row - 2.5) * PX, w * PX, PX));
+    [5].forEach((w, row) => g.fillStyle(0xffffff, 0.45).fillRect(gx + (7 - w) / 2 * PX, y + (row - 2.5) * PX, w * PX, PX));
+    gx += 8 * PX;
   }
   return [t, g];
 }
 
-// What a charm does, as 8x8 pictures and numbers: ❤+N, ✊+N, shield ×N (opening turns),
-// or the conditions a ยันต์ wards off, each crossed out.
+// What a charm does, as 16x16 pictures and numbers: heart +N, fist +N, shield ×N (opening turns),
+// or shield + the conditions a ยันต์ wards off.
 export function charmEffect(scene, x, y, c) {
   const objs = [];
   const icon = (k, ix) => objs.push(scene.add.image(ix, y, k).setScale(PX));
+  const num = (s, nx) => objs.push(scene.add.text(nx, y, s, numFont(15)).setOrigin(0, 0.5));
   const stat = charmStatIcon(c);
-  if (stat) { icon(stat, x + 12); objs.push(scene.add.text(x + 30, y, `+${c.value}`, numFont(15)).setOrigin(0, 0.5)); }
-  else if (c.type === 'prakam') { icon('mini_shield', x + 12); objs.push(scene.add.text(x + 30, y, `×${c.value}`, numFont(15)).setOrigin(0, 0.5)); }
+  if (stat) { icon(stat, x + 16); num(`+${c.value}`, x + 38); }
+  else if (c.type === 'prakam') { icon('icon_shield', x + 16); num(`×${c.value}`, x + 38); }
   else if (c.type === 'yant') {
-    c.wards.forEach((w, i) => {
-      const ix = x + 12 + i * 36;
-      icon(w === 'stun' ? 'mini_drag' : 'mini_blind', ix);
-      const g = scene.add.graphics();
-      for (let k = 0; k < 8; k++) g.fillStyle(0xff4455).fillRect(ix - 4 * PX + k * PX, y + 3 * PX - k * PX, PX, PX);
-      objs.push(g);
-    });
+    icon('icon_shield', x + 16);
+    c.wards.forEach((w, i) => icon(w === 'stun' ? 'icon_drag' : 'icon_blind', x + 56 + i * 36));
   }
   return objs;
 }

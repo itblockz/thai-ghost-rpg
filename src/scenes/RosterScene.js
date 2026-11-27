@@ -125,7 +125,7 @@ export class RosterScene extends Phaser.Scene {
     else Object.entries(OFFERINGS).forEach(([k, o], i) => {
       const ox = 122 + i * 42, n = offer[k] || 0;
       add(this.add.image(ox, 352, o.icon).setScale(PX).setAlpha(n ? 1 : 0.3));
-      add(this.add.text(ox + 12, 362, String(n), numFont(11, n ? '#ffffff' : '#666688')).setOrigin(0, 0.5));
+      add(this.add.text(ox + 12, 364, String(n), { ...numFont(13, n ? '#ffffff' : '#666688'), stroke: '#000', strokeThickness: 3 }).setOrigin(0, 0.5));
       add(this.add.zone(ox, 352, 40, 40).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
         play('click'); this.pickedOffer = k; this.picked = null; this.pickedSkill = null; this.enchanting = null; this.redraw();
       }));
@@ -225,6 +225,7 @@ export class RosterScene extends Phaser.Scene {
           play('click'); this.registry.set('bag', this.bag().map(b => (b.id === c.id ? { ...b, locked: !b.locked } : b))); saveFrom(this); this.redraw();
         }));
         const confirming = this.confirmDrop === c.id;
+        if (c.locked) add(this.add.text(290, 576, 'ล็อกอยู่ ทิ้งไม่ได้', { ...FONT, fontSize: '11px', color: '#9999bb' }).setOrigin(0.5));
         if (!c.locked) this.button(add, 290, 576, 80, 26, confirming ? 'ทิ้งแน่?' : 'ทิ้ง', confirming ? 0x5a2d3a : 0x2a2a3a, confirming ? 0xff7790 : 0x8888aa, () => {
           if (!confirming) { this.confirmDrop = c.id; return this.redraw(); }
           const g = this.strip(this.gear(), c.id);
@@ -280,9 +281,9 @@ export class RosterScene extends Phaser.Scene {
     this.chip(add, 46 + 4 * 44, 'ล้าง', () => { this.chosen = new Set(); this.confirmEnchant = false; this.redraw(); });
   }
   chip(add, x, label, onTap) {
-    add(this.panel(this.add.graphics(), x, 352, 42, 24, 0x2a2440, 0x8a7ab0));
-    add(this.add.text(x, 352, label, { ...FONT, fontSize: '10px', color: '#e8e0ff' }).setOrigin(0.5));
-    add(this.add.zone(x, 352, 42, 30).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onTap(); }));
+    add(this.panel(this.add.graphics(), x, 352, 42, 30, 0x2a2440, 0x8a7ab0));
+    add(this.add.text(x, 352, label, { ...FONT, fontSize: '11px', color: '#e8e0ff' }).setOrigin(0.5));
+    add(this.add.zone(x, 352, 44, 40).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onTap(); }));
   }
   consume(main, feeds) {
     const pts = feeds.reduce((t, f) => t + enchPoints(f, main), 0);

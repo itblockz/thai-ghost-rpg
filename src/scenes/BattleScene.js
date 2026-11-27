@@ -720,7 +720,8 @@ export class BattleScene extends Phaser.Scene {
       u.statusIcon.setVisible(!!st);
       if (st) u.statusIcon.setTexture(st);
       if (u.side === 'enemy' && u.alive) {
-        u.glow.setTint(u.pending ? 0xff1030 : 0xff3060).setAlpha(u.pending ? 0.45 : u.def.boss ? 0.28 : 0.12);
+        // a wind-up burns red; an elite (หัวหน้า) keeps a strong gold aura
+        u.glow.setTint(u.pending ? 0xff1030 : u.elite ? 0xffc030 : 0xff3060).setAlpha(u.pending ? 0.45 : u.elite ? 0.5 : u.def.boss ? 0.28 : 0.12);
         // winding up: the body itself burns red
         if (u.pending) u.sprite.setTint(0xff7788); else u.sprite.clearTint();
         u.tiles.forEach(t => {

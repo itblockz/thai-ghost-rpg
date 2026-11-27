@@ -63,8 +63,9 @@ export function effective(c) {
   const e = enchLevel(c.pts).l;
   switch (c.type) {
     case 'takrut': return { value: c.value + e };
-    case 'fang': return { value: c.value + Math.floor(e / 2) };
-    case 'feather': return { value: c.value + Math.floor(e / 4) };
+    // the first เสก step already shows (+1 at steps 1, 3, 5…; speed at 1, 5, 9)
+    case 'fang': return { value: c.value + Math.ceil(e / 2) };
+    case 'feather': return { value: c.value + Math.ceil(e / 4) };
     case 'lucky': return { value: c.value + 2 * e };
     case 'bia': return { value: c.value + e };
     case 'prakam': return { value: c.value + (e >= 5 ? 1 : 0) + (e >= 10 ? 1 : 0) };

@@ -46,7 +46,7 @@ export class PrepScene extends Phaser.Scene {
     this.teamIds = team;
     this.teamImgs = {};
     team.forEach((id, i) => { this.figure(tx[i], TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id)); this.teamImgs[id] = this.lastFigure; });
-    this.benchMarks = team.map((id, i) => this.add.text(tx[i], TEAM_Y + 44, 'พัก', { ...FONT, fontSize: '13px', color: '#9999bb', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5));
+    this.benchMarks = team.map((id, i) => this.add.text(tx[i], TEAM_Y + 44, '✓', { ...FONT, fontSize: '16px', fontStyle: 'bold', color: '#88dd99', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5));
     this.showBench();
 
     // start (same style as the battle buttons)
@@ -69,10 +69,10 @@ export class PrepScene extends Phaser.Scene {
     picks[0]();
   }
 
-  // resting retainers stand faded with a small 'พัก' under them
+  // chosen retainers carry a ✓; the rest stand faded (they sit this one out)
   showBench() {
     const bench = new Set(this.registry.get('bench') || []);
-    this.teamIds.forEach((id, i) => { this.teamImgs[id].setAlpha(bench.has(id) ? 0.35 : 1); this.benchMarks[i].setVisible(bench.has(id)); });
+    this.teamIds.forEach((id, i) => { this.teamImgs[id].setAlpha(bench.has(id) ? 0.35 : 1); this.benchMarks[i].setVisible(!bench.has(id)); });
   }
 
   figure(x, y, def, onPick) {
@@ -111,12 +111,12 @@ export class PrepScene extends Phaser.Scene {
       // charms are managed on the roster screen
       add(this.add.text(30, PANEL_TOP + 44, 'จัดบริวารและของขลัง ›', { ...FONT, fontSize: '13px', color: '#ffe08a' }).setOrigin(0, 0.5).setPadding(4, 6, 4, 6)
         .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Roster', { sel: allyId, back: { scene: 'Prep', data: this.startData } }); }));
-      // sit this fight out (fewer fighters = quicker rounds); at least one must go
+      // choose who goes in (fewer fighters = quicker rounds); anyone not chosen rests. At least one must go.
       const bench = new Set(this.registry.get('bench') || []);
       const resting = bench.has(allyId);
       const going = this.teamIds.filter(id => !bench.has(id)).length;
       const canRest = resting || going > 1;
-      add(this.add.text(330, PANEL_TOP + 44, resting ? 'ให้ออกศึก' : 'ให้พักศึก', { ...FONT, fontSize: '13px', color: canRest ? '#ffe08a' : '#55557a' }).setOrigin(1, 0.5).setPadding(4, 6, 4, 6)
+      add(this.add.text(330, PANEL_TOP + 44, resting ? 'เลือกเข้าศึก' : '✓ เข้าศึก', { ...FONT, fontSize: '13px', fontStyle: 'bold', color: resting ? '#ffe08a' : canRest ? '#88dd99' : '#5a8a66' }).setOrigin(1, 0.5).setPadding(4, 6, 4, 6)
         .setInteractive({ useHandCursor: canRest }).on('pointerdown', () => {
           if (!canRest) return;
           play('click');
@@ -138,7 +138,7 @@ export class PrepScene extends Phaser.Scene {
       const known = !!allyId || seen.has(sid);
       // each skill sits in its own card; cooldown in that card's top-right corner
       add(this.add.text(94, ry + 4, known ? s.name : '?', { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0).setDepth(1));
-      const facts = add(this.add.text(94, ry + 23, known ? s.desc : '', { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 228 }, lineSpacing: 0 }).setOrigin(0, 0).setDepth(1));
+      const facts = add(this.add.text(94, ry + 23, known ? s.desc : '', { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: known && s.cooldown ? 186 : 228 }, lineSpacing: 0 }).setOrigin(0, 0).setDepth(1));
       const rowH = Math.max(54, 29 + facts.height);
       add(this.panel(this.add.graphics(), 180, ry + rowH / 2, 312, rowH - 4, 0x201c30, 0x2e2a40));
       if (known && s.cooldown) {

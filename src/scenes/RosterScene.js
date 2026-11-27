@@ -146,7 +146,7 @@ export class RosterScene extends Phaser.Scene {
         const t = add(this.add.text(324, 540, String(sk.cooldown), numFont(15)).setOrigin(1, 0.5));
         add(this.add.image(324 - t.width - 20, 540, 'icon_cd').setScale(PX));
       }
-      add(this.add.text(30, 552, sk.desc, { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 300 }, lineSpacing: 2 }).setOrigin(0, 0));
+      add(this.add.text(30, 552, sk.desc, { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: sk.cooldown ? 256 : 300 }, lineSpacing: 2 }).setOrigin(0, 0));
     } else {
       add(this.panel(this.add.graphics(), 180, 556, 332, 82, 0x121020, 0x33334a));
       add(this.add.text(180, 556, bag.length ? 'แตะฤทธิ์หรือของขลังเพื่อดูรายละเอียด' : 'แตะฤทธิ์เพื่ออ่าน ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0.5));

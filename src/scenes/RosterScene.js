@@ -5,7 +5,7 @@ import { ALLIES } from '../data/units.js';
 import { SKILLS } from '../data/skills.js';
 import { RARITIES, CHARM_TYPES, applyWorn, wornIds, slotsOpen, SLOTS, enchLevel, enchPoints, ENCH_MAX } from '../data/charms.js';
 import { cleared } from '../flow.js';
-import { applyGrowth, levelOf, OFFERINGS, MAX_EXP, MAX_LEVEL } from '../data/growth.js';
+import { applyGrowth, levelOf, OFFERINGS, MAX_EXP, MAX_LEVEL, shownLevel } from '../data/growth.js';
 import { charmTitle, charmEffect } from '../ui/charmUi.js';
 import { currentTeam } from '../flow.js';
 import { saveFrom } from '../save.js';
@@ -86,7 +86,7 @@ export class RosterScene extends Phaser.Scene {
     const nameT = add(this.add.text(30, 190, def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
     // ขั้น and a thin บารมี bar toward the next step
     const lx = 38 + nameT.width;
-    add(this.add.text(lx, 186, lvl.lv >= MAX_LEVEL ? `ขั้น ${lvl.lv} สูงสุด` : `ขั้น ${lvl.lv}`, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0, 0.5));
+    add(this.add.text(lx, 186, lvl.lv >= MAX_LEVEL ? `ขั้น ${shownLevel(lvl.lv)} สูงสุด` : `ขั้น ${shownLevel(lvl.lv)}`, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0, 0.5));
     add(this.add.rectangle(lx, 199, 56, 4, 0x2a2440).setOrigin(0, 0.5));
     add(this.add.rectangle(lx, 199, lvl.need ? Math.round(56 * lvl.into / lvl.need / 2) * 2 : 56, 4, 0xffe08a).setOrigin(0, 0.5));
     this.iconNums(330, 190, [['icon_hp', u.maxHp], ['icon_atk', u.atk], ['icon_spd', u.spd]], add);
@@ -176,9 +176,9 @@ export class RosterScene extends Phaser.Scene {
         add(this.add.text(30, 542, 'แตะของในย่ามเพื่อเสกเข้า', { ...FONT, fontSize: '13px', color: '#ffe08a' }).setOrigin(0, 0.5));
       } else charmEffect(this, 30, 542, c).forEach(add);
       // เสก level bar
-      add(this.add.text(30, 574, en.l >= ENCH_MAX ? 'เสกเต็มแล้ว' : `เสก ${en.l}`, { ...FONT, fontSize: '12px', color: '#ccccee' }).setOrigin(0, 0.5));
-      add(this.add.rectangle(80, 574, 120, 6, 0x2a2440).setOrigin(0, 0.5));
-      add(this.add.rectangle(80, 574, en.need ? Math.round(120 * en.into / en.need / 2) * 2 : 120, 6, 0xffe08a).setOrigin(0, 0.5));
+      add(this.add.text(30, 574, en.l >= ENCH_MAX ? 'เสกเต็มแล้ว' : en.l ? `เสก ${en.l}` : 'ยังไม่เสก', { ...FONT, fontSize: '12px', color: '#ccccee' }).setOrigin(0, 0.5));
+      add(this.add.rectangle(96, 574, 104, 6, 0x2a2440).setOrigin(0, 0.5));
+      add(this.add.rectangle(96, 574, en.need ? Math.round(104 * en.into / en.need / 2) * 2 : 104, 6, 0xffe08a).setOrigin(0, 0.5));
       if (this.enchanting) {
         this.button(add, 282, 516, 96, 26, 'ธรรมดาทั้งหมด', 0x3d3d5e, 0xffdd55, () => this.feedAllCommon(c, wornBy));
         this.button(add, 282, 576, 96, 26, 'เสร็จ', 0x2a2a3a, 0x8888aa, () => { this.enchanting = null; this.redraw(); });

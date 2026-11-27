@@ -2,7 +2,9 @@
 // without fighting (handy for a newcomer, or one who sat out). Growth is small per step and the
 // steps get longer, so it never replaces charms — and there is always a next step to reach.
 
-export const MAX_LEVEL = 30;
+// internally steps count from 0; players see ขั้น from 1 (a bound spirit already has some power), up to 30
+export const MAX_LEVEL = 29;
+export const shownLevel = lv => lv + 1;
 export const EXP_PER_WIN = 5;                        // each retainer who fought, per battle or hunt wave
 export const expToNext = lv => 20 + 15 * lv;          // บารมี needed to go from ขั้น lv to lv+1
 

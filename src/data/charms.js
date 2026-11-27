@@ -27,8 +27,11 @@ const between = ([a, b]) => a + Math.floor(Math.random() * (b - a + 1));
 // Where to farm: each stage favours one kind (3x as likely as each other kind);
 // a boss stage (richDrop) gives no favourite kind but triples the chance of วิเศษ.
 export const FAVOURED = 3, RICH_MYTHIC = 3;
-export function rollCharm(stage = {}) {
-  const rarity = pick(Object.entries(RARITIES).map(([k, r]) => [k, r.weight * (stage.richDrop && k === 'mythic' ? RICH_MYTHIC : 1)]));
+// wave (ออกล่า): later waves raise the odds of rare and mythic finds
+export const WAVE_BOOST = [{ rare: 1, mythic: 1 }, { rare: 1.3, mythic: 1.6 }, { rare: 1.6, mythic: 2.5 }];
+export function rollCharm(stage = {}, wave = 0) {
+  const b = WAVE_BOOST[Math.min(wave, 2)];
+  const rarity = pick(Object.entries(RARITIES).map(([k, r]) => [k, r.weight * (b[k] || 1) * (stage.richDrop && k === 'mythic' ? RICH_MYTHIC : 1)]));
   const type = pick(Object.keys(CHARM_TYPES).map(k => [k, k === stage.drop ? FAVOURED : 1]));
   const c = { id: `c${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`, type, rarity, value: between(CHARM_TYPES[type].range[rarity]) };
   // ผ้ายันต์: value 1 wards off one condition (chosen at random), value 2 both

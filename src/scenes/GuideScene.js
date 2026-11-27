@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, numFont } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { STAGES } from '../data/units.js';
-import { RARITIES, CHARM_TYPES, charmStatIcon } from '../data/charms.js';
+import { RARITIES, CHARM_TYPES, charmStatIcon, FAVOURED, RICH_MYTHIC } from '../data/charms.js';
 import { gems } from '../ui/charmUi.js';
 import { cleared } from '../flow.js';
 import { play } from '../audio/sfx.js';
@@ -27,7 +27,12 @@ export class GuideScene extends Phaser.Scene {
     const reached = cleared(this);
     const known = i => i <= reached; // the next stage counts: it is on the map already
 
-    let y = 50;
+    // the odds, in plain numbers
+    const total = Object.values(RARITIES).reduce((a, r) => a + r.weight, 0);
+    const pct = k => `${Math.round(RARITIES[k].weight / total * 100)}%`;
+    this.add.text(180, 50, `ทุกครั้งที่ชนะ  ธรรมดา ${pct('common')}  หายาก ${pct('rare')}  วิเศษ ${pct('mythic')}`, { ...FONT, fontSize: '11px', color: '#9999bb' }).setOrigin(0.5);
+    const kinds = Object.keys(CHARM_TYPES).length, fav = Math.round(FAVOURED / (FAVOURED + kinds - 1) * 100);
+    let y = 62;
     for (const [type, t] of Object.entries(CHARM_TYPES)) {
       const h = 100;
       this.panel(180, y + h / 2, 332, h - 6, 0x161424, 0x44445e);
@@ -44,7 +49,7 @@ export class GuideScene extends Phaser.Scene {
       });
       // where it drops most
       const si = STAGES.findIndex(s => s.drop === type);
-      this.add.text(326, y + 22, 'ออกบ่อยที่', { ...FONT, fontSize: '11px', color: '#9999bb' }).setOrigin(1, 0.5);
+      this.add.text(326, y + 22, `ออกบ่อยที่ ${fav}%`, { ...FONT, fontSize: '11px', color: '#9999bb' }).setOrigin(1, 0.5);
       if (si >= 0 && known(si)) {
         this.add.image(290, y + 56, STAGES[si].node).setScale(PX);
         this.add.text(290, y + 82, STAGES[si].name, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0.5);
@@ -60,7 +65,7 @@ export class GuideScene extends Phaser.Scene {
     if (bi >= 0 && known(bi)) {
       this.add.image(48, y + 36, STAGES[bi].node).setScale(PX);
       this.add.text(76, y + 26, STAGES[bi].name, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5);
-      this.add.text(76, y + 48, 'ได้ของวิเศษบ่อยกว่าที่อื่น', { ...FONT, fontSize: '12px', color: '#ccccee' }).setOrigin(0, 0.5);
+      this.add.text(76, y + 48, `ได้ของวิเศษบ่อยขึ้น ${RICH_MYTHIC} เท่า`, { ...FONT, fontSize: '12px', color: '#ccccee' }).setOrigin(0, 0.5);
     } else {
       this.add.text(180, y + 36, 'ยังมีที่ที่ได้ของวิเศษบ่อยกว่านี้ รอผู้กล้าไปพบ', { ...FONT, fontSize: '12px', color: '#9999bb' }).setOrigin(0.5);
     }

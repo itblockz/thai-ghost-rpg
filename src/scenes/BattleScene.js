@@ -25,6 +25,15 @@ const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : [65, 180, 295]);
 function storageGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function storageSet(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } }
 
+// ออกล่า waves for a stage: 1) its own foes, 2) mixed with others from the same chapter, 3) its foes led by an elite
+function huntWaves(i) {
+  const stage = STAGES[i], ch = stage.chapter || 0;
+  const pool = [...new Set(STAGES.filter(s => (s.chapter || 0) === ch).flatMap(s => s.enemies))].filter(id => !ENEMIES[id].boss);
+  const pick = () => pool[Math.floor(Math.random() * pool.length)];
+  const mixed = stage.enemies.length < 3 ? [...stage.enemies, pick()] : [...stage.enemies.slice(0, 2), pick()];
+  return [{ ids: stage.enemies }, { ids: mixed }, { ids: [...stage.enemies], elite: 0 }];
+}
+
 export class BattleScene extends Phaser.Scene {
   constructor() { super('Battle'); }
 
@@ -46,12 +55,11 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: this.reticle, alpha: 0.35, yoyo: true, repeat: -1, duration: 500, ease: 'Sine.inOut' });
 
     // ----- units -----
-    const ex = slots(stage.enemies.length);
-    const eScale = stage.enemies.length === 1 ? 10 : stage.enemies.length === 2 ? 7 : 5;
-    this.enemies = stage.enemies.map((id, i) => {
-      const def = ENEMIES[id];
-      return this.makeUnit('enemy', id, def, def.name, ex[i], ENEMY_Y, eScale);
-    });
+    // ออกล่า: replaying a cleared (non-boss) stage is a hunt of 3 waves, rising in danger, a charm per wave
+    this.hunt = !this.first && !stage.enemies.some(id => ENEMIES[id].boss);
+    this.waves = this.hunt ? huntWaves(this.stage) : [{ ids: stage.enemies }];
+    this.wave = 0;
+    this.spawnWave(this.waves[0]);
     const team = fightingTeam(this);
     const ax = slots(team.length);
     this.time.addEvent({ delay: IDLE_MS, loop: true, callback: () => {
@@ -64,7 +72,7 @@ export class BattleScene extends Phaser.Scene {
     const bag = this.registry.get('bag') || [], gear = this.registry.get('gear') || {};
     this.allies.forEach(u => applyWorn(u, bag, gear, u.id));
     // ประคำ: warded from the very start, renewed on the wearer's first turns
-    this.allies.forEach(u => { if (u.openBlock > 0) { u.block = true; u.blockBy = u; u.shieldIcon.setVisible(true); } });
+    this.allies.forEach(u => { u.openBlock0 = u.openBlock || 0; if (u.openBlock > 0) { u.block = true; u.blockBy = u; u.shieldIcon.setVisible(true); } });
     this.initTimeline();
     this.drawOrder();
 
@@ -85,11 +93,11 @@ export class BattleScene extends Phaser.Scene {
 
     // retreat to the prep screen (tap twice, so a stray tap doesn't throw the fight away)
     let sure = false;
-    const flee = this.add.text(14, 26, '‹ ถอย', { ...FONT, fontSize: '15px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0, 0.5).setPadding(6, 6, 6, 6).setDepth(10)
+    const flee = this.fleeText = this.add.text(14, 26, '‹ ถอย', { ...FONT, fontSize: '15px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0, 0.5).setPadding(6, 6, 6, 6).setDepth(10)
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => {
         if (this.ended) return;
         play('click');
-        if (!sure) { sure = true; flee.setText('‹ ถอย?').setColor('#ff7790'); this.time.delayedCall(2500, () => { sure = false; flee.setText('‹ ถอย').setColor('#ccccee'); }); return; }
+        if (!sure) { sure = true; flee.setText('‹ ถอย?').setColor('#ff7790'); this.time.delayedCall(2500, () => { sure = false; flee.setText(this.loot ? '‹ ถอยพร้อมของ' : '‹ ถอย').setColor('#ccccee'); }); return; }
         this.ended = true;
         this.scene.start('Prep', { stage: this.stage, first: this.first, retry: true });
       });
@@ -101,6 +109,61 @@ export class BattleScene extends Phaser.Scene {
 
     this.refresh();
     this.intro(!!data?.retry);
+  }
+
+  // ---------- waves ----------
+  // Put a wave's enemies on the field; an elite (หัวหน้า) is tougher, hits harder, and glows gold.
+  spawnWave(w) {
+    const ex = slots(w.ids.length);
+    this.enemies = w.ids.map((id, i) => {
+      const before = this.children.list.length;
+      const u = this.makeUnit('enemy', id, ENEMIES[id], ENEMIES[id].name, ex[i], ENEMY_Y, 5);
+      if (w.elite === i) {
+        u.elite = true; u.hp = u.maxHp = Math.round(u.maxHp * 1.8); u.dmgMult = 1.3; u.spd += 1;
+        u.glow.setTint(0xffd040);
+      }
+      u.objs = this.children.list.slice(before);
+      return u;
+    });
+    this.drawWaveStars();
+  }
+
+  // three small stars at the top: waves won light up
+  drawWaveStars() {
+    (this.starObjs || []).forEach(o => o.destroy());
+    this.starObjs = [];
+    if (!this.hunt) return;
+    this.waves.forEach((_, i) => {
+      const g = this.add.graphics().setDepth(10), x = 150 + i * 30, y = 26, col = i < this.wave ? 0xffdd55 : i === this.wave ? 0xffffff : 0x44445e;
+      [[0, -3, 1, 2], [-3, -1, 7, 1], [-2, 0, 5, 1], [-2, 1, 2, 1], [1, 1, 2, 1], [-2, 2, 1, 1], [2, 2, 1, 1]]
+        .forEach(([dx, dy, w, h]) => g.fillStyle(col).fillRect(x + dx * PX - PX / 2, y + dy * PX, w * PX, h * PX));
+      this.starObjs.push(g);
+    });
+  }
+
+  // a wave is cleared: take its charm, catch breath, and the next wave comes on
+  nextWave() {
+    this.dropCharm(this.wave, true);
+    this.loot = (this.loot || 0) + 1;
+    this.fleeText?.setText('‹ ถอยพร้อมของ');
+    this.wave++;
+    this.time.delayedCall(1700, () => {
+      // survivors recover a quarter of their life and shake off conditions; the fallen stay down
+      for (const u of this.alive(this.allies)) {
+        const h = Math.min(Math.round(u.maxHp * 0.25), u.maxHp - u.hp);
+        u.hp += h; if (h) this.popup(u.x, u.y - 20, `+${h}`, '#66ee88', 22);
+        u.poison = null; u.stunned = 0; u.blind = false;
+        if (u.openBlock0) { u.openBlock = u.openBlock0; u.block = true; u.blockBy = u; u.shieldIcon.setVisible(true); }
+      }
+      this.enemies.forEach(e => e.objs.forEach(o => o.destroy()));
+      this.spawnWave(this.waves[this.wave]);
+      const now = this.now ?? 0;
+      this.enemies.forEach(e => { e.next = now + this.stepOf(e); e.sprite.setAlpha(0); this.tweens.add({ targets: e.sprite, alpha: 1, duration: 400, ease: 'Stepped', easeParams: [4] }); });
+      const label = this.add.text(180, 250, this.wave === this.waves.length - 1 ? 'ระลอกสุดท้าย' : `ระลอกที่ ${this.wave + 1}`, { ...FONT, fontSize: '30px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
+      this.time.delayedCall(900, () => label.destroy());
+      this.refresh();
+      this.time.delayedCall(1000, () => { this.waveBreak = false; this.advance(); });
+    });
   }
 
   // ---------- units ----------
@@ -270,6 +333,8 @@ export class BattleScene extends Phaser.Scene {
 
   checkEnd() {
     if (this.ended) return true;
+    if (this.waveBreak) return true;
+    if (!this.alive(this.enemies).length && this.wave < this.waves.length - 1) { this.waveBreak = true; this.time.delayedCall(500, () => this.nextWave()); return true; }
     if (!this.alive(this.enemies).length) { this.ended = true; this.time.delayedCall(500, () => this.end(true)); return true; }
     if (!this.alive(this.allies).length) { this.ended = true; this.time.delayedCall(700, () => this.end(false)); return true; }
     return false;
@@ -313,7 +378,7 @@ export class BattleScene extends Phaser.Scene {
       if (e.damage != null) {
         if (blindNow) missed = true;
         else if (target.block) blocked = true;
-        else { mult = target.takenMult; const d = amount(e, 'damage', user) * mult; target.hp -= d; dealt += d; }
+        else { mult = target.takenMult; const d = Math.round(amount(e, 'damage', user) * mult * (user.dmgMult || 1)); target.hp -= d; dealt += d; }
       }
       if (e.block) { target.block = true; target.blockBy = user; target.shieldIcon.setVisible(true); }
       const warded = k => target.wards?.has(k);
@@ -403,8 +468,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // A win yields one random charm, shown where the enemies stood, and saved right away.
-  dropCharm() {
-    const c = rollCharm(STAGES[this.stage]);
+  dropCharm(wave = this.wave, fleeting = false) {
+    const c = rollCharm(STAGES[this.stage], wave);
     this.registry.set('bag', [...(this.registry.get('bag') || []), c]);
     saveFrom(this);
     const r = RARITIES[c.rarity];
@@ -419,6 +484,8 @@ export class BattleScene extends Phaser.Scene {
     objs.forEach(o => o.setAlpha(0));
     this.tweens.add({ targets: objs, alpha: 1, duration: 400, delay: 500, ease: 'Stepped', easeParams: [4] });
     this.time.delayedCall(500, () => play(c.rarity === 'mythic' ? 'win' : 'ward'));
+    // between waves the find is shown briefly, then the fight goes on
+    if (fleeting) this.time.delayedCall(1600, () => objs.forEach(o => o.destroy()));
   }
 
   knockOut(u) {
@@ -893,7 +960,7 @@ export class BattleScene extends Phaser.Scene {
     });
     // a vanquished foe holds no more secrets
     if (won) this.see(this.enemies.flatMap(e => e.skills));
-    if (won) this.dropCharm(); else saveFrom(this);
+    if (won) { this.dropCharm(); if (this.hunt) { this.wave = this.waves.length; this.drawWaveStars(); } } else saveFrom(this);
     this.add.text(180, 250, won ? 'ศัตรูสิ้นฤทธิ์!' : 'บริวารหมดสิ้น…', { ...FONT, fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
     const label = won ? 'เดินทางต่อ' : 'ตั้งจิตใหม่';
     const next = won ? () => afterVictory(this, this.stage, this.first) : () => this.scene.start('Prep', { stage: this.stage, first: this.first, retry: true });

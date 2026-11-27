@@ -41,15 +41,23 @@ export class TitleScene extends Phaser.Scene {
     }
     // a journey is saved: continue it, or start over
     this.button(180, 560, 300, 56, 'เดินทางต่อ', 0x3d3d5e, 0xffdd55, go(continueGame));
-    this.button(180, 616, 300, 40, 'เริ่มใหม่', 0x1e1e2a, 0x55557a, go(startNewGame), '15px');
+    // starting over wipes the saved journey: it takes a second tap, and says so
+    let sure = false;
+    const again = this.button(180, 616, 300, 40, 'เริ่มใหม่', 0x1e1e2a, 0x55557a, () => {
+      if (sure) return go(startNewGame)();
+      sure = true; play('click');
+      again.setText('แตะอีกครั้ง: ลบบันทึกเดิมทั้งหมด').setColor('#ff7790');
+      this.time.delayedCall(3000, () => { sure = false; again.setText('เริ่มใหม่').setColor('#ffffff'); });
+    }, '15px', true);
   }
 
-  button(x, y, w, h, label, fill, border, onTap, size = '19px') {
+  button(x, y, w, h, label, fill, border, onTap, size = '19px', repeat = false) {
     const g = this.add.graphics(), u = PX, l = x - w / 2, t = y - h / 2;
     g.fillStyle(0x000000).fillRect(l + u, t, w - 2 * u, h).fillRect(l, t + u, w, h - 2 * u);
     g.fillStyle(border).fillRect(l + 2 * u, t + u, w - 4 * u, h - 2 * u).fillRect(l + u, t + 2 * u, w - 2 * u, h - 4 * u);
     g.fillStyle(fill).fillRect(l + 2 * u, t + 2 * u, w - 4 * u, h - 4 * u);
-    this.add.text(x, y, label, { ...FONT, fontSize: size, fontStyle: 'bold' }).setOrigin(0.5);
-    this.add.zone(x, y, w, h).setInteractive({ useHandCursor: true }).once('pointerdown', onTap);
+    const txt = this.add.text(x, y, label, { ...FONT, fontSize: size, fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.zone(x, y, w, h).setInteractive({ useHandCursor: true })[repeat ? 'on' : 'once']('pointerdown', onTap);
+    return txt;
   }
 }

@@ -219,8 +219,9 @@ export class BattleScene extends Phaser.Scene {
   applySkill(user, target, skillId, from = 0) {
     const skill = SKILLS[skillId];
     let dealt = 0, blocked = false, mult = 1, healed = 0, missed = false;
-    const blindNow = user.blind && skill.effects.slice(from).some(e => e.damage != null);
-    if (blindNow) user.blind = false; // a blinded unit's next attack misses entirely
+    // a blinded unit's next attack misses entirely — for an area attack, every target (missAll)
+    const blindNow = (user.blind || user.missAll) && skill.effects.slice(from).some(e => e.damage != null);
+    if (blindNow) user.blind = false;
     for (let i = from; i < skill.effects.length; i++) {
       const e = skill.effects[i];
       if (e.wait) {
@@ -273,13 +274,15 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: user.sprite, y: user.y + 16, yoyo: true, duration: 140, onComplete: () => user.sprite.setY(user.y) });
     hit.forEach(t => this.growFx(t.x, t.y, [20, 28, 36, 44], 0x66dd55, 0.7, 450, pixelDisc));
     this.time.delayedCall(300, () => {
-      // one shared application of the skill's cooldown/blind state, then each target separately
+      // one attack: if the user is blinded, it misses every target, not just the first
+      if (user.blind) user.missAll = true;
       hit.forEach((t, i) => {
         const r = this.applySkill(user, t, skillId, from);
         if (i < hit.length - 1 && SKILLS[skillId].cooldown) delete user.cd[skillId];
         this.feedback(t, r);
         if (t.hp <= 0 && t.alive) this.knockOut(t);
       });
+      user.missAll = false;
       if (SKILLS[skillId].cooldown) { user.cd[skillId] = SKILLS[skillId].cooldown; (user.fresh ||= new Set()).add(skillId); }
       this.time.delayedCall(250, () => user.alive && this.pose(user, 'idle'));
       this.refresh();

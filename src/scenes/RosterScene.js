@@ -104,17 +104,17 @@ export class RosterScene extends Phaser.Scene {
     }
     const pageItems = list.slice(this.page * PER_PAGE, (this.page + 1) * PER_PAGE);
     for (let i = pageItems.length; i < PER_PAGE; i++) {
-      const x = 46 + (i % 6) * 54, y = 400 + Math.floor(i / 6) * 56;
-      add(this.panel(this.add.graphics(), x, y, 50, 50, 0x100e1a, 0x26263a));
+      const x = 40 + (i % 6) * 56, y = 400 + Math.floor(i / 6) * 56;
+      add(this.panel(this.add.graphics(), x, y, 52, 52, 0x100e1a, 0x26263a));
     }
     const wornBy = Object.fromEntries(Object.entries(gear).map(([k, v]) => [v, k]));
     list.slice(this.page * PER_PAGE, (this.page + 1) * PER_PAGE).forEach((c, i) => {
-      const x = 46 + (i % 6) * 54, y = 400 + Math.floor(i / 6) * 56;
+      const x = 40 + (i % 6) * 56, y = 400 + Math.floor(i / 6) * 56;
       const g = add(this.add.graphics());
-      this.panel(g, x, y, 50, 50, this.picked === c.id ? 0x4a4020 : 0x1e1c2a, this.picked === c.id ? 0xffffff : RARITIES[c.rarity].hex);
+      this.panel(g, x, y, 52, 52, this.picked === c.id ? 0x4a4020 : 0x1e1c2a, this.picked === c.id ? 0xffffff : RARITIES[c.rarity].hex);
       add(this.add.image(x, y, CHARM_TYPES[c.type].icon).setScale(PX).setAlpha(wornBy[c.id] && wornBy[c.id] !== id ? 0.45 : 1));
       if (wornBy[c.id]) add(this.add.text(x + 20, y - 18, wornBy[c.id] === id ? '✓' : '•', { ...FONT, fontSize: '13px', fontStyle: 'bold', color: wornBy[c.id] === id ? '#88dd99' : '#ccccee', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5));
-      add(this.add.zone(x, y, 50, 50).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.picked = c.id; this.pickedSkill = null; this.confirmDrop = null; this.redraw(); }));
+      add(this.add.zone(x, y, 52, 52).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.picked = c.id; this.pickedSkill = null; this.confirmDrop = null; this.redraw(); }));
     });
 
     // ---- the charm under inspection: look first, then wear or throw away ----
@@ -125,12 +125,12 @@ export class RosterScene extends Phaser.Scene {
       this.effect(30, 556, c, add);
       const owner = wornBy[c.id];
       add(this.add.text(30, 578, owner ? `${ALLIES[owner].name}สวมอยู่` : 'ยังไม่มีผู้ใดสวม', { ...FONT, fontSize: '12px', color: '#9999bb' }).setOrigin(0, 0.5));
-      if (owner === id) this.button(add, 250, 540, 90, 34, 'ถอด', 0x2a2a3a, 0x8888aa, () => { const g = this.gear(); delete g[id]; this.setGear(g); this.redraw(); });
-      if (owner !== id) this.button(add, 250, 540, 90, 34, 'สวม', 0x3d3d5e, 0xffdd55, () => {
+      if (owner === id) this.button(add, 290, 540, 90, 34, 'ถอด', 0x2a2a3a, 0x8888aa, () => { const g = this.gear(); delete g[id]; this.setGear(g); this.redraw(); });
+      if (owner !== id) this.button(add, 290, 540, 90, 34, 'สวม', 0x3d3d5e, 0xffdd55, () => {
         const g = this.gear(); for (const k in g) if (g[k] === c.id) delete g[k]; g[id] = c.id; this.setGear(g); this.redraw();
       });
       const confirming = this.confirmDrop === c.id;
-      this.button(add, 250, 578, 90, 30, confirming ? 'ทิ้งแน่?' : 'ทิ้ง', confirming ? 0x5a2d3a : 0x2a2a3a, confirming ? 0xff7790 : 0x8888aa, () => {
+      this.button(add, 290, 578, 90, 30, confirming ? 'ทิ้งแน่?' : 'ทิ้ง', confirming ? 0x5a2d3a : 0x2a2a3a, confirming ? 0xff7790 : 0x8888aa, () => {
         if (!confirming) { this.confirmDrop = c.id; return this.redraw(); }
         const g = this.gear(); for (const k in g) if (g[k] === c.id) delete g[k];
         this.registry.set('bag', this.bag().filter(b => b.id !== c.id));

@@ -104,15 +104,15 @@ export class PrepScene extends Phaser.Scene {
       // enemy skills stay unknown (???) until witnessed in a fight
       const known = !!allyId || seen.has(sid);
       // each skill sits in its own card; cooldown in that card's top-right corner
-      add(this.add.text(84, ry + 3, known ? s.name : '?', { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0).setDepth(1));
-      const facts = add(this.add.text(84, ry + 23, known ? s.desc : '', { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 236 }, lineSpacing: 0 }).setOrigin(0, 0).setDepth(1));
-      const rowH = Math.max(52, 28 + facts.height);
+      add(this.add.text(94, ry + 4, known ? s.name : '?', { ...FONT, fontSize: '16px', fontStyle: 'bold' }).setOrigin(0, 0).setDepth(1));
+      const facts = add(this.add.text(94, ry + 23, known ? s.desc : '', { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: 228 }, lineSpacing: 0 }).setOrigin(0, 0).setDepth(1));
+      const rowH = Math.max(54, 29 + facts.height);
       add(this.panel(this.add.graphics(), 180, ry + rowH / 2, 312, rowH - 4, 0x201c30, 0x2e2a40));
       if (known && s.cooldown) {
         // 6pt (two art pixels) clear of the card's inner edge on top and right, like the skill icon on the left
         const t = add(this.add.text(324, ry + 26, String(s.cooldown), numFont(15)).setOrigin(1, 0.5).setDepth(1));
         add(this.add.image(324 - t.width - 16, ry + 26, 'mini_cd').setScale(PX).setDepth(1)); }
-      const icon = add(this.add.image(52, ry + rowH / 2, s.icon).setScale(PX).setDepth(1));
+      const icon = add(this.add.image(60, ry + rowH / 2, s.icon).setScale(PX).setDepth(1));
       if (!known) icon.setTintFill(0x2a2a3a);
       ry += rowH;
     }

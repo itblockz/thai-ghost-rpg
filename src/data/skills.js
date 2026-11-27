@@ -26,7 +26,7 @@ export const SKILLS = {
   khamotBlind: { name: 'ไฟหลอกตา', desc: 'ล่อไฟวูบวาบใส่ศัตรูหนึ่งตนจนตาพร่า การโจมตีครั้งถัดไปของมันจะพลาด', icon: 'icon_blind', anim: 'wisp', cooldown: 3, effects: [{ damage: 2 }, { blind: true }] },
   khamotHeal: { name: 'ไฟอุ่นใจ', desc: 'ส่องไฟอุ่นปลอบขวัญ และถอนพิษพวกพ้องหนึ่งตน ยิ่งมีขวัญมากยิ่งปลอบได้มาก', icon: 'icon_heal', anim: 'heal', cooldown: 2, target: 'ally', effects: [{ heal: 2, scale: 0.4, stat: 'hp' }] },
   gnaw: { name: 'แทะ', desc: 'แทะศัตรูหนึ่งตน แล้วฟื้นขวัญตนเองเท่าที่แทะได้ ยิ่งมีกำลังยิ่งแทะได้มาก', icon: 'icon_devour', anim: 'bite', cooldown: 0, effects: [{ damage: 1, scale: 1, drain: true }] },
-  gorge: { name: 'ตะกละ', desc: 'ขย้ำศัตรูหนึ่งตนอย่างตะกละ ฟื้นขวัญตนเองเท่าที่กินได้ ยิ่งมีกำลังยิ่งกินมาก', icon: 'icon_gorge', anim: 'bite', cooldown: 3, effects: [{ damage: 3, scale: 2, drain: true }] },
+  gorge: { name: 'ตะกละ', desc: 'ขย้ำศัตรูหนึ่งตนอย่างตะกละ ฟื้นขวัญตนเองเท่าที่กินได้ ยิ่งมีกำลังยิ่งกินมาก', icon: 'icon_gorge', anim: 'gorge', cooldown: 3, effects: [{ damage: 3, scale: 2, drain: true }] },
   hairBind: { name: 'ผมรัด', desc: 'สะบัดผมเปียกพันรัดศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งรัดแน่น', icon: 'icon_hair', anim: 'hair', cooldown: 0, effects: [{ damage: 0, scale: 1 }] },
   drown: { name: 'ฉุดจม', desc: 'ฉุดศัตรูหนึ่งตนลงใต้น้ำ ถ้ามันเหลือขวัญไม่ถึงครึ่ง จะแรงขึ้นสองเท่า ยิ่งมีกำลังยิ่งฉุดแรง', icon: 'icon_drag', anim: 'water', cooldown: 3, effects: [{ damage: 2, scale: 1.5, weakMult: 2 }] },
   // enemies

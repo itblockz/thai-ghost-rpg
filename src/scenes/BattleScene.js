@@ -889,7 +889,8 @@ export class BattleScene extends Phaser.Scene {
             } else {
               if (kind === 'bite') this.fxBite(target);
               else if (kind === 'claw') this.fxClaw(target);
-              else if (kind === 'kick' || kind === 'thud') this.fxKick(target);
+              else if (kind === 'kick' || kind === 'thud') this.fxKick(target, kind === 'thud' && user.def.boss);
+              else if (kind === 'gorge') this.fxGorge(target);
               else this.fxSlash(target);
               if (target.side === 'ally') play('hurt');
               this.tweens.add({ targets: target.sprite, x: k.x, y: k.y, duration: 70, yoyo: true, ease: 'Quad.out', onComplete: () => target.sprite.setPosition(target.x, target.y) });
@@ -978,17 +979,42 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // กระโดดถีบ: a heavy thud — ring burst and a hard shove
-  fxKick(t) {
+  fxKick(t, big = false) {
     play('hit');
-    this.growFx(t.x, t.y + 8, [12, 20, 28], 0xffffff, 0.8, 260, pixelDisc);
-    this.pixelShake(120, 3);
+    this.fxImpact(t.x, t.y + 8, big);
+    this.pixelShake(big ? 220 : 140, big ? 6 : 4);
+  }
+
+  // A hit that lands with weight: a gold burst and chips flying out (big = heavier and wider)
+  fxImpact(x, y, big = false) {
+    this.growFx(x, y, big ? [20, 32, 44, 56] : [14, 24, 34, 44], 0xffe08a, 0.9, big ? 380 : 300, pixelDisc, 6);
+    this.growFx(x, y, big ? [10, 18, 26] : [8, 14, 20], 0xffffff, 1, 200, pixelDisc, 6);
+    const n = big ? 10 : 7;
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2 + Math.random() * 0.4, r = (big ? 56 : 40) + Math.random() * 14;
+      const d = this.add.rectangle(x, y, 4, 4, i % 2 ? 0xffffff : 0xffe08a).setDepth(6);
+      this.tweens.add({ targets: d, x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, alpha: 0, duration: 320, ease: 'Quad.out', onComplete: () => d.destroy() });
+    }
+  }
+
+  // ตะกละ: two greedy chomps, the second bigger, spraying red
+  fxGorge(t) {
+    this.fxBite(t);
+    this.time.delayedCall(170, () => {
+      this.fxBite(t);
+      this.pixelShake(160, 5);
+      for (let i = 0; i < 8; i++) {
+        const d = this.add.rectangle(t.x, t.y, 4, 4, i % 2 ? 0xd01030 : 0x7a1020).setDepth(6), a = Math.random() * Math.PI * 2;
+        this.tweens.add({ targets: d, x: t.x + Math.cos(a) * 40, y: t.y + Math.sin(a) * 30 + 20, alpha: 0, duration: 420, ease: 'Quad.out', onComplete: () => d.destroy() });
+      }
+    });
   }
 
   // ถีบรัว: three thuds in quick succession; damage lands on the last
   fxKickRush(t, onHit) {
     [0, 1, 2].forEach(i => this.time.delayedCall(i * 140, () => {
       play('hit');
-      this.growFx(t.x + (i - 1) * 12, t.y + 8, [10, 16, 22], 0xffffff, 0.8, 200, pixelDisc);
+      this.fxImpact(t.x + (i - 1) * 14, t.y + 8 - i * 4, i === 2);
       this.tweens.add({ targets: t.sprite, x: t.x + (i % 2 ? -6 : 6), duration: 50, yoyo: true });
       if (i === 2) { this.pixelShake(120, 3); if (t.side === 'ally') play('hurt'); onHit(); }
     }));
@@ -1055,7 +1081,6 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  // Rear back, then hurl glowing guts at the target; splats drip off.
   // กระสือ's ฟาดไส้: rises, then the entrails whip out in an arc of links and crack down on the target
   animLash(user, target, onHit) {
     this.tweens.add({

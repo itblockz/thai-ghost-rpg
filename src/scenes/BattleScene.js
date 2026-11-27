@@ -93,7 +93,7 @@ export class BattleScene extends Phaser.Scene {
   // Pixel-art feel: units move in whole art pixels, never sub-pixel.
   update() {
     for (const u of [...(this.allies || []), ...(this.enemies || [])]) {
-      const sp = u.sprite, st = u.scale / 2;
+      const sp = u.sprite, st = sp.scaleX;
       sp.x = u.x + Math.round((sp.x - u.x) / st) * st;
       sp.y = u.y + Math.round((sp.y - u.y) / st) * st;
       u.glow.y = u.y + Math.round((u.glow.y - u.y) / st) * st;
@@ -106,7 +106,10 @@ export class BattleScene extends Phaser.Scene {
       hp: def.hp, maxHp: def.hp, skills: def.skills, cd: {}, block: false, pending: null, takenMult: 1, alive: true,
     };
     u.glow = this.add.image(x, y, 'px_disc').setScale(scale).setTint(side === 'enemy' ? 0xff3060 : 0xffd860).setAlpha(side === 'enemy' ? 0.12 : 0);
-    u.sprite = this.add.image(x, y, def.sprite).setScale(scale);
+    // sprites may be 16 or 32 px wide; keep the same on-screen size either way
+    u.sprite = this.add.image(x, y, def.sprite);
+    // 32px art fills less of its grid, so show it a touch larger (2.5x -> 3x for retainers)
+    u.sprite.setScale(scale * 16 / u.sprite.width * (u.sprite.width > 16 ? 1.2 : 1));
     u.pose = 'idle';
 
     // HP bar under the sprite (no name label: the art identifies the unit)
@@ -471,7 +474,7 @@ export class BattleScene extends Phaser.Scene {
         play(enemy ? 'laugh' : 'slash');
         // 2) dash: stretched along the move, leaving after-images
         const trail = this.time.addEvent({ delay: 25, repeat: 4, callback: () => {
-          const ghost = this.add.image(sp.x, sp.y, sp.texture.key).setScale(sx).setAlpha(0.35).setTint(enemy ? 0xff6080 : 0xffe08a).setDepth(sp.depth - 0.1);
+          const ghost = this.add.image(sp.x, sp.y, sp.texture.key).setScale(sp.scaleX).setAlpha(0.35).setTint(enemy ? 0xff6080 : 0xffe08a).setDepth(sp.depth - 0.1);
           this.tweens.add({ targets: ghost, alpha: 0, duration: 200, onComplete: () => ghost.destroy() });
         } });
         const style = MOTION[user.id] || 'dash';

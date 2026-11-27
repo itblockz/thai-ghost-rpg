@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, pixelBob, stepped } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, pixelBob, stepped, idleFrames } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { STORY } from '../data/story.js';
 import { ALLIES } from '../data/units.js';
@@ -54,7 +54,7 @@ export class StoryScene extends Phaser.Scene {
       this.tweens.add({ targets: this.art, alpha: 1, duration: 400, ...stepped(4), onComplete: () => {
         // gentle life: figures float, scenes flicker like lamplight
         if (wide) this.tweens.add({ targets: this.art, alpha: 0.82, yoyo: true, repeat: -1, duration: 1300, ...stepped(3) });
-        else this.bob = pixelBob(this, this.art, Math.round(scale), 1, 500);
+        else this.bob = idleFrames(this, this.art, page.art) || pixelBob(this, this.art, Math.round(scale), 1, 500);
       } });
       if (wide) {
         const h = tex.height * scale;

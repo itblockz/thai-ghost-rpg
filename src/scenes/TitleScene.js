@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, pixelBob, stepped, FONT_FAMILY, TEXT_METRICS } from '../display.js';
+import { ZOOM, setupCamera, pixelBob, stepped, idleFrames, FONT_FAMILY, TEXT_METRICS } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { unlockAudio, play } from '../audio/sfx.js';
 import { startNewGame } from '../flow.js';
@@ -20,12 +20,14 @@ export class TitleScene extends Phaser.Scene {
     const ghost = (key, x, y, sc, a, d) => {
       const g = this.add.image(x, y, key).setScale(sc).setAlpha(a).setTint(0xb8a0ff);
       pixelBob(this, g, sc, 3, d / 4);
+      idleFrames(this, g, key);
       this.tweens.add({ targets: g, alpha: a * 0.5, yoyo: true, repeat: -1, duration: d, ...stepped(4) });
     };
     ghost('krasue', 312, 320, 4, 0.85, 1700);
     ghost('kongkoi', 46, 450, 4, 0.8, 1300);
     // the heir's companion, seen from behind as a silhouette, facing the gate
-    this.add.image(180, 572, 'kumarn').setScale(4).setTintFill(0x05030a);
+    const heir = this.add.image(180, 572, 'kumarn').setScale(4).setTintFill(0x05030a);
+    idleFrames(this, heir, 'kumarn');
     this.add.text(180, 52, 'ประตูหิมพานต์', { ...FONT, fontSize: '40px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
     this.add.text(180, 92, 'บทที่ ๑ — คืนเดือนดับ', { ...FONT, fontSize: '17px', color: '#ccccee', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
     const t = this.add.text(180, 618, 'แตะเพื่อเริ่มเดินทาง', { ...FONT, fontSize: '20px', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);

@@ -31,3 +31,15 @@ export function pixelBob(scene, obj, px, steps, stepMs) {
 
 // Fade in evenly spaced steps (like palette fades on old consoles).
 export const stepped = n => ({ ease: 'Stepped', easeParams: [n] });
+
+// Idle "breathing": swap between a sprite's base frame and its <key>_idle2 frame on a fixed beat.
+// Same beat as the battle screen so characters feel alive everywhere.
+export const IDLE_MS = 420;
+export function idleFrames(scene, img, key) {
+  if (!scene.textures.exists(`${key}_idle2`)) return null;
+  let alt = false;
+  return scene.time.addEvent({ delay: IDLE_MS, loop: true, callback: () => {
+    alt = !alt;
+    img.setTexture(alt ? `${key}_idle2` : key);
+  } });
+}

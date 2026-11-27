@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillDamage } from '../data/skills.js';
 import { registerSprites } from '../art/sprites.js';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS } from '../display.js';
 import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, currentTeam } from '../flow.js';
 
@@ -48,7 +48,7 @@ export class BattleScene extends Phaser.Scene {
     });
     const team = currentTeam(this);
     const ax = slots(team.length);
-    this.time.addEvent({ delay: 420, loop: true, callback: () => {
+    this.time.addEvent({ delay: IDLE_MS, loop: true, callback: () => {
       // one shared beat, so every standing unit breathes in sync
       this.idlePhase = !this.idlePhase;
       for (const u of [...this.allies, ...this.enemies]) if (u.alive && (u.pose === 'idle' || u.pose === 'idle2')) this.pose(u, 'idle');

@@ -9,6 +9,10 @@ export const ALLIES = {
     name: 'ผีกองกอย', sprite: 'kongkoi', hp: 20, atk: 4, spd: 13, skills: ['rake', 'frenzy'],
     lore: 'ผีป่าขาเดียว ว่องไว ขี้แกล้ง',
   },
+  krahang: {
+    name: 'ผีกระหัง', sprite: 'krahang', hp: 16, atk: 3, spd: 14, skills: ['flap', 'whack'],
+    lore: 'ผีชายบินด้วยกระด้งสองใบ ว่องไวกว่าผีใด',
+  },
   khamot: {
     name: 'ผีโขมด', sprite: 'khamot', hp: 18, atk: 2, spd: 12, skills: ['khamotEmber', 'khamotHeal', 'khamotBlind'],
     lore: 'ดวงไฟลอยกลางน้ำ เคยหลอกคนหลงทาง บัดนี้ส่องทางให้',
@@ -20,6 +24,10 @@ export const ENEMIES = {
   kongkoi: {
     name: 'ผีกองกอย', sprite: 'kongkoi', hp: 14, spd: 11, skills: ['scratch'],
     lore: 'ผีป่าตัวเล็ก ขาเดียว ชอบแกล้งคนหลงป่า',
+  },
+  krahang: {
+    name: 'ผีกระหัง', sprite: 'krahang', hp: 12, spd: 12, skills: ['swoop'],
+    lore: 'ผีบินกระพือกระด้งโฉบลงจากฟ้า',
   },
   phrai: {
     name: 'ผีพราย', sprite: 'phrai', hp: 26, spd: 10, skills: ['grab', 'drag'],

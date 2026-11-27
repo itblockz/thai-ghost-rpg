@@ -347,8 +347,9 @@ export class BattleScene extends Phaser.Scene {
     if (!pick && blind && big) pick = [blind, big];
     // 4) otherwise the hardest hit on whoever is winding up, else the weakest foe
     if (!pick) {
-      const hits = ready.filter(id => SKILLS[id].target !== 'ally' && has(id, 'damage'))
-        .sort((a, b) => SKILLS[b].effects.reduce((t, e) => t + (e.damage != null ? amount(e, 'damage', u) : 0), 0) - SKILLS[a].effects.reduce((t, e) => t + (e.damage != null ? amount(e, 'damage', u) : 0), 0));
+      // worth of a hit: its damage, times the foes it reaches if it strikes them all
+      const worth = id => SKILLS[id].effects.reduce((t, e) => t + (e.damage != null ? amount(e, 'damage', u) : 0), 0) * (SKILLS[id].area ? foes.length : 1);
+      const hits = ready.filter(id => SKILLS[id].target !== 'ally' && has(id, 'damage')).sort((a, b) => worth(b) - worth(a));
       const t = [...foes].sort((a, b) => (b.pending ? 1 : 0) - (a.pending ? 1 : 0) || a.hp - b.hp)[0];
       if (hits[0] && t) pick = [hits[0], t];
     }
@@ -477,7 +478,7 @@ export class BattleScene extends Phaser.Scene {
     play('splash');
     this.pose(user, 'atk');
     this.tweens.add({ targets: user.sprite, y: user.y + 16, yoyo: true, duration: 140, onComplete: () => user.sprite.setY(user.y) });
-    hit.forEach(t => this.growFx(t.x, t.y, [20, 28, 36, 44], 0x66dd55, 0.7, 450, pixelDisc));
+    hit.forEach(t => this.growFx(t.x, t.y, [20, 28, 36, 44], SKILLS[skillId].anim === 'flap' ? 0xc8d8e8 : 0x66dd55, 0.7, 450, pixelDisc));
     this.time.delayedCall(300, () => {
       // one attack: if the user is blinded, it misses every target, not just the first
       if (user.blind) user.missAll = true;

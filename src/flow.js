@@ -24,6 +24,8 @@ export function continueGame(scene) {
   scene.registry.set('bag', p.bag);
   scene.registry.set('gear', p.gear);
   scene.registry.set('bench', p.bench);
+  // saves that finished chapter 2 before ผีกระหัง joined there: he joins now
+  if (p.cleared >= 5 && !p.team.includes('krahang')) scene.registry.set('team', [...p.team, 'krahang']);
   // saves from before the ??? system: foes of stages already cleared count as known
   const known = new Set(p.seen);
   STAGES.slice(0, p.cleared).forEach(s => s.enemies.forEach(id => ENEMIES[id].skills.forEach(k => known.add(k))));
@@ -52,9 +54,11 @@ export function currentTeam(scene) {
 
 // Who actually goes into battle: the team minus anyone told to sit out (always at least one).
 // Fewer fighters = shorter rounds, handy when farming an easy stage.
+// At most three go: the first three not resting, in line-up order.
+export const MAX_FIGHTERS = 3;
 export function fightingTeam(scene) {
   const bench = new Set(scene.registry.get('bench') || []);
-  const team = currentTeam(scene).slice(0, 3);
-  const going = team.filter(id => !bench.has(id));
+  const team = currentTeam(scene);
+  const going = team.filter(id => !bench.has(id)).slice(0, MAX_FIGHTERS);
   return going.length ? going : team.slice(0, 1);
 }

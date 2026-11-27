@@ -3,16 +3,16 @@ import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, numFont }
 import { registerSprites } from '../art/sprites.js';
 import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
-import { currentTeam } from '../flow.js';
+import { currentTeam, fightingTeam, MAX_FIGHTERS } from '../flow.js';
 import { saveFrom } from '../save.js';
 import { play } from '../audio/sfx.js';
 import { applyWorn, CHARM_TYPES } from '../data/charms.js';
 import { gems } from '../ui/charmUi.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
-const TEAM_SLOTS = 3;
+const TEAM_SLOTS = 4; // retainers shown (three of them can go in)
 const ENEMY_Y = 100, TEAM_Y = 492, PANEL_TOP = 160, PANEL_BOTTOM = 430, BTN_Y = 588;
-const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : [65, 180, 295]);
+const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : n === 3 ? [65, 180, 295] : [48, 136, 224, 312]);
 
 // Before each fight. Laid out like the battlefield (enemies above, team below);
 // tap anyone to read them in the middle panel. No pop-ups.
@@ -85,8 +85,8 @@ export class PrepScene extends Phaser.Scene {
 
   // chosen retainers carry a ✓; the rest stand faded (they sit this one out)
   showBench() {
-    const bench = new Set(this.registry.get('bench') || []);
-    this.teamIds.forEach((id, i) => { this.teamImgs[id].setAlpha(bench.has(id) ? 0.35 : 1); this.benchMarks[i].setVisible(!bench.has(id)); });
+    const goers = fightingTeam(this);
+    this.teamIds.forEach((id, i) => { const go = goers.includes(id); this.teamImgs[id].setAlpha(go ? 1 : 0.35); this.benchMarks[i].setVisible(go); });
   }
 
   figure(x, y, def, onPick) {
@@ -106,7 +106,7 @@ export class PrepScene extends Phaser.Scene {
 
     // selection brackets, like target brackets in battle
     const m = this.marker.clear().fillStyle(enemy ? 0xff7790 : 0xffdd55);
-    const h = 52, k = 12;
+    const h = 40, k = 10;
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
       const cx = x + sx * h, cy = y + sy * h;
       m.fillRect(Math.min(cx, cx - sx * k), cy - (sy > 0 ? 3 : 0), k, 3);
@@ -134,12 +134,14 @@ export class PrepScene extends Phaser.Scene {
       });
       // choose who goes in (fewer fighters = quicker rounds); anyone not chosen rests. At least one must go.
       const bench = new Set(this.registry.get('bench') || []);
-      const resting = bench.has(allyId);
-      const going = this.teamIds.filter(id => !bench.has(id)).length;
-      const canRest = resting || going > 1;
-      add(this.add.text(330, PANEL_TOP + 44, resting ? 'เลือกเข้าศึก' : '✓ เข้าศึก', { ...FONT, fontSize: '13px', fontStyle: 'bold', color: resting ? '#ffe08a' : canRest ? '#88dd99' : '#5a8a66' }).setOrigin(1, 0.5).setPadding(4, 6, 4, 6)
-        .setInteractive({ useHandCursor: canRest }).on('pointerdown', () => {
-          if (!canRest) return;
+      const goers = fightingTeam(this);
+      const resting = !goers.includes(allyId);
+      // choosing needs a free place (three at most); leaving needs someone else still going
+      const canToggle = resting ? goers.length < MAX_FIGHTERS : goers.length > 1;
+      const label = resting ? (canToggle ? 'เลือกเข้าศึก' : 'ครบสามแล้ว') : '✓ เข้าศึก';
+      add(this.add.text(330, PANEL_TOP + 44, label, { ...FONT, fontSize: '13px', fontStyle: 'bold', color: resting ? (canToggle ? '#ffe08a' : '#77779a') : canToggle ? '#88dd99' : '#5a8a66' }).setOrigin(1, 0.5).setPadding(4, 6, 4, 6)
+        .setInteractive({ useHandCursor: canToggle }).on('pointerdown', () => {
+          if (!canToggle) return;
           play('click');
           if (resting) bench.delete(allyId); else bench.add(allyId);
           this.registry.set('bench', [...bench]);

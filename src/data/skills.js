@@ -24,6 +24,9 @@ export const SKILLS = {
   khamotBlind: { name: 'ไฟหลอกตา', desc: 'ล่อไฟวูบวาบใส่ศัตรูหนึ่งตนจนตาพร่า การโจมตีครั้งถัดไปของมันจะพลาด', icon: 'icon_blind', anim: 'wisp', cooldown: 3, effects: [{ damage: 2 }, { blind: true }] },
   khamotHeal: { name: 'ไฟอุ่นใจ', desc: 'ส่องไฟอุ่นปลอบขวัญ และถอนพิษบริวารหนึ่งตน ยิ่งมีขวัญมากยิ่งปลอบได้มาก', icon: 'icon_heal', anim: 'heal', cooldown: 2, target: 'ally', effects: [{ heal: 2, scale: 0.4, stat: 'hp' }] },
   // enemies
+  flap: { name: 'กระพือกระด้ง', desc: 'กระพือกระด้งเป็นลมแรงใส่ศัตรูทุกตน ยิ่งมีกำลังยิ่งแรง', icon: 'icon_flap', anim: 'flap', cooldown: 1, area: true, effects: [{ damage: 1, scale: 0.5 }] },
+  whack: { name: 'ฟาดกระด้ง', desc: 'ฟาดกระด้งใส่ศัตรูหนึ่งตน ยิ่งมีกำลังยิ่งฟาดแรง', icon: 'icon_whack', anim: 'ram', cooldown: 0, effects: [{ damage: 2, scale: 1 }] },
+  swoop: { name: 'โฉบ', desc: 'โฉบลงตีบริวารหนึ่งตน', icon: 'icon_whack', anim: 'claw', cooldown: 0, effects: [{ damage: 3 }] },
   scratch: { name: 'ตะกุย', desc: 'ข่วนบริวารหนึ่งตน', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 3 }] },
   bite: { name: 'กัด', desc: 'งับบริวารหนึ่งตนจนเจ็บ', icon: 'icon_fang', anim: 'bite', cooldown: 0, effects: [{ damage: 10 }] },
   grab: { name: 'ข่วน', desc: 'ข่วนบริวารหนึ่งตนด้วยเล็บเปียกน้ำ', icon: 'icon_claw', anim: 'claw', cooldown: 0, effects: [{ damage: 5 }] },

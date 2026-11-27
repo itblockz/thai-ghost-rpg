@@ -125,11 +125,11 @@ export class BattleScene extends Phaser.Scene {
     // enemies show their skills (cooldowns visible) under the bar
     if (side === 'enemy') {
       u.tiles = u.skills.map((sid, i) => {
-        const tx = x + (i - (u.skills.length - 1) / 2) * 30, ty = by + 50;
+        const tx = x + (i - (u.skills.length - 1) / 2) * 42, ty = by + 50;
         const g = this.add.graphics();
         const icon = this.add.image(tx, ty, SKILLS[sid].icon).setScale(PX);
         const cdText = this.add.text(tx, ty, '', { ...FONT, fontSize: '15px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
-        this.add.zone(tx, ty, 30, 30).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(SKILLS[sid], `ฤทธิ์ของ${def.name}`));
+        this.add.zone(tx, ty, 40, 40).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showSkillInfo(SKILLS[sid], `ฤทธิ์ของ${def.name}`));
         return { sid, g, icon, cdText, x: tx, y: ty };
       });
     }
@@ -360,7 +360,7 @@ export class BattleScene extends Phaser.Scene {
         u.tiles.forEach(t => {
           const cd = u.cd[t.sid] || 0, winding = u.pending?.skillId === t.sid;
           t.g.clear();
-          this.pixelPanel(t.g, t.x, t.y, 28, 28, winding ? 0x5a1020 : 0x2a1a2e, winding ? 0xff3355 : 0xaa6677, 3);
+          this.pixelPanel(t.g, t.x, t.y, 36, 36, winding ? 0x5a1020 : 0x2a1a2e, winding ? 0xff3355 : 0xaa6677, 3);
           t.icon.setAlpha(cd ? 0.3 : 1);
           t.cdText.setText(cd ? String(cd) : '');
         });

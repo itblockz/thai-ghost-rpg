@@ -16,6 +16,7 @@ const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT
 const ENEMY_Y = 140;   // enemy sprite centre
 const ALLY_Y = 345;    // retainer sprite centre
 const BTN_Y = 505;     // skill buttons
+const BTN_H = 96;      // sized to a 32pt skill icon plus its name
 const PANEL_BOTTOM = 436;
 
 // x positions for 1–3 units in a row
@@ -415,13 +416,13 @@ export class BattleScene extends Phaser.Scene {
       const x = 180 + (i - (n - 1) / 2) * gap, y = BTN_Y, s = SKILLS[id];
       const cd = u.cd[id] || 0, sel = this.selected === id && !cd;
       const g = this.add.graphics();
-      this.pixelPanel(g, x, y, w, 120, cd ? 0x1e1e2a : sel ? 0x3d3d5e : 0x33334d, cd ? 0x444455 : sel ? 0xffdd55 : 0x8888cc);
-      const icon = this.add.image(x, y - 14, s.icon).setScale(PX);
-      const name = this.add.text(x, y + 36, s.name, { ...FONT, fontSize: n === 3 ? '16px' : '20px' }).setOrigin(0.5);
+      this.pixelPanel(g, x, y, w, BTN_H, cd ? 0x1e1e2a : sel ? 0x3d3d5e : 0x33334d, cd ? 0x444455 : sel ? 0xffdd55 : 0x8888cc);
+      const icon = this.add.image(x, y - 12, s.icon).setScale(PX);
+      const name = this.add.text(x, y + 26, s.name, { ...FONT, fontSize: n === 3 ? '16px' : '20px' }).setOrigin(0.5);
       const cdText = this.add.text(x, y, cd ? String(cd) : '', { ...numFont(44), stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
       const parts = [g, icon, name, cdText];
       if (cd) [icon, name].forEach(p => p.setAlpha(0.25));
-      const zone = this.add.zone(x, y, w, 120).setInteractive({ useHandCursor: true });
+      const zone = this.add.zone(x, y, w, BTN_H).setInteractive({ useHandCursor: true });
       zone.on('pointerdown', () => { if (this.busy) return; if (cd) this.turnText.setText(`${s.name} ต้องพักฤทธิ์อีก ${cd} ตา`); else this.select(id); });
       parts.push(zone);
       this.btns.push({ id, parts });

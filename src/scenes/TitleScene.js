@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS } from '../display.js';
+import { ZOOM, setupCamera, pixelBob, stepped, FONT_FAMILY, TEXT_METRICS } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { unlockAudio, play } from '../audio/sfx.js';
 import { startNewGame } from '../flow.js';
@@ -15,11 +15,12 @@ export class TitleScene extends Phaser.Scene {
     this.add.image(180, 0, 'art_gate').setOrigin(0.5, 0).setScale(4);
     // the crack breathes
     const glow = this.add.image(180, 405, 'px_disc').setScale(4, 13).setTint(0xb090ff).setAlpha(0.2).setBlendMode(Phaser.BlendModes.ADD);
-    this.tweens.add({ targets: glow, alpha: 0.06, yoyo: true, repeat: -1, duration: 1400, ease: 'Sine.inOut' });
+    this.tweens.add({ targets: glow, alpha: 0.06, yoyo: true, repeat: -1, duration: 1400, ...stepped(4) });
     // things slipping out through the gap
     const ghost = (key, x, y, sc, a, d) => {
       const g = this.add.image(x, y, key).setScale(sc).setAlpha(a).setTint(0xb8a0ff);
-      this.tweens.add({ targets: g, y: y - 10, alpha: a * 0.5, yoyo: true, repeat: -1, duration: d, ease: 'Sine.inOut' });
+      pixelBob(this, g, sc, 3, d / 4);
+      this.tweens.add({ targets: g, alpha: a * 0.5, yoyo: true, repeat: -1, duration: d, ...stepped(4) });
     };
     ghost('krasue', 312, 320, 4, 0.85, 1700);
     ghost('kongkoi', 46, 450, 4, 0.8, 1300);

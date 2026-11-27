@@ -265,12 +265,12 @@ export class BattleScene extends Phaser.Scene {
         const px = this.add.rectangle(u.x + Phaser.Math.Between(-40, 40), u.y + Phaser.Math.Between(-50, 50), 6, 6, Phaser.Math.RND.pick([0x5d4d6e, 0xffffff, 0xd01030]));
         this.tweens.add({ targets: px, y: px.y - Phaser.Math.Between(40, 120), alpha: 0, duration: Phaser.Math.Between(400, 900), onComplete: () => px.destroy() });
       }
-      this.tweens.add({ targets: [u.sprite, u.glow], alpha: 0, duration: 400 });
+      this.tweens.add({ targets: [u.sprite, u.glow], alpha: 0, duration: 400, ease: 'Stepped', easeParams: [4] });
       (u.tiles || []).forEach(t => { t.icon.setVisible(false); t.cdText.setVisible(false); t.g.clear(); });
     } else {
       u.sprite.setTint(0x444455);
       u.sprite.setTexture(`${u.def.sprite}_ko`);
-      this.tweens.add({ targets: u.sprite, alpha: 0.45, duration: 300 });
+      this.tweens.add({ targets: u.sprite, alpha: 0.45, duration: 300, ease: 'Stepped', easeParams: [3] });
     }
   }
 
@@ -614,14 +614,14 @@ export class BattleScene extends Phaser.Scene {
       raised.forEach(o => o.setDepth(0).setAlpha(1));
             this.banner?.destroy(); this.bannerSub?.destroy();
       this.banner = this.bannerSub = null;
-      this.tweens.add({ targets: veil, alpha: 0, duration: 350, onComplete: () => veil.destroy() });
+      this.tweens.add({ targets: veil, alpha: 0, duration: 350, ease: 'Stepped', easeParams: [4], onComplete: () => veil.destroy() });
       this.startRound();
     };
     if (short) return this.time.delayedCall(10, finish);
 
     raised.forEach(o => o.setDepth(21).setAlpha(0));
     this.enemies.forEach(e => {
-      this.tweens.add({ targets: [e.sprite, e.glow], alpha: 1, duration: 900 });
+      this.tweens.add({ targets: [e.sprite, e.glow], alpha: 1, duration: 900, ease: 'Stepped', easeParams: [5] });
     });
     this.time.delayedCall(350, () => play('laugh'));
     this.time.delayedCall(700, () => {
@@ -630,7 +630,7 @@ export class BattleScene extends Phaser.Scene {
       const title = Object.entries(counts).map(([n, c]) => (c > 1 ? `${n} ×${c}` : n)).join(' · ');
       this.banner = this.add.text(180, 300, `— ${title} —`, { ...FONT, fontSize: '28px', fontStyle: 'bold', color: '#ff5577', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(22).setAlpha(0);
       this.bannerSub = this.add.text(180, 335, this.enemies[0].def.lore || '', { ...FONT, fontSize: '14px', color: '#ccccee', align: 'center', wordWrap: { width: 300 } }).setOrigin(0.5, 0).setDepth(22).setAlpha(0);
-      this.tweens.add({ targets: [this.banner, this.bannerSub], alpha: 1, duration: 400 });
+      this.tweens.add({ targets: [this.banner, this.bannerSub], alpha: 1, duration: 400, ease: 'Stepped', easeParams: [4] });
       play('growl');
     });
     this.time.delayedCall(2600, finish);

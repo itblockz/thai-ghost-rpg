@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS } from '../display.js';
+import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, pixelBob, stepped } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
 import { STORY } from '../data/story.js';
 import { ALLIES } from '../data/units.js';
@@ -49,11 +49,12 @@ export class StoryScene extends Phaser.Scene {
       const wide = tex.width >= 60;
       const scale = wide ? 340 / tex.width : Math.min(14, 200 / tex.height);
       this.tweens.killTweensOf(this.art);
+      this.bob?.remove();
       this.art.setTexture(page.art).setScale(scale).setVisible(true).setAlpha(0).setY(210);
-      this.tweens.add({ targets: this.art, alpha: 1, duration: 400, onComplete: () => {
+      this.tweens.add({ targets: this.art, alpha: 1, duration: 400, ...stepped(4), onComplete: () => {
         // gentle life: figures float, scenes flicker like lamplight
-        if (wide) this.tweens.add({ targets: this.art, alpha: 0.82, yoyo: true, repeat: -1, duration: 1300, ease: 'Sine.inOut' });
-        else this.tweens.add({ targets: this.art, y: 200, yoyo: true, repeat: -1, duration: 1100, ease: 'Sine.inOut' });
+        if (wide) this.tweens.add({ targets: this.art, alpha: 0.82, yoyo: true, repeat: -1, duration: 1300, ...stepped(3) });
+        else this.bob = pixelBob(this, this.art, Math.round(scale), 1, 500);
       } });
       if (wide) {
         const h = tex.height * scale;

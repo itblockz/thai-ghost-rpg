@@ -17,3 +17,17 @@ export const FONT_FAMILY = '"Kanit", sans-serif';
 // with a Latin test string, so on Safari the top marks get clipped. Measure with tall Thai
 // clusters and add a little top padding so nothing is cut off.
 export const TEXT_METRICS = { testString: '|MÉqgyสิ้ทธิ์ปั้ญฐ', padding: { top: 4, bottom: 2 } };
+
+// Pixel-style float: move in whole art pixels, one step every stepMs, ping-ponging
+// 0 → steps → 0. Even timing keeps it crisp without looking jerky.
+export function pixelBob(scene, obj, px, steps, stepMs) {
+  const base = obj.y;
+  let i = 0;
+  return scene.time.addEvent({ delay: stepMs, loop: true, callback: () => {
+    i = (i + 1) % (steps * 2);
+    obj.y = base - (i <= steps ? i : steps * 2 - i) * px;
+  } });
+}
+
+// Fade in evenly spaced steps (like palette fades on old consoles).
+export const stepped = n => ({ ease: 'Stepped', easeParams: [n] });

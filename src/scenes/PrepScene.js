@@ -27,7 +27,6 @@ export class PrepScene extends Phaser.Scene {
     registerSprites(this);
     this.stage = data?.stage ?? 0;
     this.startData = data;
-    this.swapIn = null; // a resting retainer waiting to take a fighter's place (survives no redraw)
     const stage = STAGES[this.stage];
 
     this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(PX);
@@ -47,7 +46,7 @@ export class PrepScene extends Phaser.Scene {
     const picks = foes.map((id, i) => this.figure(ex[i], ENEMY_Y, ENEMIES[id], () => this.show(ENEMIES[id], counts[id], ex[i], ENEMY_Y, 'enemy')));
 
     // keep the bench explicit: whoever is not in the front line rests
-    const team = currentTeam(this), goers = fightingTeam(this);
+    const team = currentTeam(this), goers = fightingTeam(this, true);
     this.registry.set('bench', team.filter(id => !goers.includes(id)));
     this.teamIds = team;
     this.goers = goers;
@@ -55,24 +54,31 @@ export class PrepScene extends Phaser.Scene {
     // front line: exactly where they will stand in the fight
     const tx = slots(goers.length);
     this.spots = {}; // where each retainer stands: { x, y, front }
-    goers.forEach((id, i) => { this.spots[id] = { x: tx[i], y: TEAM_Y, front: true }; allyPicks[id] = this.figure(tx[i], TEAM_Y, ALLIES[id], () => (this.swapIn ? this.bringIn(this.swapIn, id) : this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id)), id); });
+    goers.forEach((id, i) => { this.spots[id] = { x: tx[i], y: TEAM_Y, front: true }; allyPicks[id] = this.figure(tx[i], TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id), id); });
     // bench: the others, four to a page, a little faded
     const resting = team.filter(id => !goers.includes(id));
     const pages = Math.max(1, Math.ceil(resting.length / BENCH_PAGE));
     this.benchPage = Math.min(data?.benchPage ?? Math.floor(Math.max(0, resting.indexOf(data?.sel)) / BENCH_PAGE), pages - 1);
-    if (resting.length) this.add.text(14, BENCH_Y - 34, 'พัก', { ...FONT, fontSize: '12px', color: '#aaaacc', stroke: '#000', strokeThickness: 3 }).setOrigin(0, 0.5);
+    // with three going, the bench is locked (tap one only to read it)
+    this.full = goers.length >= MAX_FIGHTERS;
+    // the first visit, the bench label says how it works instead
+    let firstVisit = false;
+    try { firstVisit = !localStorage.getItem('himmapan-hint-hold'); if (firstVisit) localStorage.setItem('himmapan-hint-hold', '1'); } catch { /* no storage */ }
+    if (resting.length) this.add.text(14, BENCH_Y - 34, firstVisit ? 'แตะ = เข้า/ออกศึก · กดค้าง = อ่านเฉย ๆ' : this.full ? 'พัก · ครบ 3 แล้ว' : 'พัก', { ...FONT, fontSize: '12px', color: this.full || firstVisit ? '#ffe08a' : '#aaaacc', stroke: '#000', strokeThickness: 3 }).setOrigin(0, 0.5);
     resting.slice(this.benchPage * BENCH_PAGE, (this.benchPage + 1) * BENCH_PAGE).forEach((id, i) => {
       this.spots[id] = { x: BENCH_X[i], y: BENCH_Y, front: false };
       allyPicks[id] = this.figure(BENCH_X[i], BENCH_Y, ALLIES[id], () => this.show(ALLIES[id], 1, BENCH_X[i], BENCH_Y, 'ally', id), id);
-      this.lastFigure.setAlpha(0.6);
+      this.lastFigure.setAlpha(this.full ? 0.3 : 0.6);
     });
     if (pages > 1) [[-1, 18], [1, 342]].forEach(([d, x]) => this.add.text(x, BENCH_Y, d < 0 ? '‹' : '›', { ...FONT, fontSize: '28px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setPadding(8, 10, 8, 10)
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.restart({ ...this.startData, sel: null, benchPage: (this.benchPage + d + pages) % pages }); }));
 
     // start (same style as the battle buttons)
-    this.panel(this.add.graphics(), 180, BTN_Y, 332, 56, 0x3d3d5e, 0xffdd55);
-    this.add.text(180, BTN_Y, 'ออกศึก', { ...FONT, fontSize: '26px', fontStyle: 'bold' }).setOrigin(0.5);
-    this.add.zone(180, BTN_Y, 332, 56).setInteractive({ useHandCursor: true })
+    // nobody going: the button is locked until someone is tapped in
+    const none = !goers.length;
+    this.panel(this.add.graphics(), 180, BTN_Y, 332, 56, none ? 0x2a2a3a : 0x3d3d5e, none ? 0x55557a : 0xffdd55);
+    this.add.text(180, BTN_Y, none ? 'เลือกอย่างน้อย 1 ตัว' : 'ออกศึก', { ...FONT, fontSize: none ? '18px' : '26px', fontStyle: 'bold', color: none ? '#8888aa' : '#ffffff' }).setOrigin(0.5);
+    if (!none) this.add.zone(180, BTN_Y, 332, 56).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => { play('click'); this.scene.start('Battle', { stage: this.stage, first: !!data?.first, retry: !!data?.retry }); });
 
     // back to the map
@@ -87,37 +93,15 @@ export class PrepScene extends Phaser.Scene {
     this.add.zone(316, 30, 80, 52).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => { play('click'); this.scene.start('Guide', { back: { scene: 'Prep', data: this.startData } }); });
 
-    // the first time there is a bench, a faded copy of a resting retainer glides up to the front and back:
-    // retainers can be dragged
-    const firstBench = resting[this.benchPage * BENCH_PAGE], firstFront = goers[0];
-    let seenHint = true;
-    try { seenHint = !!localStorage.getItem('himmapan-hint-drag'); } catch { /* no storage: skip the hint */ }
-    if (firstBench && !seenHint) {
-      try { localStorage.setItem('himmapan-hint-drag', '1'); } catch { /* ignore */ }
-      const a = this.spots[firstBench], b = this.spots[firstFront];
-      const ghost = this.add.image(a.x, a.y, ALLIES[firstBench].sprite).setScale(PX).setAlpha(0).setDepth(30);
-      this.tweens.chain({ targets: ghost, tweens: [
-        { alpha: 0.6, duration: 250, delay: 600 },
-        { x: b.x, y: b.y, duration: 700, ease: 'Sine.inOut' },
-        { alpha: 0.6, duration: 300 },
-        { x: a.x, y: a.y, alpha: 0, duration: 500, ease: 'Sine.inOut' },
-      ], onComplete: () => ghost.destroy() });
-    }
-
     // reopen on the retainer just moved (see swap)
     if (data?.sel && allyPicks[data.sel]) allyPicks[data.sel](); else picks[0]();
   }
 
-  // move a fighter one place left/right in the front line (also sets who acts first on a speed tie)
-  swap(id, d) {
-    const team = [...currentTeam(this)], goers = this.goers;
-    const k = goers.indexOf(id) + d;
-    if (k < 0 || k >= goers.length) return;
-    const i = team.indexOf(id), j = team.indexOf(goers[k]);
-    [team[i], team[j]] = [team[j], team[i]];
-    this.registry.set('team', team);
-    saveFrom(this);
-    this.scene.restart({ ...this.startData, sel: id });
+  // the one rule: tap a fighter = it rests; tap a resting one = it goes in (unless three already go)
+  toggle(id) {
+    if (this.goers.includes(id)) { play('click'); return this.rest(id); }
+    if (this.full) { play('click'); return this.show(ALLIES[id], 1, this.spots[id].x, this.spots[id].y, 'ally', id); }
+    play('click'); this.bringIn(id);
   }
 
   // put a resting retainer in: into a free place, or in the place of the fighter `out`
@@ -143,7 +127,7 @@ export class PrepScene extends Phaser.Scene {
     idleFrames(this, img, def.sprite);
     const zone = this.add.zone(x, y, y === BENCH_Y ? 72 : 100, y === BENCH_Y ? 72 : 100);
     // a retainer can also be dragged: onto a fighter (swap places), onto the bench (rest), or into a free place in front
-    if (allyId) tapOrDrag(this, zone, { key: def.sprite, tap: () => { play('click'); onPick(); }, targets: () => this.dropTargets(allyId) });
+    if (allyId) tapOrDrag(this, zone, { key: def.sprite, tap: () => this.toggle(allyId), hold: () => { play('click'); onPick(); }, targets: () => this.dropTargets(allyId) });
     else zone.setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onPick(); });
     return onPick;
   }
@@ -158,8 +142,8 @@ export class PrepScene extends Phaser.Scene {
     }
     // a free place in front (fewer than three going)
     if (!from.front && this.goers.length < MAX_FIGHTERS) out.push({ x: 180, y: TEAM_Y, w: 340, h: 76, drop: () => this.bringIn(id) });
-    // down to the bench (someone must still go)
-    if (from.front && this.goers.length > 1) out.push({ x: 180, y: BENCH_Y, w: 340, h: 76, drop: () => this.rest(id) });
+    // down to the bench
+    if (from.front) out.push({ x: 180, y: BENCH_Y, w: 340, h: 76, drop: () => this.rest(id) });
     return out;
   }
 
@@ -174,7 +158,6 @@ export class PrepScene extends Phaser.Scene {
 
   // Fill the middle panel with one unit: name, HP, lore, then every skill with all its numbers.
   show(def, count, x, y, side, allyId = null, tab = 'skills') {
-    if (this.swapIn && allyId !== this.swapIn) this.swapIn = null;
     this.current = [def, count, x, y, side, allyId];
     this.panelObjs.forEach(o => o.destroy());
     const objs = this.panelObjs = [];
@@ -210,27 +193,7 @@ export class PrepScene extends Phaser.Scene {
       add(this.add.text(30, PANEL_TOP + 44, 'จัดบริวารและของขลัง ›', { ...FONT, fontSize: '13px', color: '#ffe08a' }).setOrigin(0, 0.5).setPadding(4, 6, 4, 6)
         .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Roster', { sel: allyId, back: { scene: 'Prep', data: this.startData } }); }));
       const going = this.goers.includes(allyId);
-      if (going) {
-        // arrows beside a fighter: move it left/right in the front line
-        const i = this.goers.indexOf(allyId);
-        [[-1, x - 58], [1, x + 58]].forEach(([d, ax]) => {
-          if (i + d < 0 || i + d >= this.goers.length) return;
-          add(this.add.text(ax, y, d < 0 ? '‹' : '›', { ...FONT, fontSize: '30px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setPadding(10, 8, 10, 8)
-            .setDepth(6).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.swap(allyId, d); }));
-        });
-      }
-      // in the front line: it may rest (someone must still go). Resting: it goes in — into a free place,
-      // or, with three already going, it takes the place of the fighter tapped next.
-      const full = this.goers.length >= MAX_FIGHTERS;
-      const label = going ? (this.goers.length > 1 ? 'ให้พัก' : '') : this.swapIn === allyId ? 'แตะตัวที่จะให้พัก' : full ? 'สลับเข้าศึก' : 'เข้าศึก';
-      if (label) add(this.add.text(330, PANEL_TOP + 44, label, { ...FONT, fontSize: '13px', fontStyle: 'bold', color: going ? '#ccccee' : '#88dd99' }).setOrigin(1, 0.5).setPadding(4, 6, 4, 6)
-        .setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-          play('click');
-          if (going) return this.rest(allyId);
-          if (!full) return this.bringIn(allyId);
-          this.swapIn = this.swapIn === allyId ? null : allyId; // now tap a fighter
-          this.show(...this.current);
-        }));
+      add(this.add.text(330, PANEL_TOP + 44, going ? 'แตะตัวเพื่อให้พัก' : this.full ? 'ครบ 3 แล้ว' : 'แตะตัวเพื่อเข้าศึก', { ...FONT, fontSize: '12px', color: going ? '#88dd99' : '#aaaacc' }).setOrigin(1, 0.5));
     } else {
       add(this.add.text(30, PANEL_TOP + 44, def.lore || '', { ...FONT, fontSize: '12px', color: '#a8a8c8' }).setOrigin(0, 0.5));
     }

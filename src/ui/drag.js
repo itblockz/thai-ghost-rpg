@@ -6,13 +6,21 @@ import { play } from '../audio/sfx.js';
 // may land glows gold; let go over one and onDrop runs, anywhere else the copy slides home and nothing
 // changes. Nothing that loses things for good (ปลุกเสก, ทิ้ง) is ever done by dragging.
 //
-// opts: { key: texture to lift, tap(), targets(): [{ x, y, w, h, drop() }] }
+// A long press (hold still ~half a second) can do something else instead of the tap: opts.hold().
+// opts: { key: texture to lift, tap(), hold(), targets(): [{ x, y, w, h, drop() }] }
 export function tapOrDrag(scene, zone, opts) {
   scene.input.dragDistanceThreshold = 12;
   zone.setInteractive({ useHandCursor: true, draggable: true });
-  let dragging = false, ghost = null, glow = null, list = [];
-  zone.on('pointerup', () => { if (!dragging) opts.tap?.(); });
+  let dragging = false, ghost = null, glow = null, list = [], held = false, timer = null;
+  const stopHold = () => { timer?.remove(); timer = null; };
+  zone.on('pointerdown', () => {
+    held = false; stopHold();
+    if (opts.hold) timer = scene.time.delayedCall(450, () => { timer = null; if (!dragging) { held = true; opts.hold(); } });
+  });
+  zone.on('pointerout', stopHold);
+  zone.on('pointerup', () => { stopHold(); if (!dragging && !held) opts.tap?.(); held = false; });
   zone.on('dragstart', p => {
+    stopHold();
     dragging = true;
     list = opts.targets();
     play('click');

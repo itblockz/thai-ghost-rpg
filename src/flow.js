@@ -68,9 +68,10 @@ export function currentTeam(scene) {
 // Fewer fighters = shorter rounds, handy when farming an easy stage.
 // At most three go: the first three not resting, in line-up order.
 export const MAX_FIGHTERS = 3;
-export function fightingTeam(scene) {
+// strict: as chosen, even if nobody (the prep screen locks ออกศึก until someone goes)
+export function fightingTeam(scene, strict = false) {
   const bench = new Set(scene.registry.get('bench') || []);
   const team = currentTeam(scene);
   const going = team.filter(id => !bench.has(id)).slice(0, MAX_FIGHTERS);
-  return going.length ? going : team.slice(0, 1);
+  return going.length || strict ? going : team.slice(0, 1);
 }

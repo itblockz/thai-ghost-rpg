@@ -1,4 +1,5 @@
-import { STAGES, STARTING_TEAM, ENEMIES } from './data/units.js';
+import { STAGES, STARTING_TEAM, ENEMIES, ALLIES, foeSkills } from './data/units.js';
+import { expFor } from './data/growth.js';
 import { loadProgress, clearProgress } from './save.js';
 
 // Journey flow: Title → intro story → Map. From the map:
@@ -33,9 +34,13 @@ export function continueGame(scene) {
   if (p.cleared >= 2 && !scene.registry.get('team').includes('krasue')) scene.registry.set('team', [...scene.registry.get('team'), 'krasue']);
   if (p.cleared >= 3 && !scene.registry.get('team').includes('phrai')) scene.registry.set('team', [...scene.registry.get('team'), 'phrai']);
   if (p.cleared >= 8 && !scene.registry.get('team').includes('pop')) scene.registry.set('team', [...scene.registry.get('team'), 'pop']);
+  // every retainer stands at least at the ขั้น it joins at (older saves, and those added just above)
+  const exp = { ...(p.exp || {}) };
+  scene.registry.get('team').forEach(id => { exp[id] = Math.max(exp[id] || 0, expFor(ALLIES[id].joinLevel || 1)); });
+  scene.registry.set('exp', exp);
   // saves from before the ??? system: foes of stages already cleared count as known
   const known = new Set(p.seen);
-  STAGES.slice(0, p.cleared).forEach(s => s.enemies.forEach(id => ENEMIES[id].skills.forEach(k => known.add(k))));
+  STAGES.slice(0, p.cleared).forEach(s => s.enemies.forEach(id => foeSkills(ENEMIES[id]).forEach(k => known.add(k))));
   scene.registry.set('seen', [...known]);
   scene.scene.start('Map');
 }

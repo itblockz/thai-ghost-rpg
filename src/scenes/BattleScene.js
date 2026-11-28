@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
+import { ALLIES, ENEMIES, STAGES, foeSkills, ELITE_LEVELS, ELITE_LEVELS_SMALL } from '../data/units.js';
 import { SKILLS, skillDamage, skillFacts, amount } from '../data/skills.js';
 import { registerSprites, pixelDisc, pixelRing } from '../art/sprites.js';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, IDLE_MS, PX, pixelBob, numFont } from '../display.js';
@@ -7,7 +7,7 @@ import { play, isMuted, toggleMute } from '../audio/sfx.js';
 import { afterVictory, fightingTeam } from '../flow.js';
 import { charmTitle, charmEffect } from '../ui/charmUi.js';
 import { rollCharm, applyWorn, RARITIES, CHARM_TYPES } from '../data/charms.js';
-import { applyGrowth, levelOf, EXP_PER_WIN, MAX_EXP, rollOfferings, OFFERINGS } from '../data/growth.js';
+import { applyGrowth, applyLevel, levelOf, EXP_PER_WIN, MAX_EXP, rollOfferings, OFFERINGS } from '../data/growth.js';
 import { saveFrom } from '../save.js';
 
 // How each unit travels to its target: dash (default), hop, float.
@@ -153,15 +153,18 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ---------- waves ----------
-  // Put a wave's enemies on the field; an elite (หัวหน้า) is tougher, hits harder, and glows gold.
+  // Put a wave's enemies on the field; an elite (หัวหน้า) has more ขั้น and glows gold.
   spawnWave(w) {
     const ex = slots(w.ids.length);
     this.enemies = w.ids.map((id, i) => {
       const before = this.children.list.length;
       const u = this.makeUnit('enemy', id, ENEMIES[id], ENEMIES[id].name, ex[i], ENEMY_Y, 5);
-      if (w.elite === i) {
-        u.elite = true; u.hp = u.maxHp = Math.round(u.maxHp * (w.eliteMult ?? (w.small ? 1.4 : 1.8))); if (!w.small) { u.dmgMult = 1.3; u.spd += 1; }
-        u.glow.setTint(0xffd040);
+      // common foes stand at the stage's ขั้น; a หัวหน้า has more ขั้น (bosses have their own numbers)
+      if (!u.def.boss) {
+        const elite = w.elite === i;
+        u.level = (STAGES[this.stage].level || 1) + (elite ? w.eliteLevels ?? (w.small ? ELITE_LEVELS_SMALL : ELITE_LEVELS) : 0);
+        applyLevel(u, u.level);
+        if (elite) { u.elite = true; u.glow.setTint(0xffd040); }
       }
       u.objs = this.children.list.slice(before);
       return u;
@@ -263,7 +266,7 @@ export class BattleScene extends Phaser.Scene {
   makeUnit(side, id, def, name, x, y, scale) {
     const u = {
       side, id, def, name, x, y, scale,
-      hp: def.hp, maxHp: def.hp, atk: def.atk || 0, spd: def.spd || 10, skills: def.skills, cd: {}, block: false, pending: null, takenMult: 1, alive: true,
+      hp: def.hp, maxHp: def.hp, atk: def.atk || 0, spd: def.spd || 10, skills: side === 'enemy' ? foeSkills(def) : def.skills, cd: {}, block: false, pending: null, takenMult: 1, alive: true,
     };
     // every unit is drawn at the same pixel size; bigger creatures simply have bigger grids
     const grid = this.textures.get(def.sprite).getSourceImage().width;
@@ -499,7 +502,7 @@ export class BattleScene extends Phaser.Scene {
       if (e.damage != null) {
         if (blindNow) missed = true;
         else if (target.block) blocked = true;
-        else { mult = target.takenMult * (e.weakMult && target.hp * 2 < target.maxHp ? e.weakMult : 1); const d = Math.round(amount(e, 'damage', user) * mult * (user.dmgMult || 1)); target.hp -= d; dealt += d;
+        else { mult = target.takenMult * (e.weakMult && target.hp * 2 < target.maxHp ? e.weakMult : 1); const d = Math.round(amount(e, 'damage', user) * mult); target.hp -= d; dealt += d;
           // ผีปอบ: what it bites off, it takes back as its own life
           if (e.drain) { const h = Math.min(d, user.maxHp - user.hp); user.hp += h; if (h) this.popup(user.x, user.y - 20, `+${h}`, '#66ee88', 22); } }
       }
@@ -683,7 +686,9 @@ export class BattleScene extends Phaser.Scene {
   pickEnemySkill(e) {
     const rolled = e.skills.filter(id => !e.cd[id] && SKILLS[id].useChance != null && Math.random() < SKILLS[id].useChance);
     const pool = rolled.length ? rolled : e.skills.filter(id => !e.cd[id] && SKILLS[id].useChance == null);
-    return (pool.length ? pool : e.skills).reduce((a, b) => (skillDamage(SKILLS[b]) > skillDamage(SKILLS[a]) ? b : a));
+    // nothing chosen: any skill that is ready (never one still resting)
+    const ready = e.skills.filter(id => !e.cd[id]);
+    return (pool.length ? pool : ready.length ? ready : e.skills).reduce((a, b) => (skillDamage(SKILLS[b], e) > skillDamage(SKILLS[a], e) ? b : a));
   }
 
   // A stunned unit (dragged under) sits out this turn.

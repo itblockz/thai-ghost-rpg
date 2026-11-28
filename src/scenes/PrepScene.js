@@ -1,13 +1,13 @@
 import Phaser from 'phaser';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, numFont } from '../display.js';
 import { registerSprites } from '../art/sprites.js';
-import { ALLIES, ENEMIES, STAGES } from '../data/units.js';
+import { ALLIES, ENEMIES, STAGES, foeSkills } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
 import { currentTeam, fightingTeam, MAX_FIGHTERS } from '../flow.js';
 import { saveFrom } from '../save.js';
 import { play } from '../audio/sfx.js';
 import { applyWorn, CHARM_TYPES } from '../data/charms.js';
-import { applyGrowth, levelOf, shownLevel } from '../data/growth.js';
+import { applyGrowth, applyLevel, levelOf, shownLevel } from '../data/growth.js';
 import { gems } from '../ui/charmUi.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
@@ -119,11 +119,15 @@ export class PrepScene extends Phaser.Scene {
     add(this.panel(this.add.graphics(), 180, (PANEL_TOP + PANEL_BOTTOM) / 2, 332, PANEL_BOTTOM - PANEL_TOP, 0x161424, enemy ? 0xaa6677 : 0xb89a50));
     const nameT = add(this.add.text(30, PANEL_TOP + 20, count > 1 ? `${def.name} ×${count}` : def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
     // bosses never lose a turn (drowned, …): said up front, beside the name
+    // a common foe stands at this stage's ขั้น (shown like a retainer's)
+    const foeLevel = enemy && !def.boss ? STAGES[this.stage].level || 1 : 0;
+    if (foeLevel) add(this.add.text(36 + nameT.width, PANEL_TOP + 22, `ขั้น ${foeLevel}`, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0, 0.5));
     if (def.boss) add(this.add.text(38 + nameT.width, PANEL_TOP + 22, 'ไม่เสียตา', { ...FONT, fontSize: '12px', color: '#9ac8f0' }).setOrigin(0, 0.5));
     if (allyId) add(this.add.text(36 + nameT.width, PANEL_TOP + 22, `ขั้น ${shownLevel(levelOf((this.registry.get('exp') || {})[allyId] || 0).lv)}`, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0, 0.5));
     // the unit as it will fight: base stats plus any worn charm
     const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0, spd: def.spd || 10 };
     if (allyId) { const exp = (this.registry.get('exp') || {})[allyId] || 0; applyGrowth(u, exp); applyWorn(u, this.registry.get('bag') || [], this.registry.get('gear') || {}, allyId); }
+    if (foeLevel) applyLevel(u, foeLevel);
     // stats as small pictures: heart = ขวัญ, fist = กำลัง (right-aligned)
     this.iconNums(330, PANEL_TOP + 20, [['icon_hp', u.maxHp], ...(def.atk ? [['icon_atk', u.atk]] : []), ['icon_spd', u.spd]], add);
     add(this.add.rectangle(180, PANEL_TOP + 62, 300, 2, 0x44445e));
@@ -163,7 +167,7 @@ export class PrepScene extends Phaser.Scene {
 
     let ry = PANEL_TOP + 68;
     const seen = new Set(this.registry.get('seen') || []);
-    for (const sid of def.skills) {
+    for (const sid of enemy ? foeSkills(def) : def.skills) {
       const s = SKILLS[sid];
       // enemy skills stay unknown (???) until witnessed in a fight
       const known = !!allyId || seen.has(sid);

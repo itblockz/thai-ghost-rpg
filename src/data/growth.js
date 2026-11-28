@@ -16,12 +16,17 @@ export function levelOf(exp = 0) {
 }
 const totalFor = lv => { let t = 0; for (let l = 0; l < lv; l++) t += expToNext(l); return t; };
 export const MAX_EXP = totalFor(MAX_LEVEL);
+// the บารมี that puts a unit at a shown ขั้น (a retainer joining at its joinLevel starts here)
+export const expFor = shown => totalFor(Math.max(0, Math.min(MAX_LEVEL, shown - 1)));
 
 // what each ขั้น gives: ขวัญ +1 every step, กำลัง +1 every fourth step (speed is nature, not growth).
 // Measured: played straight through, bosses stay about as hard as before; ขั้น 30 takes ~90 full hunts per retainer.
 export const growthOf = lv => ({ hp: lv, atk: Math.floor(lv / 4) });
-export function applyGrowth(u, exp) {
-  const g = growthOf(levelOf(exp).lv);
+export function applyGrowth(u, exp) { growBy(u, levelOf(exp).lv); }
+// a foe at a shown ขั้น grows by the very same steps
+export function applyLevel(u, shown) { growBy(u, Math.max(0, shown - 1)); }
+function growBy(u, lv) {
+  const g = growthOf(lv);
   u.hp += g.hp; u.maxHp += g.hp; u.atk = (u.atk || 0) + g.atk;
 }
 

@@ -3,6 +3,7 @@ import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, pixelBob, stepped, idleFr
 import { registerSprites } from '../art/sprites.js';
 import { STORY } from '../data/story.js';
 import { ALLIES } from '../data/units.js';
+import { expFor } from '../data/growth.js';
 import { play } from '../audio/sfx.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
@@ -73,6 +74,10 @@ export class StoryScene extends Phaser.Scene {
     if (page.recruit) {
       const team = this.registry.get('team') || [];
       if (!team.includes(page.recruit)) this.registry.set('team', [...team, page.recruit]);
+      // it comes at the ขั้น it was beaten at, +3 (กุมารทอง: 5, a gift to begin with)
+      const exp = { ...(this.registry.get('exp') || {}) };
+      exp[page.recruit] = Math.max(exp[page.recruit] || 0, expFor(ALLIES[page.recruit].joinLevel || 1));
+      this.registry.set('exp', exp);
       this.gift.setText(`${ALLIES[page.recruit].name} เข้ามาเป็นบริวาร`);
       play('ward');
     }

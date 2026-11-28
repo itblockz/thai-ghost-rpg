@@ -118,6 +118,8 @@ export class PrepScene extends Phaser.Scene {
 
     add(this.panel(this.add.graphics(), 180, (PANEL_TOP + PANEL_BOTTOM) / 2, 332, PANEL_BOTTOM - PANEL_TOP, 0x161424, enemy ? 0xaa6677 : 0xb89a50));
     const nameT = add(this.add.text(30, PANEL_TOP + 20, count > 1 ? `${def.name} ×${count}` : def.name, { ...FONT, fontSize: '20px', fontStyle: 'bold' }).setOrigin(0, 0.5));
+    // bosses never lose a turn (drowned, …): said up front, beside the name
+    if (def.boss) add(this.add.text(38 + nameT.width, PANEL_TOP + 22, 'ไม่เสียตา', { ...FONT, fontSize: '12px', color: '#9ac8f0' }).setOrigin(0, 0.5));
     if (allyId) add(this.add.text(36 + nameT.width, PANEL_TOP + 22, `ขั้น ${shownLevel(levelOf((this.registry.get('exp') || {})[allyId] || 0).lv)}`, { ...FONT, fontSize: '12px', color: '#ffe08a' }).setOrigin(0, 0.5));
     // the unit as it will fight: base stats plus any worn charm
     const u = { hp: def.hp, maxHp: def.hp, atk: def.atk || 0, spd: def.spd || 10 };

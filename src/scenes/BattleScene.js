@@ -218,6 +218,8 @@ export class BattleScene extends Phaser.Scene {
       this.enemies.forEach(e => e.objs.forEach(o => o.destroy()));
       this.spawnWave(this.waves[this.wave]);
       const now = this.now ?? 0;
+      // a fresh start for everyone: every gauge empties, so the quick act first in each wave as in the first
+      this.alive(this.allies).forEach(u => { u.next = now + this.stepOf(u); });
       this.enemies.forEach(e => { e.next = now + this.stepOf(e); e.sprite.setAlpha(0); this.tweens.add({ targets: e.sprite, alpha: 1, duration: 400, ease: 'Stepped', easeParams: [4] }); });
       const label = this.add.text(180, 250, this.wave === this.waves.length - 1 ? 'ระลอกสุดท้าย' : `ระลอกที่ ${this.wave + 1}`, { ...FONT, fontSize: '30px', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(9);
       this.time.delayedCall(900, () => label.destroy());

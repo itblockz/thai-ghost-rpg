@@ -1,4 +1,6 @@
 // spd = speed: the turn timeline gives faster units earlier and more frequent turns (8 slow … 14 quick).
+// lore: what it looks like + one habit that hints how it fights; no 'ผี…' opening, no numbers;
+// the same words whether it is a foe or a retainer.
 // Retainers (บริวาร) — the player's units. Each retainer is unique (no duplicates in the team).
 export const ALLIES = {
   kumarn: {
@@ -7,27 +9,27 @@ export const ALLIES = {
   },
   kongkoi: {
     name: 'ผีกองกอย', sprite: 'kongkoi', hp: 20, atk: 4, spd: 13, skills: ['rake', 'frenzy'],
-    lore: 'ผีป่าขาเดียว ว่องไว แอบดูดเลือดหัวแม่เท้าคนหลับ',
+    lore: 'ร่างเล็กขาเดียว กระโดดว่องไว แอบดูดเลือดหัวแม่เท้าคนหลับ',
   },
   krahang: {
     name: 'ผีกระหัง', sprite: 'krahang', hp: 20, atk: 3, spd: 14, skills: ['flap', 'whack'],
-    lore: 'ผีชายบินด้วยกระด้งสองใบ ว่องไวกว่าผีใด',
+    lore: 'ชายบินด้วยกระด้งสองใบ กระพือทีลมพัดไปทั้งแถว',
   },
   krasue: {
     name: 'กระสือ', sprite: 'krasue', hp: 26, atk: 3, spd: 9, skills: ['krasueBite', 'krasueLash'],
-    lore: 'หัวหญิงสาวลอยได้ ไส้ห้อยระย้า ตามมาเพราะอยากรู้ว่า \'ท่าน\' คือใคร',
+    lore: 'หัวหญิงสาวลอยได้ ไส้ห้อยระย้า ออกหากินยามดึก',
   },
   phrai: {
     name: 'ผีพราย', sprite: 'phrai', hp: 24, atk: 4, spd: 11, skills: ['hairBind', 'drown'],
-    lore: 'ผีหญิงผมเปียกจากใต้ท่าน้ำ รอจังหวะคนอ่อนแรงแล้วฉุดลงน้ำ',
+    lore: 'หญิงผมยาวเปียกน้ำ ซุ่มใต้ท่าน้ำ รอคนอ่อนแรงแล้วฉุดลงไป',
   },
   pop: {
     name: 'ผีปอบ', sprite: 'pop', hp: 32, atk: 3, spd: 9, skills: ['gnaw', 'gorge'],
-    lore: 'ผีปอบหิวไม่รู้อิ่ม ยิ่งกัดกินยิ่งมีแรงสู้',
+    lore: 'ลิ้นยาวห้อยถึงอก หิวไม่รู้อิ่ม ยิ่งกินยิ่งมีแรง',
   },
   khamot: {
     name: 'ผีโขมด', sprite: 'khamot', hp: 18, atk: 2, spd: 12, skills: ['khamotEmber', 'khamotHeal', 'khamotBlind'],
-    lore: 'ดวงไฟลอยกลางน้ำ เคยหลอกคนหลงทาง บัดนี้ส่องทางให้',
+    lore: 'ดวงไฟวับแวมเหนือน้ำ ล่อคนจนตาพร่าหลงทาง',
   },
 };
 
@@ -35,35 +37,35 @@ export const ALLIES = {
 export const ENEMIES = {
   kongkoi: {
     name: 'ผีกองกอย', sprite: 'kongkoi', hp: 14, spd: 11, skills: ['scratch'],
-    lore: 'ผีป่าตัวเล็ก ขาเดียว ชอบแกล้งคนหลงป่า',
+    lore: 'ร่างเล็กขาเดียว กระโดดว่องไว แอบดูดเลือดหัวแม่เท้าคนหลับ',
   },
   krahang: {
     name: 'ผีกระหัง', sprite: 'krahang', hp: 20, spd: 12, skills: ['swoop'],
-    lore: 'ผีบินกระพือกระด้งโฉบลงจากฟ้า',
+    lore: 'ชายบินด้วยกระด้งสองใบ กระพือทีลมพัดไปทั้งแถว',
   },
   pop: {
     name: 'ผีปอบ', sprite: 'pop', hp: 26, spd: 10, skills: ['devour'],
-    lore: 'ผีสิงกินของดิบ ยิ่งกินยิ่งมีแรง',
+    lore: 'ลิ้นยาวห้อยถึงอก หิวไม่รู้อิ่ม ยิ่งกินยิ่งมีแรง',
   },
   pret: {
     name: 'ผีเปรต', sprite: 'pret', hp: 280, spd: 7, boss: true, skills: ['smash', 'hunger'],
-    lore: 'เปรตสูงเท่าต้นตาล ปากเท่ารูเข็ม หิวโหยชั่วกัปชั่วกัลป์',
+    lore: 'สูงเท่าต้นตาล ปากเท่ารูเข็ม หิวโหยชั่วกัปชั่วกัลป์',
   },
   phrai: {
     name: 'ผีพราย', sprite: 'phrai', hp: 26, spd: 10, skills: ['grab', 'drag'],
-    lore: 'ผีหญิงผมเปียก ซุ่มใต้ท่าน้ำ ดึงคนลงไปอยู่ด้วย',
+    lore: 'หญิงผมยาวเปียกน้ำ ซุ่มใต้ท่าน้ำ รอคนอ่อนแรงแล้วฉุดลงไป',
   },
   khamot: {
     name: 'ผีโขมด', sprite: 'khamot', hp: 16, spd: 10, skills: ['ember', 'lure'],
-    lore: 'ดวงไฟวับแวมเหนือน้ำ หลอกให้หลงทาง',
+    lore: 'ดวงไฟวับแวมเหนือน้ำ ล่อคนจนตาพร่าหลงทาง',
   },
   naga: {
     name: 'นาค', sprite: 'naga', hp: 140, spd: 9, boss: true, skills: ['strike', 'venom'],
-    lore: 'พญางูใหญ่เฝ้าวังใต้น้ำ เกล็ดเขียวแวววาว',
+    lore: 'พญางูใหญ่เฝ้าวังใต้น้ำ เขี้ยวมีพิษร้าย',
   },
   krasue: {
     name: 'กระสือ', sprite: 'krasue', hp: 68, spd: 9, boss: true, skills: ['bite', 'spit'],
-    lore: 'หัวหญิงสาวลอยได้ มีไส้ห้อยระย้า ออกหากินยามดึก',
+    lore: 'หัวหญิงสาวลอยได้ ไส้ห้อยระย้า ออกหากินยามดึก',
   },
 };
 

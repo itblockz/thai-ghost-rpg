@@ -4,7 +4,7 @@ import { registerSprites } from '../art/sprites.js';
 import { ALLIES } from '../data/units.js';
 import { SKILLS } from '../data/skills.js';
 import { RARITIES, CHARM_TYPES, applyWorn, wornIds, slotsOpen, SLOTS, enchLevel, enchPoints, ENCH_MAX, effective } from '../data/charms.js';
-import { cleared } from '../flow.js';
+import { cleared, fightingTeam } from '../flow.js';
 import { applyGrowth, levelOf, OFFERINGS, MAX_EXP, MAX_LEVEL, shownLevel } from '../data/growth.js';
 import { charmTitle, charmEffect } from '../ui/charmUi.js';
 import { currentTeam } from '../flow.js';
@@ -40,15 +40,21 @@ export class RosterScene extends Phaser.Scene {
     this.add.text(346, 26, 'คู่มือ ›', { ...FONT, fontSize: '15px', color: '#ffe08a' }).setOrigin(1, 0.5).setPadding(6, 6, 6, 6)
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Guide', { back: { scene: 'Roster', data: { back: this.back, sel: this.sel } } }); });
 
-    // retainer row
+    // retainers: one row for up to four, else a grid of four to a row (two rows; everything below moves down)
     this.marker = this.add.graphics().setDepth(5);
-    const xs = slots(this.ids.length);
+    const going = new Set(fightingTeam(this));
+    const grid = this.ids.length > 4, cols = grid ? 4 : this.ids.length;
+    this.pos = {};
     this.ids.forEach((id, i) => {
-      const img = this.add.image(xs[i], 104, ALLIES[id].sprite).setScale(PX);
+      const x = slots(cols)[i % cols], y = grid ? 74 + Math.floor(i / cols) * 70 : 104;
+      this.pos[id] = [x, y];
+      const img = this.add.image(x, y, ALLIES[id].sprite).setScale(PX);
       idleFrames(this, img, ALLIES[id].sprite);
-      this.add.zone(xs[i], 104, Math.min(100, 360 / Math.max(3, this.ids.length)), 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.sel = id; this.picked = null; this.pickedSkill = null; this.redraw(); });
+      // the ones going into the next fight carry a small ✓
+      if (going.has(id) && grid) this.add.text(x + 26, y + 24, '✓', { ...FONT, fontSize: '13px', fontStyle: 'bold', color: '#88dd99', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(6);
+      this.add.zone(x, y, grid ? 80 : 100, grid ? 68 : 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.sel = id; this.picked = null; this.pickedSkill = null; this.redraw(); });
     });
-    this.xs = xs;
+    this.oy = grid ? 36 : 0; // the panel, bag and notes sit lower under a two-row grid
     this.objs = [];
     this.redraw();
   }
@@ -67,9 +73,9 @@ export class RosterScene extends Phaser.Scene {
     const id = this.sel, def = ALLIES[id], bag = this.bag(), gear = this.gear();
 
     // brackets on the chosen retainer
-    const x0 = this.xs[this.ids.indexOf(id)], m = this.marker.clear().fillStyle(0xffdd55);
+    const [x0, y0] = this.pos[id], m = this.marker.clear().fillStyle(0xffdd55), bh = this.oy ? 34 : 40;
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
-      const cx = x0 + sx * (this.ids.length > 5 ? 28 : this.ids.length > 4 ? 34 : 40), cy = 104 + sy * 40;
+      const cx = x0 + sx * bh, cy = y0 + sy * bh;
       m.fillRect(Math.min(cx, cx - sx * 12), cy - (sy > 0 ? 3 : 0), 12, 3);
       m.fillRect(cx - (sx > 0 ? 3 : 0), Math.min(cy, cy - sy * 12), 3, 12);
     });
@@ -246,6 +252,8 @@ export class RosterScene extends Phaser.Scene {
       add(this.panel(this.add.graphics(), 180, 556, 332, 82, 0x121020, 0x33334a));
       add(this.add.text(180, 556, bag.length ? 'แตะฤทธิ์หรือของขลังเพื่อดูรายละเอียด' : 'แตะฤทธิ์เพื่ออ่าน ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0.5));
     }
+    // under a two-row grid of retainers, everything here sits lower
+    if (this.oy) objs.forEach(o => { o.y += this.oy; });
   }
 
   // a charm's effect: stat charms as icon + number, others as words
@@ -299,8 +307,8 @@ export class RosterScene extends Phaser.Scene {
     this.flash(up ? `เสกขึ้น +${up}!` : `เสก +${pts}`);
   }
   flash(text) {
-    const t = this.add.text(180, 488, text, { ...FONT, fontSize: '14px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(9);
-    this.tweens.add({ targets: t, y: 470, alpha: 0, duration: 1100, onComplete: () => t.destroy() });
+    const t = this.add.text(180, 488 + (this.oy || 0), text, { ...FONT, fontSize: '14px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(9);
+    this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: 1100, onComplete: () => t.destroy() });
   }
 
   button(add, x, y, w, h, label, fill, border, onTap) {

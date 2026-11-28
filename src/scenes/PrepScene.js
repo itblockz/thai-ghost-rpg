@@ -11,11 +11,12 @@ import { applyGrowth, applyLevel, levelOf, shownLevel } from '../data/growth.js'
 import { gems } from '../ui/charmUi.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
-const TEAM_SLOTS = 8; // retainers shown (three of them can go in)
-const ENEMY_Y = 100, TEAM_Y = 492, PANEL_TOP = 160, PANEL_BOTTOM = 430, BTN_Y = 588;
+// front line (the three going in, placed as in the fight), then the bench (the rest, four to a page)
+const ENEMY_Y = 100, TEAM_Y = 466, BENCH_Y = 540, PANEL_TOP = 160, PANEL_BOTTOM = 430, BTN_Y = 608;
+const BENCH_PAGE = 4, BENCH_X = [72, 144, 216, 288];
 const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : n === 3 ? [65, 180, 295] : n === 4 ? [48, 136, 224, 312] : Array.from({ length: n }, (_, i) => Math.round((i + 0.5) * 360 / n / 2) * 2));
 
-// Before each fight. Laid out like the battlefield (enemies above, team below);
+// Before each fight. Laid out like the battlefield (enemies above, the three going in below, the bench under them);
 // tap anyone to read them in the middle panel. No pop-ups.
 export class PrepScene extends Phaser.Scene {
   constructor() { super('Prep'); }
@@ -25,6 +26,7 @@ export class PrepScene extends Phaser.Scene {
     registerSprites(this);
     this.stage = data?.stage ?? 0;
     this.startData = data;
+    this.swapIn = null; // a resting retainer waiting to take a fighter's place (survives no redraw)
     const stage = STAGES[this.stage];
 
     this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(PX);
@@ -43,20 +45,31 @@ export class PrepScene extends Phaser.Scene {
     const ex = slots(foes.length);
     const picks = foes.map((id, i) => this.figure(ex[i], ENEMY_Y, ENEMIES[id], () => this.show(ENEMIES[id], counts[id], ex[i], ENEMY_Y, 'enemy')));
 
-    // team row: one place per retainer you have (up to 3), positioned exactly as in the fight
-    const team = currentTeam(this).slice(0, TEAM_SLOTS);
-    const tx = slots(team.length);
+    // keep the bench explicit: whoever is not in the front line rests
+    const team = currentTeam(this), goers = fightingTeam(this);
+    this.registry.set('bench', team.filter(id => !goers.includes(id)));
     this.teamIds = team;
-    this.teamImgs = {};
+    this.goers = goers;
     const allyPicks = {};
-    team.forEach((id, i) => { allyPicks[id] = this.figure(tx[i], TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id)); this.teamImgs[id] = this.lastFigure; });
-    this.benchMarks = team.map((id, i) => this.add.text(tx[i], TEAM_Y + 44, '✓', { ...FONT, fontSize: '16px', fontStyle: 'bold', color: '#88dd99', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5));
-    this.showBench();
+    // front line: exactly where they will stand in the fight
+    const tx = slots(goers.length);
+    goers.forEach((id, i) => { allyPicks[id] = this.figure(tx[i], TEAM_Y, ALLIES[id], () => (this.swapIn ? this.bringIn(this.swapIn, id) : this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id))); });
+    // bench: the others, four to a page, a little faded
+    const resting = team.filter(id => !goers.includes(id));
+    const pages = Math.max(1, Math.ceil(resting.length / BENCH_PAGE));
+    this.benchPage = Math.min(data?.benchPage ?? Math.floor(Math.max(0, resting.indexOf(data?.sel)) / BENCH_PAGE), pages - 1);
+    if (resting.length) this.add.text(14, BENCH_Y - 34, 'พัก', { ...FONT, fontSize: '12px', color: '#aaaacc', stroke: '#000', strokeThickness: 3 }).setOrigin(0, 0.5);
+    resting.slice(this.benchPage * BENCH_PAGE, (this.benchPage + 1) * BENCH_PAGE).forEach((id, i) => {
+      allyPicks[id] = this.figure(BENCH_X[i], BENCH_Y, ALLIES[id], () => this.show(ALLIES[id], 1, BENCH_X[i], BENCH_Y, 'ally', id));
+      this.lastFigure.setAlpha(0.6);
+    });
+    if (pages > 1) [[-1, 18], [1, 342]].forEach(([d, x]) => this.add.text(x, BENCH_Y, d < 0 ? '‹' : '›', { ...FONT, fontSize: '28px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setPadding(8, 10, 8, 10)
+      .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.restart({ ...this.startData, sel: null, benchPage: (this.benchPage + d + pages) % pages }); }));
 
     // start (same style as the battle buttons)
-    this.panel(this.add.graphics(), 180, BTN_Y, 332, 80, 0x3d3d5e, 0xffdd55);
+    this.panel(this.add.graphics(), 180, BTN_Y, 332, 56, 0x3d3d5e, 0xffdd55);
     this.add.text(180, BTN_Y, 'ออกศึก', { ...FONT, fontSize: '26px', fontStyle: 'bold' }).setOrigin(0.5);
-    this.add.zone(180, BTN_Y, 332, 80).setInteractive({ useHandCursor: true })
+    this.add.zone(180, BTN_Y, 332, 56).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => { play('click'); this.scene.start('Battle', { stage: this.stage, first: !!data?.first, retry: !!data?.retry }); });
 
     // back to the map
@@ -75,32 +88,46 @@ export class PrepScene extends Phaser.Scene {
     if (data?.sel && allyPicks[data.sel]) allyPicks[data.sel](); else picks[0]();
   }
 
-  // move a retainer one place left/right in the team (also sets who acts first on a speed tie)
+  // move a fighter one place left/right in the front line (also sets who acts first on a speed tie)
   swap(id, d) {
-    const team = [...currentTeam(this)];
-    const i = team.indexOf(id), j = i + d;
-    if (j < 0 || j >= Math.min(team.length, TEAM_SLOTS)) return;
+    const team = [...currentTeam(this)], goers = this.goers;
+    const k = goers.indexOf(id) + d;
+    if (k < 0 || k >= goers.length) return;
+    const i = team.indexOf(id), j = team.indexOf(goers[k]);
     [team[i], team[j]] = [team[j], team[i]];
     this.registry.set('team', team);
     saveFrom(this);
     this.scene.restart({ ...this.startData, sel: id });
   }
 
-  // chosen retainers carry a ✓; the rest stand faded (they sit this one out)
-  showBench() {
-    const goers = fightingTeam(this);
-    this.teamIds.forEach((id, i) => { const go = goers.includes(id); this.teamImgs[id].setAlpha(go ? 1 : 0.35); this.benchMarks[i].setVisible(go); });
+  // put a resting retainer in: into a free place, or in the place of the fighter `out`
+  bringIn(id, out = null) {
+    let team = [...currentTeam(this)];
+    if (out) { const i = team.indexOf(out), j = team.indexOf(id); [team[i], team[j]] = [team[j], team[i]]; }
+    else { team = team.filter(x => x !== id); const last = team.indexOf(this.goers[this.goers.length - 1]); team.splice(last + 1, 0, id); }
+    const goers = team.filter(x => (out ? x !== out : true) && (this.goers.includes(x) || x === id));
+    this.registry.set('team', team);
+    this.registry.set('bench', team.filter(x => !goers.includes(x)));
+    saveFrom(this);
+    this.scene.restart({ ...this.startData, sel: id, benchPage: null });
+  }
+
+  rest(id) {
+    this.registry.set('bench', [...new Set([...(this.registry.get('bench') || []), id])]);
+    saveFrom(this);
+    this.scene.restart({ ...this.startData, sel: id, benchPage: null });
   }
 
   figure(x, y, def, onPick) {
     const img = this.lastFigure = this.add.image(x, y, def.sprite).setScale(PX);
     idleFrames(this, img, def.sprite);
-    this.add.zone(x, y, Math.min(100, 360 / Math.max(3, this.teamIds?.length || 3)), 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onPick(); });
+    this.add.zone(x, y, y === BENCH_Y ? 72 : 100, y === BENCH_Y ? 72 : 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onPick(); });
     return onPick;
   }
 
   // Fill the middle panel with one unit: name, HP, lore, then every skill with all its numbers.
   show(def, count, x, y, side, allyId = null, tab = 'skills') {
+    if (this.swapIn && allyId !== this.swapIn) this.swapIn = null;
     this.current = [def, count, x, y, side, allyId];
     this.panelObjs.forEach(o => o.destroy());
     const objs = this.panelObjs = [];
@@ -109,7 +136,7 @@ export class PrepScene extends Phaser.Scene {
 
     // selection brackets, like target brackets in battle
     const m = this.marker.clear().fillStyle(enemy ? 0xff7790 : 0xffdd55);
-    const h = enemy ? 40 : this.teamIds.length > 5 ? 28 : this.teamIds.length > 4 ? 34 : 40, k = 10;
+    const h = enemy ? 40 : 34, k = 10;
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
       const cx = x + sx * h, cy = y + sy * h;
       m.fillRect(Math.min(cx, cx - sx * k), cy - (sy > 0 ? 3 : 0), k, 3);
@@ -135,30 +162,26 @@ export class PrepScene extends Phaser.Scene {
       // charms are managed on the roster screen
       add(this.add.text(30, PANEL_TOP + 44, 'จัดบริวารและของขลัง ›', { ...FONT, fontSize: '13px', color: '#ffe08a' }).setOrigin(0, 0.5).setPadding(4, 6, 4, 6)
         .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Roster', { sel: allyId, back: { scene: 'Prep', data: this.startData } }); }));
-      // arrows beside the chosen retainer: move it left/right in the line-up
-      const i = this.teamIds.indexOf(allyId);
-      // five or more stand close together: the arrows go under the figure, beside the ✓
-      const tight = this.teamIds.length > 4, ay = tight ? y + 44 : y;
-      [[-1, x - (tight ? 24 : 58)], [1, x + (tight ? 24 : 58)]].forEach(([d, ax]) => {
-        if (i + d < 0 || i + d >= this.teamIds.length) return;
-        add(this.add.text(ax, ay, d < 0 ? '‹' : '›', { ...FONT, fontSize: '30px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setPadding(10, 8, 10, 8)
-          .setDepth(6).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.swap(allyId, d); }));
-      });
-      // choose who goes in (fewer fighters = quicker rounds); anyone not chosen rests. At least one must go.
-      const bench = new Set(this.registry.get('bench') || []);
-      const goers = fightingTeam(this);
-      const resting = !goers.includes(allyId);
-      // choosing needs a free place (three at most); leaving needs someone else still going
-      const canToggle = resting ? goers.length < MAX_FIGHTERS : goers.length > 1;
-      const label = resting ? (canToggle ? 'เลือกเข้าศึก' : 'ครบสามแล้ว') : '✓ เข้าศึก';
-      add(this.add.text(330, PANEL_TOP + 44, label, { ...FONT, fontSize: '13px', fontStyle: 'bold', color: resting ? (canToggle ? '#ffe08a' : '#77779a') : canToggle ? '#88dd99' : '#5a8a66' }).setOrigin(1, 0.5).setPadding(4, 6, 4, 6)
-        .setInteractive({ useHandCursor: canToggle }).on('pointerdown', () => {
-          if (!canToggle) return;
+      const going = this.goers.includes(allyId);
+      if (going) {
+        // arrows beside a fighter: move it left/right in the front line
+        const i = this.goers.indexOf(allyId);
+        [[-1, x - 58], [1, x + 58]].forEach(([d, ax]) => {
+          if (i + d < 0 || i + d >= this.goers.length) return;
+          add(this.add.text(ax, y, d < 0 ? '‹' : '›', { ...FONT, fontSize: '30px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setPadding(10, 8, 10, 8)
+            .setDepth(6).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.swap(allyId, d); }));
+        });
+      }
+      // in the front line: it may rest (someone must still go). Resting: it goes in — into a free place,
+      // or, with three already going, it takes the place of the fighter tapped next.
+      const full = this.goers.length >= MAX_FIGHTERS;
+      const label = going ? (this.goers.length > 1 ? 'ให้พัก' : '') : this.swapIn === allyId ? 'แตะตัวที่จะให้พัก' : full ? 'สลับเข้าศึก' : 'เข้าศึก';
+      if (label) add(this.add.text(330, PANEL_TOP + 44, label, { ...FONT, fontSize: '13px', fontStyle: 'bold', color: going ? '#ccccee' : '#88dd99' }).setOrigin(1, 0.5).setPadding(4, 6, 4, 6)
+        .setInteractive({ useHandCursor: true }).on('pointerdown', () => {
           play('click');
-          if (resting) bench.delete(allyId); else bench.add(allyId);
-          this.registry.set('bench', [...bench]);
-          saveFrom(this);
-          this.showBench();
+          if (going) return this.rest(allyId);
+          if (!full) return this.bringIn(allyId);
+          this.swapIn = this.swapIn === allyId ? null : allyId; // now tap a fighter
           this.show(...this.current);
         }));
     } else {

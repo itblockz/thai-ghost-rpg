@@ -3308,6 +3308,18 @@ export function pixelOval(scene, w, h) {
   return key;
 }
 
+/** Dashed oval outline, w×h art pixels: an empty place to stand (or to put something). */
+export function pixelOvalDash(scene, w, h) {
+  const key = `px_ovaldash_${w}x${h}`;
+  canvasArt(scene, key, w, h, (px) => {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const d = Math.hypot((x - (w - 1) / 2) / (w / 2), (y - (h - 1) / 2) / (h / 2));
+      if (d > 0.82 && d < 1 && Math.floor(Math.atan2(y - (h - 1) / 2, x - (w - 1) / 2) * 4) % 2 === 0) px(x, y, '#ffffff');
+    }
+  });
+  return key;
+}
+
 /** Thin ring of diameter n (one art pixel thick). */
 export function pixelRing(scene, n) {
   const key = `px_ring_${n}`;

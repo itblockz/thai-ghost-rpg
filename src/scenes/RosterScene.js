@@ -106,22 +106,29 @@ export class RosterScene extends Phaser.Scene {
       add(this.add.zone(x, 272, 62, 76).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.pickedSkill = sid; this.picked = null; this.pickedOffer = null; this.redraw(); }));
     });
     // charm slots: one at first, the second opens in chapter 2 (a lock until then). The chosen slot is
-    // outlined; 'สวม' puts the inspected charm there. Tap a worn charm to inspect it.
+    // outlined (the next charm tapped goes there if none is free). Empty places show a dashed frame.
     for (let i = 0; i < SLOTS; i++) {
       const sx = 254 + i * 56, sy = 268, w = worn[i];
       const chosen = i === this.slot && i < open;
       add(this.panel(this.add.graphics(), sx, sy, 52, 52, w ? 0x2a2418 : 0x121020, chosen ? 0xffffff : w ? RARITIES[w.rarity].hex : 0x44445e));
       if (i >= open) { add(this.add.image(sx, sy, 'node_lock').setScale(PX).setAlpha(0.6)); continue; }
       if (w) add(this.add.image(sx, sy, CHARM_TYPES[w.type].icon).setScale(PX));
-      else add(this.add.text(sx, sy, '+', { ...FONT, fontSize: '24px', color: '#55557a' }).setOrigin(0.5));
+      else { // an empty place: a dashed frame inside
+        const dg = add(this.add.graphics()), l = sx - 16, t = sy - 16;
+        dg.fillStyle(0x55557a);
+        for (let k = 0; k < 32; k += 8) { dg.fillRect(l + k, t, 4, 2).fillRect(l + k, t + 30, 4, 2).fillRect(l, t + k, 2, 4).fillRect(l + 30, t + k, 2, 4); }
+      }
+      // tap a worn charm = it flies back into the bag (taken off); tap an empty place = the next charm goes there
       const tapSlot = () => {
         play('click'); this.slot = i;
-        if (w) { this.picked = w.id; this.pickedSkill = null; this.confirmDrop = null; }
-        this.redraw();
+        if (!w) return this.redraw();
+        this.picked = w.id; this.pickedSkill = null; this.confirmDrop = null;
+        this.fly(CHARM_TYPES[w.type].icon, [sx, sy + this.oy], [180, 428 + this.oy], () => { this.setGear(this.strip(this.gear(), w.id)); this.redraw(); });
       };
+      const readSlot = () => { play('click'); this.slot = i; if (w) { this.picked = w.id; this.pickedSkill = null; } this.redraw(); };
       const sz = add(this.add.zone(sx, sy, 54, 54));
       // a worn charm can be dragged back down into the bag to take it off
-      if (w && !this.enchanting) tapOrDrag(this, sz, { key: CHARM_TYPES[w.type].icon, tap: tapSlot,
+      if (w && !this.enchanting) tapOrDrag(this, sz, { key: CHARM_TYPES[w.type].icon, tap: tapSlot, hold: readSlot,
         targets: () => [{ x: 180, y: 428 + this.oy, w: 344, h: 116, drop: () => { this.setGear(this.strip(this.gear(), w.id)); this.picked = w.id; this.redraw(); } }] });
       else sz.setInteractive({ useHandCursor: true }).on('pointerdown', tapSlot);
     }
@@ -140,7 +147,9 @@ export class RosterScene extends Phaser.Scene {
       add(this.add.text(ox + 12, 364, String(n), { ...numFont(13, n ? '#ffffff' : '#666688'), stroke: '#000', strokeThickness: 3 }).setOrigin(0, 0.5));
       // tap to read it (and feed the retainer shown); or drag it onto any retainer above to feed that one
       tapOrDrag(this, add(this.add.zone(ox, 352, 40, 40)), { key: o.icon,
-        tap: () => { play('click'); this.pickedOffer = k; this.picked = null; this.pickedSkill = null; this.enchanting = null; this.redraw(); },
+        // tap = feed the retainer shown above (it flies to them); hold = read what it is
+        tap: () => { play('click'); if (!n) return; const [tx, ty] = this.pos[id]; this.fly(o.icon, [ox, 352 + this.oy], [tx, ty], () => this.feed(id, k)); },
+        hold: () => { play('click'); this.pickedOffer = k; this.picked = null; this.pickedSkill = null; this.enchanting = null; this.redraw(); },
         targets: () => (n ? this.ids.map(rid => ({ x: this.pos[rid][0], y: this.pos[rid][1], w: 76, h: 66, drop: () => this.feed(rid, k) })) : []) });
       if (this.pickedOffer === k) add(this.add.graphics().lineStyle(PX, 0xffffff).strokeRect(ox - 20, 332, 40, 40));
     });
@@ -174,10 +183,23 @@ export class RosterScene extends Phaser.Scene {
       const el = enchLevel(c.pts).l;
       if (el) add(this.add.text(x + 22, y + 18, `+${el}`, { ...numFont(11, '#c8a8ff'), stroke: '#000', strokeThickness: 3 }).setOrigin(1, 0.5));
       if (wornBy[c.id]) add(this.add.text(x + 20, y - 18, wornBy[c.id] === id ? '✓' : '•', { ...FONT, fontSize: '13px', fontStyle: 'bold', color: wornBy[c.id] === id ? '#88dd99' : '#ccccee', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5));
-      const tapCharm = () => { play('click'); if (this.enchanting) return this.toggleChoose(c, wornBy); this.picked = c.id; this.pickedSkill = null; this.confirmDrop = null; this.redraw(); };
+      // tap a charm = this retainer wears it (it flies up into a free place, else the chosen one);
+      // tap one it already wears = it comes off. Hold = just read it. (During ปลุกเสก a tap chooses.)
+      const readCharm = () => { play('click'); this.picked = c.id; this.pickedSkill = null; this.confirmDrop = null; this.redraw(); };
+      const tapCharm = () => {
+        play('click');
+        if (this.enchanting) return this.toggleChoose(c, wornBy);
+        this.picked = c.id; this.pickedSkill = null; this.confirmDrop = null;
+        const mine = gear[id].indexOf(c.id);
+        if (mine >= 0) return this.fly(CHARM_TYPES[c.type].icon, [254 + mine * 56, 268 + this.oy], [x, y + this.oy], () => { this.setGear(this.strip(this.gear(), c.id)); this.redraw(); });
+        const free = gear[id].findIndex((w, si) => !w && si < open), si = free >= 0 ? free : Math.min(this.slot, open - 1);
+        this.fly(CHARM_TYPES[c.type].icon, [x, y + this.oy], [254 + si * 56, 268 + this.oy], () => {
+          const g = this.strip(this.gear(), c.id); g[id][si] = c.id; this.slot = si; this.setGear(g); play('ward'); this.redraw();
+        });
+      };
       const cz = add(this.add.zone(x, y, 52, 52));
       // drag a charm up onto a charm place to wear it there
-      if (!this.enchanting) tapOrDrag(this, cz, { key: CHARM_TYPES[c.type].icon, tap: tapCharm,
+      if (!this.enchanting) tapOrDrag(this, cz, { key: CHARM_TYPES[c.type].icon, tap: tapCharm, hold: readCharm,
         targets: () => Array.from({ length: open }, (_, si) => ({ x: 254 + si * 56, y: 268 + this.oy, w: 54, h: 54, drop: () => {
           const g = this.strip(this.gear(), c.id); g[id][si] = c.id; this.slot = si; this.picked = c.id; this.setGear(g); play('ward'); this.redraw();
         } })) });
@@ -196,8 +218,7 @@ export class RosterScene extends Phaser.Scene {
       add(this.add.text(70, 534, `${o.name}  (มี ${n})`, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5));
       add(this.add.text(70, 558, `ของเซ่น ป้อนให้${def.name}`, { ...FONT, fontSize: '12px', color: '#ccccee' }).setOrigin(0, 0.5));
       add(this.add.text(70, 578, `ได้บารมี +${o.exp}`, { ...FONT, fontSize: '12px', color: '#ccccee' }).setOrigin(0, 0.5));
-      if (n && !full) this.button(add, 290, 556, 80, 30, 'ป้อน', 0x3d3d5e, 0xffdd55, () => this.feed(id, this.pickedOffer));
-      else add(this.add.text(290, 556, full ? 'ขั้นสูงสุดแล้ว' : 'ไม่มีแล้ว', { ...FONT, fontSize: '12px', color: '#77779a' }).setOrigin(0.5));
+
     } else if (c) {
       // the charm panel is a little taller: title, effect, เสก progress, and three buttons
       add(this.panel(this.add.graphics(), 180, 547, 332, 104, 0x1a1626, this.enchanting ? 0xffffff : RARITIES[c.rarity].hex));
@@ -222,13 +243,6 @@ export class RosterScene extends Phaser.Scene {
         });
         this.button(add, 290, 576, 80, 26, 'เสร็จ', 0x2a2a3a, 0x8888aa, () => { this.enchanting = null; this.chosen = null; this.redraw(); });
       } else {
-        const owner = wornBy[c.id];
-        if (owner === id) this.button(add, 290, 516, 80, 26, 'ถอด', 0x2a2a3a, 0x8888aa, () => { this.setGear(this.strip(this.gear(), c.id)); this.redraw(); });
-        if (owner !== id) this.button(add, 290, 516, 80, 26, 'สวม', 0x3d3d5e, 0xffdd55, () => {
-          const g = this.strip(this.gear(), c.id);
-          g[id][this.slot] = c.id;
-          this.setGear(g); this.redraw();
-        });
         if (en.l < ENCH_MAX) this.button(add, 290, 546, 80, 26, 'ปลุกเสก', 0x3d2d5e, 0xc8a8ff, () => { this.enchanting = c.id; this.chosen = new Set(); this.confirmEnchant = false; this.confirmDrop = null; this.redraw(); });
         // lock: a locked charm can't be used for เสก or thrown away
         add(this.add.image(232, 514, 'node_lock').setScale(PX).setAlpha(c.locked ? 1 : 0.3));
@@ -254,11 +268,18 @@ export class RosterScene extends Phaser.Scene {
       }
       add(this.add.text(30, 552, sk.desc, { ...FONT, fontSize: '12px', color: '#ccccee', wordWrap: { width: sk.cooldown ? 256 : 300 }, lineSpacing: 2 }).setOrigin(0, 0));
     } else {
-      add(this.panel(this.add.graphics(), 180, 556, 332, 82, 0x121020, 0x33334a));
-      add(this.add.text(180, 556, bag.length ? 'แตะฤทธิ์หรือของขลังเพื่อดูรายละเอียด' : 'แตะฤทธิ์เพื่ออ่าน ชนะศึกเพื่อรับของขลัง', { ...FONT, fontSize: '13px', color: '#8888aa' }).setOrigin(0.5));
+      // nothing chosen: nothing to say
     }
     // under a two-row grid of retainers, everything here sits lower
     if (this.oy) objs.forEach(o => { o.y += this.oy; });
+  }
+
+  // a copy of an icon flies from a to b (on the 2pt grid), then `then` runs — the change is seen happening
+  fly(key, [ax, ay], [bx, by], then) {
+    if (this.flying) return;
+    this.flying = true;
+    const f = this.add.image(ax, ay, key).setScale(PX).setDepth(30);
+    this.tweens.add({ targets: f, x: bx, y: by, duration: 220, ease: 'Quad.inOut', onComplete: () => { f.destroy(); this.flying = false; then(); } });
   }
 
   // feed one ของเซ่น of kind k to retainer rid (from the ป้อน button, or dropped onto it)

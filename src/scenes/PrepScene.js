@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ZOOM, setupCamera, FONT_FAMILY, TEXT_METRICS, PX, idleFrames, numFont } from '../display.js';
-import { registerSprites } from '../art/sprites.js';
+import { registerSprites, pixelOval, pixelOvalDash } from '../art/sprites.js';
 import { ALLIES, ENEMIES, STAGES, foeSkills } from '../data/units.js';
 import { SKILLS, skillFacts } from '../data/skills.js';
 import { currentTeam, fightingTeam, MAX_FIGHTERS } from '../flow.js';
@@ -14,7 +14,7 @@ import { tapOrDrag } from '../ui/drag.js';
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 // front line (the three going in, placed as in the fight), then the bench (the rest, four to a page)
 const ENEMY_Y = 100, TEAM_Y = 466, BENCH_Y = 540, PANEL_TOP = 160, PANEL_BOTTOM = 430, BTN_Y = 608;
-const BENCH_PAGE = 4, BENCH_X = [72, 144, 216, 288];
+const BENCH_PAGE = 4, BENCH_X = [72, 144, 216, 288], FRONT_X = [65, 180, 295];
 const slots = n => (n === 1 ? [180] : n === 2 ? [105, 255] : n === 3 ? [65, 180, 295] : n === 4 ? [48, 136, 224, 312] : Array.from({ length: n }, (_, i) => Math.round((i + 0.5) * 360 / n / 2) * 2));
 
 // Before each fight. Laid out like the battlefield (enemies above, the three going in below, the bench under them);
@@ -27,6 +27,7 @@ export class PrepScene extends Phaser.Scene {
     registerSprites(this);
     this.stage = data?.stage ?? 0;
     this.startData = data;
+    this.busy = false;
     const stage = STAGES[this.stage];
 
     this.add.image(180, 0, stage.bg || 'bg_night').setOrigin(0.5, 0).setScale(PX);
@@ -51,24 +52,28 @@ export class PrepScene extends Phaser.Scene {
     this.teamIds = team;
     this.goers = goers;
     const allyPicks = {};
-    // front line: exactly where they will stand in the fight
-    const tx = slots(goers.length);
+    // the bench sits in the shade below the front line
+    this.add.rectangle(180, BENCH_Y + 4, 360, 76, 0x000000, 0.45);
+    // front line: three places to stand, always drawn — a dashed ring is a free place
     this.spots = {}; // where each retainer stands: { x, y, front }
-    goers.forEach((id, i) => { this.spots[id] = { x: tx[i], y: TEAM_Y, front: true }; allyPicks[id] = this.figure(tx[i], TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id), id); });
-    // bench: the others, four to a page, a little faded
+    this.places = FRONT_X.map((x, i) => {
+      const taken = i < goers.length;
+      const ring = this.add.image(x, TEAM_Y + 30, taken ? pixelOval(this, 28, 6) : pixelOvalDash(this, 30, 8)).setScale(PX)
+        .setTint(taken ? 0x000000 : 0xffe08a).setAlpha(taken ? 0.5 : 0.7);
+      return { x, ring, taken };
+    });
+    // nobody going: the free places pulse, asking to be filled
+    if (!goers.length) this.tweens.add({ targets: this.places.map(p => p.ring), alpha: 0.2, yoyo: true, repeat: -1, duration: 500, ease: 'Sine.inOut' });
+    goers.forEach((id, i) => { const x = FRONT_X[i]; this.spots[id] = { x, y: TEAM_Y, front: true }; allyPicks[id] = this.figure(x, TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, x, TEAM_Y, 'ally', id), id); this.spots[id].img = this.lastFigure; });
+    // bench: the others, four to a page, a little faded (more so when no place is free)
     const resting = team.filter(id => !goers.includes(id));
     const pages = Math.max(1, Math.ceil(resting.length / BENCH_PAGE));
     this.benchPage = Math.min(data?.benchPage ?? Math.floor(Math.max(0, resting.indexOf(data?.sel)) / BENCH_PAGE), pages - 1);
-    // with three going, the bench is locked (tap one only to read it)
     this.full = goers.length >= MAX_FIGHTERS;
-    // the first visit, the bench label says how it works instead
-    let firstVisit = false;
-    try { firstVisit = !localStorage.getItem('himmapan-hint-hold'); if (firstVisit) localStorage.setItem('himmapan-hint-hold', '1'); } catch { /* no storage */ }
-    if (resting.length) this.add.text(14, BENCH_Y - 34, firstVisit ? 'แตะ = เข้า/ออกศึก · กดค้าง = อ่านเฉย ๆ' : this.full ? 'พัก · ครบ 3 แล้ว' : 'พัก', { ...FONT, fontSize: '12px', color: this.full || firstVisit ? '#ffe08a' : '#aaaacc', stroke: '#000', strokeThickness: 3 }).setOrigin(0, 0.5);
     resting.slice(this.benchPage * BENCH_PAGE, (this.benchPage + 1) * BENCH_PAGE).forEach((id, i) => {
       this.spots[id] = { x: BENCH_X[i], y: BENCH_Y, front: false };
       allyPicks[id] = this.figure(BENCH_X[i], BENCH_Y, ALLIES[id], () => this.show(ALLIES[id], 1, BENCH_X[i], BENCH_Y, 'ally', id), id);
-      this.lastFigure.setAlpha(this.full ? 0.3 : 0.6);
+      this.spots[id].img = this.lastFigure.setAlpha(this.full ? 0.35 : 0.7);
     });
     if (pages > 1) [[-1, 18], [1, 342]].forEach(([d, x]) => this.add.text(x, BENCH_Y, d < 0 ? '‹' : '›', { ...FONT, fontSize: '28px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setPadding(8, 10, 8, 10)
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.restart({ ...this.startData, sel: null, benchPage: (this.benchPage + d + pages) % pages }); }));
@@ -77,7 +82,7 @@ export class PrepScene extends Phaser.Scene {
     // nobody going: the button is locked until someone is tapped in
     const none = !goers.length;
     this.panel(this.add.graphics(), 180, BTN_Y, 332, 56, none ? 0x2a2a3a : 0x3d3d5e, none ? 0x55557a : 0xffdd55);
-    this.add.text(180, BTN_Y, none ? 'เลือกอย่างน้อย 1 ตัว' : 'ออกศึก', { ...FONT, fontSize: none ? '18px' : '26px', fontStyle: 'bold', color: none ? '#8888aa' : '#ffffff' }).setOrigin(0.5);
+    this.add.text(180, BTN_Y, 'ออกศึก', { ...FONT, fontSize: '26px', fontStyle: 'bold', color: none ? '#66668a' : '#ffffff' }).setOrigin(0.5);
     if (!none) this.add.zone(180, BTN_Y, 332, 56).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => { play('click'); this.scene.start('Battle', { stage: this.stage, first: !!data?.first, retry: !!data?.retry }); });
 
@@ -97,11 +102,27 @@ export class PrepScene extends Phaser.Scene {
     if (data?.sel && allyPicks[data.sel]) allyPicks[data.sel](); else picks[0]();
   }
 
-  // the one rule: tap a fighter = it rests; tap a resting one = it goes in (unless three already go)
+  // the one rule: tap a fighter = it hops down to rest; tap a resting one = it hops up to a free place.
+  // No free place: it rises, finds nowhere to go and drops back, and the three places flash.
   toggle(id) {
-    if (this.goers.includes(id)) { play('click'); return this.rest(id); }
-    if (this.full) { play('click'); return this.show(ALLIES[id], 1, this.spots[id].x, this.spots[id].y, 'ally', id); }
-    play('click'); this.bringIn(id);
+    const sp = this.spots[id], img = sp.img;
+    play('click');
+    if (this.busy) return;
+    if (sp.front) { this.busy = true; return this.hop(img, 180, BENCH_Y, () => this.rest(id)); }
+    if (this.full) {
+      this.tweens.add({ targets: img, y: sp.y - 14, yoyo: true, duration: 120 });
+      this.places.forEach(p => this.tweens.add({ targets: p.ring, alpha: 0.1, yoyo: true, duration: 120, repeat: 1 }));
+      return this.show(ALLIES[id], 1, sp.x, sp.y, 'ally', id);
+    }
+    this.busy = true;
+    this.hop(img.setAlpha(1), FRONT_X[this.goers.length], TEAM_Y, () => this.bringIn(id));
+  }
+
+  // a little arcing jump to (x, y), then on with it
+  hop(img, x, y, then) {
+    const p = { t: 0 }, x0 = img.x, y0 = img.y;
+    img.setDepth(20);
+    this.tweens.add({ targets: p, t: 1, duration: 260, ease: 'Sine.inOut', onUpdate: () => img.setPosition(x0 + (x - x0) * p.t, y0 + (y - y0) * p.t - Math.sin(p.t * Math.PI) * 30), onComplete: then });
   }
 
   // put a resting retainer in: into a free place, or in the place of the fighter `out`
@@ -192,8 +213,6 @@ export class PrepScene extends Phaser.Scene {
       // charms are managed on the roster screen
       add(this.add.text(30, PANEL_TOP + 44, 'จัดบริวารและของขลัง ›', { ...FONT, fontSize: '13px', color: '#ffe08a' }).setOrigin(0, 0.5).setPadding(4, 6, 4, 6)
         .setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); this.scene.start('Roster', { sel: allyId, back: { scene: 'Prep', data: this.startData } }); }));
-      const going = this.goers.includes(allyId);
-      add(this.add.text(330, PANEL_TOP + 44, going ? 'แตะตัวเพื่อให้พัก' : this.full ? 'ครบ 3 แล้ว' : 'แตะตัวเพื่อเข้าศึก', { ...FONT, fontSize: '12px', color: going ? '#88dd99' : '#aaaacc' }).setOrigin(1, 0.5));
     } else {
       add(this.add.text(30, PANEL_TOP + 44, def.lore || '', { ...FONT, fontSize: '12px', color: '#a8a8c8' }).setOrigin(0, 0.5));
     }

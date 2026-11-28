@@ -370,6 +370,15 @@ export class BattleScene extends Phaser.Scene {
     }
     this.active = u;
     if (u.stunned) return this.loseTurn(u, done);
+    // a retainer winding up (กระสือ's ฟาดไส้) finishes the skill on its own: no choice this turn
+    if (u.pending) {
+      let { skillId, next, target } = u.pending;
+      u.pending = null; u.takenMult = 1;
+      this.enemies.forEach(e => e.marker.setVisible(false));
+      if (!target.alive) target = this.alive(this.enemies)[0];
+      this.selected = skillId; this.busy = true; this.buildButtons(); this.refresh();
+      return this.perform(u, target, skillId, next, () => this.time.delayedCall(250, done));
+    }
     // start on a skill with no rest (the everyday one); strong skills are chosen on purpose
     const ready = u.skills.filter(id => !u.cd[id]);
     this.selected = ready.find(id => !SKILLS[id].cooldown) ?? ready[0] ?? u.skills[0];
@@ -497,7 +506,9 @@ export class BattleScene extends Phaser.Scene {
       if (e.block) { target.block = true; target.blockBy = user; target.shieldIcon.setVisible(true); }
       const warded = k => target.wards?.has(k);
       if ((e.stun && warded('stun')) || (e.blind && warded('blind'))) this.iconPop(target.x, target.y + 10, 'charm_yant');
-      if (e.stun && !missed && !blocked && !warded('stun')) target.stunned = (target.stunned || 0) + e.stun;
+      // bosses are too big to drag under (นาค lives in the water; เปรต stands as tall as a palm)
+      if (e.stun && !missed && !blocked && target.def.boss) this.popup(target.x, target.y + 24, 'ไม่จม', '#9ac8f0', 16);
+      else if (e.stun && !missed && !blocked && !warded('stun')) target.stunned = (target.stunned || 0) + e.stun;
       if (e.blind && !missed && !blocked && !warded('blind')) target.blind = true;
       // poison lingers: it bites at the start of each of the next rounds
       if (e.poison && !missed && !blocked) target.poison = { turns: e.poison.turns, damage: e.poison.damage };
@@ -774,8 +785,8 @@ export class BattleScene extends Phaser.Scene {
           t.cdText.setText(cd ? String(cd) : '');
         });
       }
-      // active retainer glows gold
-      if (u.side === 'ally') u.glow.setTint(0xffd860).setAlpha(u === this.active ? 0.3 : 0);
+      // active retainer glows gold; one winding up burns red, like an enemy
+      if (u.side === 'ally') u.glow.setTint(u.pending ? 0xff1030 : 0xffd860).setAlpha(u.pending ? 0.45 : u === this.active ? 0.3 : 0);
     }
     this.drawReticle(!this.busy && !!this.active);
   }

@@ -26,6 +26,8 @@ export const STORY = {
   ending: [
     { art: 'krasue', text: 'กระสือร่ำไห้…' },
     { art: 'krasue', text: '"อาจารย์เจ้า…\nอยู่กับ \'ท่าน\' แล้ว"' },
+    { art: 'krasue', text: '"ข้าเองก็อยากรู้ว่า \'ท่าน\' คือใคร\nให้ข้าตามไปด้วยเถิด"' },
+    { art: 'krasue', text: 'กระสือลอยมาอยู่ข้างกาย', recruit: 'krasue' },
     { art: 'heir', text: 'ผู้สืบทอดวิชากำตะเกียงแน่น\n\'ท่าน\' คือใคร…' },
     { art: 'art_shrine', text: 'ใครกันที่เปิดประตูหิมพานต์' },
     { art: null, end: true, text: 'จบบรรพที่ ๑\nคืนเดือนดับ' },

@@ -66,7 +66,9 @@ export class PrepScene extends Phaser.Scene {
     if (!goers.length) this.tweens.add({ targets: this.places.map(p => p.ring), alpha: 0.2, yoyo: true, repeat: -1, duration: 500, ease: 'Sine.inOut' });
     goers.forEach((id, i) => { const x = FRONT_X[i]; this.spots[id] = { x, y: TEAM_Y, front: true }; allyPicks[id] = this.figure(x, TEAM_Y, ALLIES[id], () => this.show(ALLIES[id], 1, x, TEAM_Y, 'ally', id), id); this.spots[id].img = this.lastFigure; });
     // bench: the others, four to a page, a little faded (more so when no place is free)
-    const resting = team.filter(id => !goers.includes(id));
+    // the bench: highest ขั้น first
+    const expAll = this.registry.get('exp') || {};
+    const resting = team.filter(id => !goers.includes(id)).sort((a, b) => (expAll[b] || 0) - (expAll[a] || 0));
     const pages = Math.max(1, Math.ceil(resting.length / BENCH_PAGE));
     this.benchPage = Math.min(data?.benchPage ?? Math.floor(Math.max(0, resting.indexOf(data?.sel)) / BENCH_PAGE), pages - 1);
     this.full = goers.length >= MAX_FIGHTERS;

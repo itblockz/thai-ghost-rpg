@@ -26,7 +26,9 @@ export class RosterScene extends Phaser.Scene {
     setupCamera(this);
     registerSprites(this);
     this.back = data?.back || { scene: 'Map' };
-    this.ids = currentTeam(this);
+    // shown order: those going in first (in their line-up order), then the rest by ขั้น, highest first
+    const exp0 = this.registry.get('exp') || {}, goingNow = fightingTeam(this);
+    this.ids = [...goingNow, ...currentTeam(this).filter(r => !goingNow.includes(r)).sort((a, b) => (exp0[b] || 0) - (exp0[a] || 0))];
     this.sel = data?.sel && this.ids.includes(data.sel) ? data.sel : this.ids[0];
     this.page = data?.page || 0;
     this.picked = null;      // charm id under inspection
@@ -134,7 +136,15 @@ export class RosterScene extends Phaser.Scene {
     }
 
     // ---- the bag ----
-    const list = [...bag].sort((a, b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity] || CHARM_TYPES[a.type].name.localeCompare(CHARM_TYPES[b.type].name) || b.value - a.value);
+    // the bag's order: what this retainer wears first; then by kind, strongest first; others' charms last
+    const owner = {};
+    for (const k in gear) gear[k].forEach(cid => { if (cid) owner[cid] = k; });
+    const kindOrder = Object.keys(CHARM_TYPES);
+    const group = c => (owner[c.id] === id ? 0 : owner[c.id] ? 2 : 1);
+    const list = [...bag].sort((a, b) => group(a) - group(b)
+      || (group(a) === 0 ? gear[id].indexOf(a.id) - gear[id].indexOf(b.id) : 0)
+      || kindOrder.indexOf(a.type) - kindOrder.indexOf(b.type)
+      || RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity] || (b.pts || 0) - (a.pts || 0) || b.value - a.value);
     const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
     this.page = Math.min(this.page, pages - 1);
     if (!this.enchanting) add(this.add.text(30, 352, `ย่าม (${bag.length})`, { ...FONT, fontSize: '15px', fontStyle: 'bold', color: '#ffe08a' }).setOrigin(0, 0.5));

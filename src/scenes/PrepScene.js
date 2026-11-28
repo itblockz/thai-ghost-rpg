@@ -9,6 +9,7 @@ import { play } from '../audio/sfx.js';
 import { applyWorn, CHARM_TYPES } from '../data/charms.js';
 import { applyGrowth, applyLevel, levelOf, shownLevel } from '../data/growth.js';
 import { gems } from '../ui/charmUi.js';
+import { tapOrDrag } from '../ui/drag.js';
 
 const FONT = { fontFamily: FONT_FAMILY, color: '#fff', resolution: ZOOM, ...TEXT_METRICS };
 // front line (the three going in, placed as in the fight), then the bench (the rest, four to a page)
@@ -53,14 +54,16 @@ export class PrepScene extends Phaser.Scene {
     const allyPicks = {};
     // front line: exactly where they will stand in the fight
     const tx = slots(goers.length);
-    goers.forEach((id, i) => { allyPicks[id] = this.figure(tx[i], TEAM_Y, ALLIES[id], () => (this.swapIn ? this.bringIn(this.swapIn, id) : this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id))); });
+    this.spots = {}; // where each retainer stands: { x, y, front }
+    goers.forEach((id, i) => { this.spots[id] = { x: tx[i], y: TEAM_Y, front: true }; allyPicks[id] = this.figure(tx[i], TEAM_Y, ALLIES[id], () => (this.swapIn ? this.bringIn(this.swapIn, id) : this.show(ALLIES[id], 1, tx[i], TEAM_Y, 'ally', id)), id); });
     // bench: the others, four to a page, a little faded
     const resting = team.filter(id => !goers.includes(id));
     const pages = Math.max(1, Math.ceil(resting.length / BENCH_PAGE));
     this.benchPage = Math.min(data?.benchPage ?? Math.floor(Math.max(0, resting.indexOf(data?.sel)) / BENCH_PAGE), pages - 1);
     if (resting.length) this.add.text(14, BENCH_Y - 34, 'พัก', { ...FONT, fontSize: '12px', color: '#aaaacc', stroke: '#000', strokeThickness: 3 }).setOrigin(0, 0.5);
     resting.slice(this.benchPage * BENCH_PAGE, (this.benchPage + 1) * BENCH_PAGE).forEach((id, i) => {
-      allyPicks[id] = this.figure(BENCH_X[i], BENCH_Y, ALLIES[id], () => this.show(ALLIES[id], 1, BENCH_X[i], BENCH_Y, 'ally', id));
+      this.spots[id] = { x: BENCH_X[i], y: BENCH_Y, front: false };
+      allyPicks[id] = this.figure(BENCH_X[i], BENCH_Y, ALLIES[id], () => this.show(ALLIES[id], 1, BENCH_X[i], BENCH_Y, 'ally', id), id);
       this.lastFigure.setAlpha(0.6);
     });
     if (pages > 1) [[-1, 18], [1, 342]].forEach(([d, x]) => this.add.text(x, BENCH_Y, d < 0 ? '‹' : '›', { ...FONT, fontSize: '28px', fontStyle: 'bold', color: '#ffe08a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setPadding(8, 10, 8, 10)
@@ -83,6 +86,23 @@ export class PrepScene extends Phaser.Scene {
     this.add.text(314, 26, 'ของ ›', { ...FONT, fontSize: '12px', color: '#ffe08a', stroke: '#000', strokeThickness: 3 }).setOrigin(1, 0.5);
     this.add.zone(316, 30, 80, 52).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => { play('click'); this.scene.start('Guide', { back: { scene: 'Prep', data: this.startData } }); });
+
+    // the first time there is a bench, a faded copy of a resting retainer glides up to the front and back:
+    // retainers can be dragged
+    const firstBench = resting[this.benchPage * BENCH_PAGE], firstFront = goers[0];
+    let seenHint = true;
+    try { seenHint = !!localStorage.getItem('himmapan-hint-drag'); } catch { /* no storage: skip the hint */ }
+    if (firstBench && !seenHint) {
+      try { localStorage.setItem('himmapan-hint-drag', '1'); } catch { /* ignore */ }
+      const a = this.spots[firstBench], b = this.spots[firstFront];
+      const ghost = this.add.image(a.x, a.y, ALLIES[firstBench].sprite).setScale(PX).setAlpha(0).setDepth(30);
+      this.tweens.chain({ targets: ghost, tweens: [
+        { alpha: 0.6, duration: 250, delay: 600 },
+        { x: b.x, y: b.y, duration: 700, ease: 'Sine.inOut' },
+        { alpha: 0.6, duration: 300 },
+        { x: a.x, y: a.y, alpha: 0, duration: 500, ease: 'Sine.inOut' },
+      ], onComplete: () => ghost.destroy() });
+    }
 
     // reopen on the retainer just moved (see swap)
     if (data?.sel && allyPicks[data.sel]) allyPicks[data.sel](); else picks[0]();
@@ -118,11 +138,38 @@ export class PrepScene extends Phaser.Scene {
     this.scene.restart({ ...this.startData, sel: id, benchPage: null });
   }
 
-  figure(x, y, def, onPick) {
+  figure(x, y, def, onPick, allyId = null) {
     const img = this.lastFigure = this.add.image(x, y, def.sprite).setScale(PX);
     idleFrames(this, img, def.sprite);
-    this.add.zone(x, y, y === BENCH_Y ? 72 : 100, y === BENCH_Y ? 72 : 100).setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onPick(); });
+    const zone = this.add.zone(x, y, y === BENCH_Y ? 72 : 100, y === BENCH_Y ? 72 : 100);
+    // a retainer can also be dragged: onto a fighter (swap places), onto the bench (rest), or into a free place in front
+    if (allyId) tapOrDrag(this, zone, { key: def.sprite, tap: () => { play('click'); onPick(); }, targets: () => this.dropTargets(allyId) });
+    else zone.setInteractive({ useHandCursor: true }).on('pointerdown', () => { play('click'); onPick(); });
     return onPick;
+  }
+
+  // where a dragged retainer may land
+  dropTargets(id) {
+    const from = this.spots[id], out = [];
+    for (const [other, at] of Object.entries(this.spots)) {
+      if (other === id || !at.front) continue;
+      // onto a fighter: a resting one takes its place; a fighter swaps order with it
+      out.push({ x: at.x, y: at.y, w: 76, h: 76, drop: () => (from.front ? this.swapWith(id, other) : this.bringIn(id, other)) });
+    }
+    // a free place in front (fewer than three going)
+    if (!from.front && this.goers.length < MAX_FIGHTERS) out.push({ x: 180, y: TEAM_Y, w: 340, h: 76, drop: () => this.bringIn(id) });
+    // down to the bench (someone must still go)
+    if (from.front && this.goers.length > 1) out.push({ x: 180, y: BENCH_Y, w: 340, h: 76, drop: () => this.rest(id) });
+    return out;
+  }
+
+  // two fighters trade places in the front line
+  swapWith(a, b) {
+    const team = [...currentTeam(this)], i = team.indexOf(a), j = team.indexOf(b);
+    [team[i], team[j]] = [team[j], team[i]];
+    this.registry.set('team', team);
+    saveFrom(this);
+    this.scene.restart({ ...this.startData, sel: a });
   }
 
   // Fill the middle panel with one unit: name, HP, lore, then every skill with all its numbers.
